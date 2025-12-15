@@ -922,3 +922,25 @@ async def list_providers(
             "self-signed": "Self-signed certificates for testing"
         }
     }
+
+
+# ============================================================
+# Monitoring & Metrics Endpoint
+# ============================================================
+
+from fastapi.responses import Response
+
+@router.get("/metrics")
+async def get_prometheus_metrics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Prometheus metrics endpoint for credential monitoring.
+    
+    Exports metrics for Grafana/Prometheus scraping.
+    """
+    from app.services.credentials.metrics import get_metrics_text, CONTENT_TYPE_LATEST
+    
+    metrics = get_metrics_text(db)
+    return Response(content=metrics, media_type=CONTENT_TYPE_LATEST)
