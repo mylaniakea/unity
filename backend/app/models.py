@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey, PrimaryKeyConstraint
 from sqlalchemy import JSON
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
@@ -225,15 +225,17 @@ class PluginMetric(Base):
     """Time-series metrics collected by plugins"""
     __tablename__ = "plugin_metrics"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, autoincrement=True, index=True)
     plugin_id = Column(String(100), ForeignKey('plugins.id'), nullable=False, index=True)
-    timestamp = Column(DateTime(timezone=True), nullable=False, index=True, server_default=func.now())
+    timestamp = Column(DateTime(timezone=True), nullable=False, index=True, server_default=func.now(), primary_key=True)
     data = Column(JSON().with_variant(JSONB, "postgresql"), nullable=False)  # The actual metrics data
     
     # Relationship
     plugin = relationship("Plugin", back_populates="metrics")
 
     __table_args__ = (
+        # Composite primary key required for partitioned table
+        PrimaryKeyConstraint('id', 'timestamp'),
         # Index for efficient time-series queries
         {'postgresql_partition_by': 'RANGE (timestamp)'},  # Optional: for partitioning
     )
