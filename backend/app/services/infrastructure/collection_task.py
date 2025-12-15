@@ -11,8 +11,8 @@ from app.services.infrastructure.ssh_service import ssh_service, SSHConnectionEr
 from app.services.infrastructure import storage_discovery, pool_discovery, database_discovery
 from app.services.infrastructure.alert_evaluator import AlertEvaluator
 from app.services.infrastructure.mysql_metrics import MySQLMetricsService
-from app.services.infrastructure.postgres_metrics import PostgresMetricsService
-from app.services.notification_service import send_notification
+from app.services.infrastructure.postgres_metrics import PostgreSQLMetricsService
+from app.services.notification_service import NotificationService
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +92,7 @@ def collect_server_data(server_id: int) -> Tuple[bool, str]:
                 
                 # Collect metrics for each database
                 mysql_service = MySQLMetricsService()
-                postgres_service = PostgresMetricsService()
+                postgres_service = PostgreSQLMetricsService()
                 
                 for db_instance in db_result.get("databases", []):
                     try:
@@ -171,7 +171,7 @@ def collect_server_data(server_id: int) -> Tuple[bool, str]:
                     for alert in new_alerts:
                         try:
                             # Use Unity's notification service
-                            send_notification(
+                            NotificationService.send_notification(
                                 title=f"Alert: {alert.message}",
                                 message=f"Severity: {alert.severity}\nTriggered at: {alert.triggered_at}",
                                 severity=alert.severity

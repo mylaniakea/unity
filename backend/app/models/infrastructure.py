@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey, PrimaryKeyConstraint
+import enum
+from sqlalchemy import Enum, Column, Integer, BigInteger, String, DateTime, Text, Boolean, Float, ForeignKey, PrimaryKeyConstraint
 from sqlalchemy import JSON
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func

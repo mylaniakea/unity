@@ -6,7 +6,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from app import models
-from app.services.encryption import decrypt_value
+from app.services.credentials.encryption import decrypt
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ class InfrastructureSSHService:
                 ).first()
                 if ssh_key_obj and ssh_key_obj.private_key_encrypted:
                     ssh_key = asyncssh.import_private_key(
-                        decrypt_value(ssh_key_obj.private_key_encrypted)
+                        decrypt(ssh_key_obj.private_key_encrypted)
                     )
             
             if server.credential_id:
@@ -70,16 +70,16 @@ class InfrastructureSSHService:
                     models.ServerCredential.id == server.credential_id
                 ).first()
                 if cred and cred.credential_value_encrypted:
-                    password = decrypt_value(cred.credential_value_encrypted)
+                    password = decrypt(cred.credential_value_encrypted)
             
             # Fallback to legacy encrypted credentials if Unity creds not available
             if not ssh_key and not password:
                 if server.ssh_private_key_encrypted:
                     ssh_key = asyncssh.import_private_key(
-                        decrypt_value(server.ssh_private_key_encrypted)
+                        decrypt(server.ssh_private_key_encrypted)
                     )
                 elif server.ssh_password_encrypted:
-                    password = decrypt_value(server.ssh_password_encrypted)
+                    password = decrypt(server.ssh_password_encrypted)
             
             # Connection options
             connect_kwargs = {
