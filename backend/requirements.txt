@@ -1,0 +1,15 @@
+fastapi>=0.100.0
+uvicorn[standard]>=0.20.0
+psutil>=5.9.0
+pydantic>=2.0.0
+httpx>=0.24.0
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+asyncssh>=2.14.0
+APScheduler>=3.10.4
+cryptography>=41.0.0 # For SSH Key Encryption at Rest
+pywebpush>=1.2.0 # For Web Push Notifications
+python-jose[cryptography]>=3.3.0 # For JWT tokens
+passlib>=1.7.4 # For password hashing
+bcrypt==4.1.3 # Pin to 4.x for passlib compatibility
+python-multipart>=0.0.6 # For OAuth2 form data handling

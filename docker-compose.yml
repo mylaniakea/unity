@@ -1,0 +1,54 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: homelab-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: homelab_db
+      POSTGRES_USER: homelab_user
+      POSTGRES_PASSWORD: homelab_password
+    volumes:
+      - homelab_db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - homelab-net
+
+  backend:
+    build: ./backend
+    container_name: homelab-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/data:/app/data
+      # Mount source code for dev reloading (optional, remove for prod)
+      # - ./backend/app:/app/app
+    environment:
+      - ALLOW_ORIGINS=*
+      - DATABASE_URL=postgresql+psycopg2://homelab_user:homelab_password@db:5432/homelab_db
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level debug
+    depends_on:
+      - db
+    # Network mode host might be needed for some hardware discovery,
+    # but bridge is safer. Stick to bridge for now.
+    networks:
+      - homelab-net
+
+  frontend:
+    build: ./frontend
+    container_name: homelab-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - homelab-net
+
+volumes:
+  homelab_db_data:
+
+networks:
+  homelab-net:
+    driver: bridge
