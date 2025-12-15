@@ -254,3 +254,30 @@ class PluginExecution(Base):
     
     # Relationship
     plugin = relationship("Plugin", back_populates="executions")
+
+
+class PluginAPIKey(Base):
+    """API keys for external plugin authentication"""
+    __tablename__ = "plugin_api_keys"
+
+    id = Column(Integer, primary_key=True, index=True)
+    plugin_id = Column(String(100), ForeignKey('plugins.id'), nullable=False, index=True)
+    key_hash = Column(String(64), nullable=False, unique=True)  # SHA-256 hash
+    name = Column(String(255), nullable=True)  # Descriptive name for the key
+    
+    # Permissions and restrictions
+    permissions = Column(JSONB, default=["report_metrics", "update_health", "get_config"])
+    
+    # Usage tracking
+    last_used = Column(DateTime(timezone=True), nullable=True)
+    uses_count = Column(Integer, default=0)
+    
+    # Expiration and revocation
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+    is_active = Column(Boolean, default=True)
+    
+    # Audit
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_by = Column(Integer, ForeignKey('users.id'), nullable=True)
+    revoked_at = Column(DateTime(timezone=True), nullable=True)
+    revoked_by = Column(Integer, ForeignKey('users.id'), nullable=True)
