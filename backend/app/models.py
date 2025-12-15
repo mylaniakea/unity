@@ -183,3 +183,74 @@ class User(Base):
     is_superuser = Column(Boolean, default=False)  # Kept for backwards compatibility
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+# ==================
+# PLUGIN SYSTEM MODELS
+# ==================
+
+class Plugin(Base):
+    """Plugin registry - tracks all registered plugins"""
+    __tablename__ = "plugins"
+
+    id = Column(String(100), primary_key=True)  # Plugin ID (e.g., "lm-sensors")
+    name = Column(String(255), nullable=False)
+    version = Column(String(50), nullable=True)
+    category = Column(String(50), nullable=True)  # thermal, system, network, etc.
+    description = Column(Text, nullable=True)
+    author = Column(String(255), nullable=True)
+    enabled = Column(Boolean, default=False)
+    external = Column(Boolean, default=False)  # True for external plugins, False for built-in
+    
+    # Plugin metadata and config
+    metadata = Column(JSONB, default={})  # Full plugin metadata
+    config = Column(JSONB, default={})  # Plugin-specific configuration
+    
+    # Health and status tracking
+    last_health_check = Column(DateTime(timezone=True), nullable=True)
+    health_status = Column(String(50), default='unknown')  # healthy, unhealthy, unknown
+    health_message = Column(Text, nullable=True)
+    last_error = Column(Text, nullable=True)
+    
+    # Timestamps
+    installed_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    metrics = relationship("PluginMetric", back_populates="plugin", cascade="all, delete-orphan")
+    executions = relationship("PluginExecution", back_populates="plugin", cascade="all, delete-orphan")
+
+
+class PluginMetric(Base):
+    """Time-series metrics collected by plugins"""
+    __tablename__ = "plugin_metrics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    plugin_id = Column(String(100), ForeignKey('plugins.id'), nullable=False, index=True)
+    timestamp = Column(DateTime(timezone=True), nullable=False, index=True, server_default=func.now())
+    data = Column(JSONB, nullable=False)  # The actual metrics data
+    
+    # Relationship
+    plugin = relationship("Plugin", back_populates="metrics")
+
+    __table_args__ = (
+        # Index for efficient time-series queries
+        {'postgresql_partition_by': 'RANGE (timestamp)'},  # Optional: for partitioning
+    )
+
+
+class PluginExecution(Base):
+    """Plugin execution history and status"""
+    __tablename__ = "plugin_executions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    plugin_id = Column(String(100), ForeignKey('plugins.id'), nullable=False, index=True)
+    
+    started_at = Column(DateTime(timezone=True), nullable=False, index=True, server_default=func.now())
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    
+    status = Column(String(50), nullable=False, default='running')  # running, success, failed
+    error_message = Column(Text, nullable=True)
+    metrics_count = Column(Integer, default=0)  # Number of metrics collected
+    
+    # Relationship
+    plugin = relationship("Plugin", back_populates="executions")
