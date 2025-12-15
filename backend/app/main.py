@@ -7,6 +7,7 @@ from app.routers import (
 )
 # Import new plugin routers
 from app.routers import plugins_v2_secure, plugin_keys
+from app.routers import infrastructure
 
 from app.database import engine, Base, get_db
 from app.services import report_generation
@@ -164,6 +165,7 @@ app.include_router(credentials.router)  # Credential management
 app.include_router(thresholds.router)
 app.include_router(alerts.router)
 app.include_router(push.router)
+app.include_router(infrastructure.router)  # Phase 3: Infrastructure monitoring
 
 
 @app.on_event("startup")
@@ -274,6 +276,11 @@ async def startup_event():
             id='plugin_execution'
         )
         print(f"   - Plugin execution: every 5 minutes", flush=True)
+
+        # Setup infrastructure monitoring tasks (Phase 3)
+        from app.schedulers.infrastructure_tasks import setup_infrastructure_scheduler
+        setup_infrastructure_scheduler(scheduler)
+        print(f"   - Infrastructure monitoring: every 5 minutes", flush=True)
 
         scheduler.start()
         print("\n✅ Scheduler started successfully", flush=True)
