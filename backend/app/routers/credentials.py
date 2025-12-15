@@ -729,3 +729,106 @@ async def get_credential_stats(
         expiring_certificates=expiring_certs,
         unused_keys=unused_keys
     )
+
+
+# ============================================================
+# SSH Key Distribution Endpoints
+# ============================================================
+
+from app.services.credentials.distribution import SSHKeyDistributionService
+
+@router.post("/ssh-keys/{key_id}/distribute", status_code=status.HTTP_200_OK)
+async def distribute_ssh_key(
+    key_id: int,
+    server_ids: List[int],
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Distribute an SSH key to one or more servers.
+    
+    Automatically installs the public key in ~/.ssh/authorized_keys
+    on each target server.
+    
+    Requires authentication and server credentials.
+    """
+    try:
+        ip_address, user_agent = get_client_info(request)
+        
+        result = await SSHKeyDistributionService.distribute_key_to_servers(
+            db=db,
+            key_id=key_id,
+            server_profile_ids=server_ids,
+            encryption_service=encryption_service,
+            user_id=current_user.id,
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+        
+        return result
+        
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.delete("/ssh-keys/{key_id}/distribute", status_code=status.HTTP_200_OK)
+async def remove_ssh_key_distribution(
+    key_id: int,
+    server_ids: List[int],
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Remove an SSH key from one or more servers.
+    
+    Removes the public key from ~/.ssh/authorized_keys on each server.
+    """
+    try:
+        ip_address, user_agent = get_client_info(request)
+        
+        result = await SSHKeyDistributionService.remove_key_from_servers(
+            db=db,
+            key_id=key_id,
+            server_profile_ids=server_ids,
+            encryption_service=encryption_service,
+            user_id=current_user.id,
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+        
+        return result
+        
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.get("/ssh-keys/{key_id}/distribution-status/{server_id}")
+async def get_distribution_status(
+    key_id: int,
+    server_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Check if an SSH key is installed on a specific server.
+    """
+    try:
+        result = await SSHKeyDistributionService.get_distribution_status(
+            db=db,
+            key_id=key_id,
+            server_profile_id=server_id,
+            encryption_service=encryption_service
+        )
+        
+        return result
+        
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
