@@ -127,6 +127,13 @@ class Alert(Base):
     monitored_server_id = Column(Integer, ForeignKey('monitored_servers.id'), index=True, nullable=True)  # For infrastructure alerts
     severity = Column(String, index=True) # "info", "warning", "critical"
     alert_type = Column(String, index=True, default="threshold")  # "threshold", "storage", "database", "server_health"
+    # Infrastructure alert rule system (Phase 3.5)
+    alert_rule_id = Column(Integer, ForeignKey('alert_rules.id'), index=True, nullable=True)  # Link to AlertRule
+    resource_type = Column(String, nullable=True)  # "server", "device", "pool", "database"
+    resource_id = Column(Integer, nullable=True, index=True)  # ID of the resource
+    threshold = Column(Float, nullable=True)  # Threshold that was exceeded
+    status = Column(String, nullable=True, index=True)  # "active", "acknowledged", "resolved"
+    acknowledged_by = Column(String(255), nullable=True)  # User who acknowledged
     message = Column(Text)
     metric_value = Column(Integer) # Actual value that triggered the alert
     triggered_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
@@ -689,3 +696,67 @@ class DatabaseInstance(Base):
     
     def __repr__(self):
         return f"<DatabaseInstance(id={self.id}, type='{self.db_type}', name='{self.db_name}')>"
+
+# ============================================================================
+# Alert Rule System (Phase 3.5: Complete BD-Store Integration)
+# ============================================================================
+
+class ResourceType(str, enum.Enum):
+    """Resource types that can be monitored."""
+    SERVER = "server"
+    DEVICE = "device"
+    POOL = "pool"
+    DATABASE = "database"
+
+class AlertCondition(str, enum.Enum):
+    """Comparison operators for alert rules."""
+    GT = "gt"  # greater than
+    LT = "lt"  # less than
+    GTE = "gte"  # greater than or equal
+    LTE = "lte"  # less than or equal
+    EQ = "eq"  # equal
+    NE = "ne"  # not equal
+
+class AlertSeverity(str, enum.Enum):
+    """Alert severity levels."""
+    INFO = "info"
+    WARNING = "warning"
+    CRITICAL = "critical"
+
+class AlertStatus(str, enum.Enum):
+    """Alert lifecycle status."""
+    ACTIVE = "active"
+    ACKNOWLEDGED = "acknowledged"
+    RESOLVED = "resolved"
+
+class AlertRule(Base):
+    """Alert rule definition for infrastructure monitoring."""
+    
+    __tablename__ = "alert_rules"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    
+    # What to monitor
+    resource_type = Column(Enum(ResourceType), nullable=False)
+    metric_name = Column(String(100), nullable=False)
+    
+    # Condition
+    condition = Column(Enum(AlertCondition), nullable=False)
+    threshold = Column(Float, nullable=False)
+    
+    # Alert settings
+    severity = Column(Enum(AlertSeverity), nullable=False, default=AlertSeverity.WARNING)
+    enabled = Column(Boolean, nullable=False, default=True)
+    
+    # Notification settings
+    notification_channels = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)  # ["email", "webhook", "log"]
+    cooldown_minutes = Column(Integer, nullable=False, default=15)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    
+    def __repr__(self):
+        return f"<AlertRule(id={self.id}, name='{self.name}', {self.metric_name} {self.condition} {self.threshold})>"

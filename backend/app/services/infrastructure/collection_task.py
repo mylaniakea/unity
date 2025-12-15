@@ -1,4 +1,4 @@
-"""Infrastructure data collection task for Phase 3: BD-Store Integration."""
+"""Infrastructure data collection task for Phase 3.5: Complete BD-Store Integration."""
 import asyncio
 import logging
 from datetime import datetime, timezone
@@ -9,6 +9,10 @@ from app import models
 from app.database import get_db
 from app.services.infrastructure.ssh_service import ssh_service, SSHConnectionError
 from app.services.infrastructure import storage_discovery, pool_discovery, database_discovery
+from app.services.infrastructure.alert_evaluator import AlertEvaluator
+from app.services.infrastructure.mysql_metrics import MySQLMetricsService
+from app.services.infrastructure.postgres_metrics import PostgresMetricsService
+from app.services.notification_service import send_notification
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +52,7 @@ def collect_server_data(server_id: int) -> Tuple[bool, str]:
             device_count = 0
             pool_count = 0
             db_count = 0
+            metrics_collected = 0
             errors = []
             
             try:
@@ -84,8 +89,57 @@ def collect_server_data(server_id: int) -> Tuple[bool, str]:
                     )
                 )
                 db_count = len(db_result.get("databases", []))
+                
+                # Collect metrics for each database
+                mysql_service = MySQLMetricsService()
+                postgres_service = PostgresMetricsService()
+                
+                for db_instance in db_result.get("databases", []):
+                    try:
+                        if db_instance.db_type == models.DatabaseType.MYSQL:
+                            metrics = mysql_service.collect_metrics(
+                                db_instance.host,
+                                db_instance.port,
+                                db_instance.db_name,
+                                db_instance.username,
+                                db_instance.password_encrypted
+                            )
+                        elif db_instance.db_type == models.DatabaseType.POSTGRESQL:
+                            metrics = postgres_service.collect_metrics(
+                                db_instance.host,
+                                db_instance.port,
+                                db_instance.db_name,
+                                db_instance.username,
+                                db_instance.password_encrypted
+                            )
+                        else:
+                            continue
+                        
+                        if metrics.get("success"):
+                            # Update database instance with metrics
+                            db_instance.size_bytes = metrics.get("size_bytes")
+                            db_instance.connection_count = metrics.get("connection_count")
+                            db_instance.active_queries = metrics.get("active_queries")
+                            db_instance.idle_connections = metrics.get("idle_connections")
+                            db_instance.max_connections = metrics.get("max_connections")
+                            db_instance.slow_queries = metrics.get("slow_queries")
+                            db_instance.cache_hit_ratio = metrics.get("cache_hit_ratio")
+                            db_instance.uptime_seconds = metrics.get("uptime_seconds")
+                            db_instance.version = metrics.get("version")
+                            db_instance.last_metrics_collection = datetime.now(timezone.utc)
+                            db_instance.metrics_error = None
+                            metrics_collected += 1
+                        else:
+                            db_instance.metrics_error = metrics.get("error")
+                            errors.append(f"DB metrics error for {db_instance.db_name}: {metrics.get('error')}")
+                    
+                    except Exception as e:
+                        logger.error(f"Error collecting metrics for database {db_instance.db_name}: {e}")
+                        errors.append(f"DB metrics exception: {str(e)}")
+                
                 if db_result.get("errors"):
                     errors.extend(db_result["errors"])
+                    
             except Exception as e:
                 logger.error(f"Database discovery failed: {e}")
                 errors.append(f"Database discovery error: {str(e)}")
@@ -100,8 +154,39 @@ def collect_server_data(server_id: int) -> Tuple[bool, str]:
             
             db.commit()
             
+            # Evaluate alert rules
+            triggered_alerts = 0
+            resolved_alerts = 0
+            try:
+                evaluator = AlertEvaluator(db)
+                triggered_alerts, resolved_alerts = evaluator.evaluate_all_rules()
+                
+                # Send notifications for new active alerts
+                if triggered_alerts > 0:
+                    new_alerts = db.query(models.Alert).filter(
+                        models.Alert.status == "active",
+                        models.Alert.acknowledged == False
+                    ).all()
+                    
+                    for alert in new_alerts:
+                        try:
+                            # Use Unity's notification service
+                            send_notification(
+                                title=f"Alert: {alert.message}",
+                                message=f"Severity: {alert.severity}\nTriggered at: {alert.triggered_at}",
+                                severity=alert.severity
+                            )
+                        except Exception as e:
+                            logger.error(f"Failed to send alert notification: {e}")
+                
+            except Exception as e:
+                logger.error(f"Alert evaluation failed: {e}")
+                errors.append(f"Alert evaluation error: {str(e)}")
+            
             # Build result message
-            message = f"Collected: {device_count} devices, {pool_count} pools, {db_count} databases"
+            message = f"Collected: {device_count} devices, {pool_count} pools, {db_count} databases, {metrics_collected} metrics"
+            if triggered_alerts > 0 or resolved_alerts > 0:
+                message += f"; Alerts: {triggered_alerts} triggered, {resolved_alerts} resolved"
             if errors:
                 message += f" ({len(errors)} errors)"
             

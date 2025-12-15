@@ -450,3 +450,387 @@ def get_infrastructure_stats(db: Session = Depends(get_db)):
             "instances": total_databases
         }
     }
+
+
+# ============================================================================
+# Alert Rule Management Endpoints (Phase 3.5)
+# ============================================================================
+
+@router.get("/alert-rules", response_model=List[dict])
+def list_alert_rules(
+    skip: int = 0,
+    limit: int = 100,
+    enabled: Optional[bool] = None,
+    resource_type: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """List all alert rules."""
+    query = db.query(models.AlertRule)
+    
+    if enabled is not None:
+        query = query.filter(models.AlertRule.enabled == enabled)
+    if resource_type:
+        query = query.filter(models.AlertRule.resource_type == resource_type)
+    
+    rules = query.offset(skip).limit(limit).all()
+    
+    return [
+        {
+            "id": r.id,
+            "name": r.name,
+            "description": r.description,
+            "resource_type": r.resource_type.value if r.resource_type else None,
+            "metric_name": r.metric_name,
+            "condition": r.condition.value if r.condition else None,
+            "threshold": r.threshold,
+            "severity": r.severity.value if r.severity else None,
+            "enabled": r.enabled,
+            "notification_channels": r.notification_channels,
+            "cooldown_minutes": r.cooldown_minutes,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "updated_at": r.updated_at.isoformat() if r.updated_at else None
+        }
+        for r in rules
+    ]
+
+
+@router.post("/alert-rules", response_model=dict, status_code=status.HTTP_201_CREATED)
+def create_alert_rule(
+    name: str,
+    resource_type: str,
+    metric_name: str,
+    condition: str,
+    threshold: float,
+    severity: str = "warning",
+    enabled: bool = True,
+    description: Optional[str] = None,
+    notification_channels: Optional[List[str]] = None,
+    cooldown_minutes: int = 15,
+    db: Session = Depends(get_db)
+):
+    """Create a new alert rule."""
+    try:
+        rule = models.AlertRule(
+            name=name,
+            description=description,
+            resource_type=resource_type,
+            metric_name=metric_name,
+            condition=condition,
+            threshold=threshold,
+            severity=severity,
+            enabled=enabled,
+            notification_channels=notification_channels,
+            cooldown_minutes=cooldown_minutes
+        )
+        
+        db.add(rule)
+        db.commit()
+        db.refresh(rule)
+        
+        return {"id": rule.id, "name": rule.name, "status": "created"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to create alert rule: {str(e)}"
+        )
+
+
+@router.get("/alert-rules/{rule_id}", response_model=dict)
+def get_alert_rule(rule_id: int, db: Session = Depends(get_db)):
+    """Get details of a specific alert rule."""
+    rule = db.query(models.AlertRule).filter(models.AlertRule.id == rule_id).first()
+    
+    if not rule:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Alert rule {rule_id} not found"
+        )
+    
+    return {
+        "id": rule.id,
+        "name": rule.name,
+        "description": rule.description,
+        "resource_type": rule.resource_type.value if rule.resource_type else None,
+        "metric_name": rule.metric_name,
+        "condition": rule.condition.value if rule.condition else None,
+        "threshold": rule.threshold,
+        "severity": rule.severity.value if rule.severity else None,
+        "enabled": rule.enabled,
+        "notification_channels": rule.notification_channels,
+        "cooldown_minutes": rule.cooldown_minutes,
+        "created_at": rule.created_at.isoformat() if rule.created_at else None,
+        "updated_at": rule.updated_at.isoformat() if rule.updated_at else None
+    }
+
+
+@router.patch("/alert-rules/{rule_id}", response_model=dict)
+def update_alert_rule(
+    rule_id: int,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
+    threshold: Optional[float] = None,
+    enabled: Optional[bool] = None,
+    severity: Optional[str] = None,
+    notification_channels: Optional[List[str]] = None,
+    cooldown_minutes: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    """Update an alert rule."""
+    rule = db.query(models.AlertRule).filter(models.AlertRule.id == rule_id).first()
+    
+    if not rule:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Alert rule {rule_id} not found"
+        )
+    
+    if name is not None:
+        rule.name = name
+    if description is not None:
+        rule.description = description
+    if threshold is not None:
+        rule.threshold = threshold
+    if enabled is not None:
+        rule.enabled = enabled
+    if severity is not None:
+        rule.severity = severity
+    if notification_channels is not None:
+        rule.notification_channels = notification_channels
+    if cooldown_minutes is not None:
+        rule.cooldown_minutes = cooldown_minutes
+    
+    db.commit()
+    db.refresh(rule)
+    
+    return {"id": rule.id, "name": rule.name, "status": "updated"}
+
+
+@router.delete("/alert-rules/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_alert_rule(rule_id: int, db: Session = Depends(get_db)):
+    """Delete an alert rule."""
+    rule = db.query(models.AlertRule).filter(models.AlertRule.id == rule_id).first()
+    
+    if not rule:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Alert rule {rule_id} not found"
+        )
+    
+    db.delete(rule)
+    db.commit()
+
+
+@router.post("/alert-rules/{rule_id}/test", response_model=dict)
+def test_alert_rule(rule_id: int, db: Session = Depends(get_db)):
+    """Test an alert rule evaluation."""
+    from app.services.infrastructure.alert_evaluator import AlertEvaluator
+    
+    rule = db.query(models.AlertRule).filter(models.AlertRule.id == rule_id).first()
+    
+    if not rule:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Alert rule {rule_id} not found"
+        )
+    
+    evaluator = AlertEvaluator(db)
+    triggered, resolved = evaluator.evaluate_rule(rule)
+    
+    return {
+        "rule_id": rule.id,
+        "rule_name": rule.name,
+        "triggered": triggered,
+        "resolved": resolved,
+        "message": f"Evaluated rule: {triggered} triggered, {resolved} resolved"
+    }
+
+
+@router.get("/alerts/infrastructure", response_model=List[dict])
+def list_infrastructure_alerts(
+    skip: int = 0,
+    limit: int = 100,
+    status_filter: Optional[str] = None,
+    severity: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """List infrastructure alerts."""
+    query = db.query(models.Alert).filter(
+        models.Alert.alert_rule_id.isnot(None)
+    )
+    
+    if status_filter:
+        query = query.filter(models.Alert.status == status_filter)
+    if severity:
+        query = query.filter(models.Alert.severity == severity)
+    
+    alerts = query.order_by(models.Alert.triggered_at.desc()).offset(skip).limit(limit).all()
+    
+    return [
+        {
+            "id": a.id,
+            "alert_rule_id": a.alert_rule_id,
+            "resource_type": a.resource_type,
+            "resource_id": a.resource_id,
+            "metric_name": a.message.split(":")[0] if ":" in a.message else None,
+            "metric_value": a.metric_value,
+            "threshold": a.threshold,
+            "severity": a.severity,
+            "message": a.message,
+            "status": a.status or ("resolved" if a.resolved else "active"),
+            "triggered_at": a.triggered_at.isoformat() if a.triggered_at else None,
+            "acknowledged": a.acknowledged,
+            "acknowledged_at": a.acknowledged_at.isoformat() if a.acknowledged_at else None,
+            "acknowledged_by": a.acknowledged_by,
+            "resolved": a.resolved,
+            "resolved_at": a.resolved_at.isoformat() if a.resolved_at else None
+        }
+        for a in alerts
+    ]
+
+
+@router.post("/alerts/{alert_id}/acknowledge", response_model=dict)
+def acknowledge_alert(
+    alert_id: int,
+    acknowledged_by: str = "system",
+    db: Session = Depends(get_db)
+):
+    """Acknowledge an alert."""
+    alert = db.query(models.Alert).filter(models.Alert.id == alert_id).first()
+    
+    if not alert:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Alert {alert_id} not found"
+        )
+    
+    alert.acknowledged = True
+    alert.acknowledged_at = datetime.now(timezone.utc)
+    alert.acknowledged_by = acknowledged_by
+    alert.status = "acknowledged"
+    
+    db.commit()
+    db.refresh(alert)
+    
+    return {
+        "id": alert.id,
+        "status": alert.status,
+        "acknowledged_at": alert.acknowledged_at.isoformat() if alert.acknowledged_at else None
+    }
+
+
+@router.post("/alerts/{alert_id}/resolve", response_model=dict)
+def resolve_alert(alert_id: int, db: Session = Depends(get_db)):
+    """Resolve an alert."""
+    alert = db.query(models.Alert).filter(models.Alert.id == alert_id).first()
+    
+    if not alert:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Alert {alert_id} not found"
+        )
+    
+    alert.resolved = True
+    alert.resolved_at = datetime.now(timezone.utc)
+    alert.status = "resolved"
+    
+    db.commit()
+    db.refresh(alert)
+    
+    return {
+        "id": alert.id,
+        "status": alert.status,
+        "resolved_at": alert.resolved_at.isoformat() if alert.resolved_at else None
+    }
+
+
+# ============================================================================
+# Enhanced Server Management Endpoints (Phase 3.5)
+# ============================================================================
+
+@router.post("/servers/{server_id}/test-connection", response_model=dict)
+async def test_server_connection(server_id: int, db: Session = Depends(get_db)):
+    """Test SSH connection to a server."""
+    server = db.query(models.MonitoredServer).filter(
+        models.MonitoredServer.id == server_id
+    ).first()
+    
+    if not server:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Server {server_id} not found"
+        )
+    
+    success, error = await ssh_service.test_connection(server, db)
+    
+    return {
+        "server_id": server.id,
+        "hostname": server.hostname,
+        "connection_success": success,
+        "error": error
+    }
+
+
+@router.post("/servers/bulk-enable", response_model=dict)
+def bulk_enable_monitoring(server_ids: List[int], db: Session = Depends(get_db)):
+    """Enable monitoring for multiple servers."""
+    servers = db.query(models.MonitoredServer).filter(
+        models.MonitoredServer.id.in_(server_ids)
+    ).all()
+    
+    for server in servers:
+        server.monitoring_enabled = True
+    
+    db.commit()
+    
+    return {
+        "enabled": len(servers),
+        "server_ids": [s.id for s in servers]
+    }
+
+
+@router.post("/servers/bulk-disable", response_model=dict)
+def bulk_disable_monitoring(server_ids: List[int], db: Session = Depends(get_db)):
+    """Disable monitoring for multiple servers."""
+    servers = db.query(models.MonitoredServer).filter(
+        models.MonitoredServer.id.in_(server_ids)
+    ).all()
+    
+    for server in servers:
+        server.monitoring_enabled = False
+    
+    db.commit()
+    
+    return {
+        "disabled": len(servers),
+        "server_ids": [s.id for s in servers]
+    }
+
+
+# ============================================================================
+# Scheduler Control Endpoints (Phase 3.5)
+# ============================================================================
+
+@router.post("/scheduler/trigger-collection", response_model=dict)
+def trigger_collection():
+    """Manually trigger infrastructure data collection for all servers."""
+    results = collect_all_servers()
+    return results
+
+
+@router.get("/scheduler/status", response_model=dict)
+def get_scheduler_status():
+    """Get scheduler status and job information."""
+    # This would need to integrate with APScheduler to get real status
+    # For now, return a simple status
+    return {
+        "status": "running",
+        "jobs": [
+            {
+                "id": "infrastructure_collection",
+                "name": "Infrastructure Data Collection",
+                "interval": "5 minutes",
+                "enabled": True
+            }
+        ]
+    }
