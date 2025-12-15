@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Form
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -120,3 +120,17 @@ async def admin_reset_password(
     db.commit()
 
     return {"message": f"Password reset successfully for user {target_user.username}"}
+
+
+@router.post("/test-login")
+async def test_login(username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+    """Debug endpoint to test login"""
+    user = AuthService.get_user_by_username(db, username=username)
+    
+    return {
+        "user_exists": user is not None,
+        "username_received": username,
+        "password_length": len(password),
+        "user_is_active": user.is_active if user else None,
+        "password_matches": AuthService.verify_password(password, user.hashed_password) if user else False
+    }
