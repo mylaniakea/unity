@@ -832,3 +832,93 @@ async def get_distribution_status(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+# ============================================================
+# Certificate Auto-Renewal Endpoints  
+# ============================================================
+
+from app.services.credentials.cert_providers import CertificateRenewalService, get_provider
+
+@router.post("/certificates/{cert_id}/renew-acme")
+async def renew_certificate_acme(
+    cert_id: int,
+    provider: str = "letsencrypt",
+    email: Optional[str] = None,
+    use_staging: bool = False,
+    request: Request = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Auto-renew certificate using ACME provider (Let's Encrypt, ZeroSSL).
+    
+    Providers:
+    - letsencrypt: Free, rate-limited
+    - zerossl: Free alternative with higher limits
+    - self-signed: For testing only
+    
+    Requires certbot installed on server.
+    """
+    try:
+        result = CertificateRenewalService.renew_certificate_acme(
+            db=db,
+            cert_id=cert_id,
+            encryption_service=encryption_service,
+            provider_name=provider,
+            email=email,
+            use_staging=use_staging
+        )
+        
+        # Audit log
+        if result["success"]:
+            ip_address, user_agent = get_client_info(request)
+            audit_certificate_renewed(db, cert_id, current_user.id, ip_address, user_agent)
+        
+        return result
+        
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.get("/certificates/renewal-status")
+async def get_renewal_status(
+    days: int = 30,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get list of certificates expiring soon that need renewal.
+    
+    Returns certificates expiring within the specified days.
+    """
+    expiring = CertificateRenewalService.check_expiring_certificates(
+        db=db,
+        days_threshold=days
+    )
+    
+    return {
+        "expiring_count": len(expiring),
+        "days_threshold": days,
+        "certificates": expiring
+    }
+
+
+@router.get("/providers")
+async def list_providers(
+    current_user: User = Depends(get_current_user)
+):
+    """List available certificate providers"""
+    from app.services.credentials.cert_providers import PROVIDERS
+    
+    return {
+        "providers": list(PROVIDERS.keys()),
+        "default": "letsencrypt",
+        "description": {
+            "letsencrypt": "Free ACME provider with rate limits",
+            "zerossl": "Free ACME provider with higher limits",
+            "self-signed": "Self-signed certificates for testing"
+        }
+    }
