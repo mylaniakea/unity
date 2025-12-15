@@ -834,3 +834,67 @@ def get_scheduler_status():
             }
         ]
     }
+
+
+# ============================================================================
+# Health Check Endpoint (Phase 6)
+# ============================================================================
+
+@router.get("/health/detailed", response_model=dict)
+def detailed_health_check(db: Session = Depends(get_db)):
+    """Detailed health check for infrastructure monitoring system."""
+    from datetime import datetime, timezone
+    
+    try:
+        # Check database connectivity
+        db.execute("SELECT 1")
+        db_status = "connected"
+    except Exception as e:
+        db_status = f"error: {str(e)}"
+    
+    # Get infrastructure statistics
+    try:
+        total_servers = db.query(models.MonitoredServer).count()
+        online_servers = db.query(models.MonitoredServer).filter(
+            models.MonitoredServer.status == models.ServerStatus.ONLINE
+        ).count()
+        enabled_servers = db.query(models.MonitoredServer).filter(
+            models.MonitoredServer.monitoring_enabled == True
+        ).count()
+        
+        active_alerts = db.query(models.Alert).filter(
+            models.Alert.status == "active"
+        ).count()
+        
+        alert_rules = db.query(models.AlertRule).filter(
+            models.AlertRule.enabled == True
+        ).count()
+        
+        infrastructure_stats = {
+            "servers": {
+                "total": total_servers,
+                "online": online_servers,
+                "monitoring_enabled": enabled_servers
+            },
+            "alerts": {
+                "active": active_alerts,
+                "rules_enabled": alert_rules
+            },
+            "storage": {
+                "devices": db.query(models.StorageDevice).count(),
+                "pools": db.query(models.StoragePool).count()
+            },
+            "databases": {
+                "instances": db.query(models.DatabaseInstance).count()
+            }
+        }
+    except Exception as e:
+        infrastructure_stats = {"error": str(e)}
+    
+    return {
+        "status": "healthy" if db_status == "connected" else "degraded",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "database": db_status,
+        "infrastructure": infrastructure_stats,
+        "version": "1.0.0"
+    }

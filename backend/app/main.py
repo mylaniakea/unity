@@ -30,7 +30,13 @@ print("Python sys.path:", sys.path, flush=True)
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Unity - Homelab Intelligence Hub")
+app = FastAPI(
+    title="Unity - Homelab Intelligence Hub",
+    description="Unified infrastructure monitoring and automation platform with credential management, alerting, and plugin architecture",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
 
 # Configure CORS
 app.add_middleware(
