@@ -8,7 +8,7 @@ from cryptography.fernet import Fernet
 from typing import Optional
 
 
-class EncryptionManager:
+class EncryptionService:
     """Manages encryption and decryption of sensitive data."""
     
     def __init__(self, key: bytes):
@@ -57,21 +57,21 @@ class EncryptionManager:
 
 
 # Global encryption manager instance
-_encryption_manager: Optional[EncryptionManager] = None
+_encryption_manager: Optional[EncryptionService] = None
 
 
-def get_encryption_manager() -> EncryptionManager:
+def get_encryption_manager() -> EncryptionService:
     """
     Get the global encryption manager instance (singleton pattern).
     
     Returns:
-        EncryptionManager instance
+        EncryptionService instance
     """
     global _encryption_manager
     if _encryption_manager is None:
         from .config import get_settings
         settings = get_settings()
-        _encryption_manager = EncryptionManager(settings.encryption_key.encode())
+        _encryption_manager = EncryptionService(settings.encryption_key.encode())
     return _encryption_manager
 
 

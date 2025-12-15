@@ -202,7 +202,7 @@ class Plugin(Base):
     external = Column(Boolean, default=False)  # True for external plugins, False for built-in
     
     # Plugin metadata and config
-    metadata = Column(JSONB, default={})  # Full plugin metadata
+    plugin_metadata = Column(JSONB, default={})  # Full plugin metadata
     config = Column(JSONB, default={})  # Plugin-specific configuration
     
     # Health and status tracking

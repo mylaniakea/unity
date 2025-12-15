@@ -109,7 +109,7 @@ class PluginManager:
                     db_plugin.category = metadata.category.value
                     db_plugin.description = metadata.description
                     db_plugin.author = metadata.author
-                    db_plugin.metadata = metadata.dict()
+                    db_plugin.plugin_metadata = metadata.dict()
                     db_plugin.updated_at = datetime.utcnow()
                     logger.info(f"Updated plugin metadata: {plugin_id}")
                     
@@ -393,7 +393,7 @@ class PluginManager:
             "author": plugin.author,
             "enabled": plugin.enabled,
             "external": plugin.external,
-            "metadata": plugin.metadata,
+            "metadata": plugin.plugin_metadata,
             "config": plugin.config,
             "health_status": plugin.health_status,
             "health_message": plugin.health_message,
