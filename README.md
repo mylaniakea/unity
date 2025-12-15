@@ -1,5 +1,9 @@
 # Unity - Homelab Intelligence Hub
 
+> ⚠️ **PUBLIC REPOSITORY WARNING**  
+> This repository is PUBLIC. Never commit secrets, API keys, passwords, or personal information.  
+> See [PUBLIC-REPO-SECURITY.md](./PUBLIC-REPO-SECURITY.md) for guidelines.
+
 **Unity** is the unified homelab intelligence platform that brings together monitoring, automation, and management into a single, extensible hub with a plugin architecture.
 
 ## What is Unity?
@@ -31,14 +35,14 @@ Unity uses a plugin-based architecture where:
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/mylaniakea/unity.git
    cd unity
    ```
 
 2. **Set up environment**
    ```bash
    cp .env.example .env
-   # Edit .env with your settings
+   # Edit .env with your settings - NEVER commit this file!
    ```
 
 3. **Start services**
@@ -86,7 +90,7 @@ unity/
 │   │   ├── models.py     # Database models
 │   │   ├── routers/      # API endpoints
 │   │   ├── services/     # Business logic
-│   │   └── plugins/      # Plugin system (NEW)
+│   │   └── plugins/      # Plugin system
 │   └── requirements.txt
 ├── frontend/             # React frontend
 │   ├── src/
@@ -100,11 +104,13 @@ unity/
 
 ## Current Status
 
-🚧 **In Active Development** - Implementing plugin architecture (Phase 1-2)
+🚧 **Phase 1 Complete** - Plugin architecture implemented and ready for testing
 
 - ✅ Core monitoring and auth system
-- 🚧 Plugin architecture foundation
-- 🚧 KC-Booth credential management integration
+- ✅ Plugin architecture foundation
+- ✅ Security layer (JWT, API keys, validation, rate limiting)
+- ✅ Example plugin (system-info)
+- 🚧 KC-Booth credential management integration (in progress)
 - 📋 Plugin SDK development
 - 📋 External plugin support (bd-store, uptainer)
 
@@ -115,6 +121,7 @@ See [HUB-IMPLEMENTATION-PLAN.md](./HUB-IMPLEMENTATION-PLAN.md) for detailed road
 ### Current Features
 - **Authentication & RBAC** - JWT-based auth with role-based access control
 - **System Monitoring** - CPU, memory, disk, network metrics
+- **Plugin System** - Extensible architecture for built-in and external plugins
 - **Terminal Access** - Web-based SSH terminal
 - **Alert System** - Configurable thresholds and notifications
 - **AI Integration** - Intelligent insights and recommendations
@@ -135,16 +142,18 @@ See the Plugin SDK documentation (coming soon) for creating custom plugins.
 
 Built-in plugins follow this structure:
 ```python
-from app.plugins.base import PluginBase
+from app.plugins.base import PluginBase, PluginMetadata, PluginCategory
 
 class MyPlugin(PluginBase):
     def get_metadata(self):
-        return {
-            "id": "my-plugin",
-            "name": "My Plugin",
-            "version": "1.0.0",
-            "category": "monitoring"
-        }
+        return PluginMetadata(
+            id="my-plugin",
+            name="My Plugin",
+            version="1.0.0",
+            description="My plugin description",
+            author="Your Name",
+            category=PluginCategory.SYSTEM
+        )
     
     async def collect_data(self):
         # Collect and return data
@@ -162,6 +171,28 @@ pytest
 cd frontend
 npm test
 ```
+
+## Security
+
+### Public Repository Considerations
+
+This is a **PUBLIC repository**. Please review [PUBLIC-REPO-SECURITY.md](./PUBLIC-REPO-SECURITY.md) before committing:
+
+- ✅ Never commit secrets, API keys, or passwords
+- ✅ Use environment variables for all sensitive config
+- ✅ Keep `.env` files out of git (use `.env.example` instead)
+- ✅ Review diffs before committing
+
+### Security Features
+
+- JWT authentication with RBAC
+- API key authentication for external plugins
+- Input validation and sanitization
+- Rate limiting
+- Audit logging
+- Encrypted credential storage
+
+See [SECURITY.md](./SECURITY.md) for details.
 
 ## Contributing
 
