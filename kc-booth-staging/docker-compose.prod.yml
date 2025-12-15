@@ -1,0 +1,105 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: kc-booth-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - certbot-webroot:/var/www/certbot:ro
+      - nginx-logs:/var/log/nginx
+    depends_on:
+      - api
+    networks:
+      - kc-booth-net
+
+  db:
+    image: postgres:16-alpine
+    container_name: kc-booth-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-kc-booth-db}
+      POSTGRES_USER: ${POSTGRES_USER:-kc-booth-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    # Do NOT expose port 5432 to host in production for security
+    networks:
+      - kc-booth-net
+    # Enable SSL/TLS for PostgreSQL
+    command: >
+      postgres
+      -c ssl=on
+      -c ssl_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem
+      -c ssl_key_file=/etc/ssl/private/ssl-cert-snakeoil.key
+
+  api:
+    build:
+      context: .
+      args:
+        APP_ENV: production
+    container_name: kc-booth-api
+    restart: unless-stopped
+    environment:
+      - PYTHONPATH=/app
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=prefer
+      - STEP_PROVISIONER_PASSWORD=${STEP_PROVISIONER_PASSWORD:?STEP_PROVISIONER_PASSWORD must be set}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:?ENCRYPTION_KEY must be set}
+      - DISABLE_AUTH=${DISABLE_AUTH:-false}
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --workers 4
+    depends_on:
+      - db
+      - step-ca
+    networks:
+      - kc-booth-net
+    # Add health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"\]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  step-ca:
+    image: smallstep/step-ca
+    container_name: kc-booth-step-ca
+    restart: unless-stopped
+    environment:
+      - DOCKER_STEPCA_INIT_NAME=kc-booth-ca
+      - DOCKER_STEPCA_INIT_DNS=step-ca,localhost
+      - DOCKER_STEPCA_INIT_ADDRESS=:9000
+      - DOCKER_STEPCA_INIT_PROVISIONER=admin
+      - DOCKER_STEPCA_INIT_PROVISIONER_PASSWORD=${STEP_PROVISIONER_PASSWORD}
+    volumes:
+      - step-ca-data:/home/step
+    command:
+      - "step-ca"
+      - "/home/step/config/ca.json"
+    networks:
+      - kc-booth-net
+
+  # Optional: Certbot for Let's Encrypt
+  certbot:
+    image: certbot/certbot
+    container_name: kc-booth-certbot
+    volumes:
+      - ./nginx/ssl:/etc/letsencrypt
+      - certbot-webroot:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - kc-booth-net
+
+volumes:
+  postgres-data:
+  step-ca-data:
+  certbot-webroot:
+  nginx-logs:
+
+networks:
+  kc-booth-net:
+    driver: bridge
