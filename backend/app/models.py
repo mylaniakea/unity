@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey
 from sqlalchemy import JSON
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship # Import relationship for ORM
 from app.database import Base
@@ -19,13 +20,13 @@ class ServerProfile(Base):
     use_local_agent = Column(Boolean, default=False)
     
     # Data Plugins
-    enabled_plugins = Column(JSON, default=[])   # List of enabled plugin IDs ["lm-sensors", "smartctl"]
-    detected_plugins = Column(JSON, default={})  # Detected plugins with status {"lm-sensors": True, "smartctl": False}
+    enabled_plugins = Column(JSON().with_variant(JSONB, "postgresql"), default=[])   # List of enabled plugin IDs ["lm-sensors", "smartctl"]
+    detected_plugins = Column(JSON().with_variant(JSONB, "postgresql"), default={})  # Detected plugins with status {"lm-sensors": True, "smartctl": False}
     
     # Store complex data as JSON for PostgreSQL
-    hardware_info = Column(JSON, default={})
-    os_info = Column(JSON, default={})
-    packages = Column(JSON, default=[])
+    hardware_info = Column(JSON().with_variant(JSONB, "postgresql"), default={})
+    os_info = Column(JSON().with_variant(JSONB, "postgresql"), default={})
+    packages = Column(JSON().with_variant(JSONB, "postgresql"), default=[])
     
     # Metadata
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -40,7 +41,7 @@ class Settings(Base):
     id = Column(Integer, primary_key=True, index=True) # Singleton, always ID 1
     
     # Store provider keys/configs securely (encrypted in future, plain for now)
-    providers = Column(JSON, default={
+    providers = Column(JSON().with_variant(JSONB, "postgresql"), default={
         "ollama": {"url": "http://host.docker.internal:11434", "enabled": True},
         "openai": {"api_key": "", "enabled": False},
         "anthropic": {"api_key": "", "enabled": False},
@@ -73,7 +74,7 @@ class Report(Base):
     report_type = Column(String, index=True) # e.g., "24-hour", "7-day", "monthly"
     start_time = Column(DateTime(timezone=True), index=True)
     end_time = Column(DateTime(timezone=True), index=True)
-    aggregated_data = Column(JSON, default={}) # Store aggregated metrics, charts data etc.
+    aggregated_data = Column(JSON().with_variant(JSONB, "postgresql"), default={}) # Store aggregated metrics, charts data etc.
     generated_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationship to ServerProfile
@@ -86,7 +87,7 @@ class KnowledgeItem(Base):
     title = Column(String, index=True)
     content = Column(Text)
     category = Column(String, index=True) # network, hardware, manual
-    tags = Column(JSON, default=[]) # Use JSON for tags
+    tags = Column(JSON().with_variant(JSONB, "postgresql"), default=[]) # Use JSON for tags
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -96,7 +97,7 @@ class ServerSnapshot(Base):
     id = Column(Integer, primary_key=True, index=True)
     server_id = Column(Integer, ForeignKey('server_profiles.id'), index=True)
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
-    data = Column(JSON, default={}) # Comprehensive snapshot data
+    data = Column(JSON().with_variant(JSONB, "postgresql"), default={}) # Comprehensive snapshot data
 
     server_profile = relationship("ServerProfile", backref="snapshots")
 
@@ -143,7 +144,7 @@ class AlertChannel(Base):
     name = Column(String, index=True) # e.g., "SMTP", "Telegram", "ntfy"
     channel_type = Column(String, index=True) # "smtp", "telegram", "ntfy", "discord", "slack", "pushover"
     enabled = Column(Boolean, default=False)
-    config = Column(JSON, default={}) # Channel-specific configuration
+    config = Column(JSON().with_variant(JSONB, "postgresql"), default={}) # Channel-specific configuration
     template = Column(Text, nullable=True) # New: Customizable message template for the channel
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -202,8 +203,8 @@ class Plugin(Base):
     external = Column(Boolean, default=False)  # True for external plugins, False for built-in
     
     # Plugin metadata and config
-    plugin_metadata = Column(JSON, default={})  # Full plugin metadata
-    config = Column(JSON, default={})  # Plugin-specific configuration
+    plugin_metadata = Column(JSON().with_variant(JSONB, "postgresql"), default={})  # Full plugin metadata
+    config = Column(JSON().with_variant(JSONB, "postgresql"), default={})  # Plugin-specific configuration
     
     # Health and status tracking
     last_health_check = Column(DateTime(timezone=True), nullable=True)
@@ -227,7 +228,7 @@ class PluginMetric(Base):
     id = Column(Integer, primary_key=True, index=True)
     plugin_id = Column(String(100), ForeignKey('plugins.id'), nullable=False, index=True)
     timestamp = Column(DateTime(timezone=True), nullable=False, index=True, server_default=func.now())
-    data = Column(JSON, nullable=False)  # The actual metrics data
+    data = Column(JSON().with_variant(JSONB, "postgresql"), nullable=False)  # The actual metrics data
     
     # Relationship
     plugin = relationship("Plugin", back_populates="metrics")
@@ -266,7 +267,7 @@ class PluginAPIKey(Base):
     name = Column(String(255), nullable=True)  # Descriptive name for the key
     
     # Permissions and restrictions
-    permissions = Column(JSON, default=["report_metrics", "update_health", "get_config"])
+    permissions = Column(JSON().with_variant(JSONB, "postgresql"), default=["report_metrics", "update_health", "get_config"])
     
     # Usage tracking
     last_used = Column(DateTime(timezone=True), nullable=True)
@@ -328,7 +329,7 @@ class Certificate(Base):
     
     # Certificate metadata
     common_name = Column(String(255), nullable=True)
-    subject_alt_names = Column(JSON, default=[])  # List of SANs
+    subject_alt_names = Column(JSON().with_variant(JSONB, "postgresql"), default=[])  # List of SANs
     issuer = Column(String(255), nullable=True)
     
     # Validity
@@ -431,6 +432,6 @@ class CredentialAuditLog(Base):
     user_agent = Column(String(500), nullable=True)
     
     # Details
-    details = Column(JSON, default={})  # Additional context
+    details = Column(JSON().with_variant(JSONB, "postgresql"), default={})  # Additional context
     success = Column(Boolean, default=True)
     error_message = Column(Text, nullable=True)
