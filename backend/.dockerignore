@@ -5,3 +5,20 @@ __pycache__
 *.pyc
 *.log
 data/
+
+# Test files (not needed in production)
+tests/
+pytest.ini
+.pytest_cache/
+
+# Scripts (dev/CI only)
+scripts/
+
+# Old models backup
+app/models_old.py
+
+# Alembic (migrations run separately)
+alembic/
+
+# Virtual environment
+.venv/
