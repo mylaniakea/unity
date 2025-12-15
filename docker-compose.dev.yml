@@ -47,6 +47,7 @@ services:
     ports:
       - "80:80"
       - "5173:5173"  # Vite dev server
+      - "8080:80"
     volumes:
       - ./frontend:/app
       - /app/node_modules
