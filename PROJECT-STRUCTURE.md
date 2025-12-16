@@ -1,260 +1,340 @@
 # Unity Project Structure
 
-## Overview
-Unity is a monorepo containing a FastAPI backend and React frontend for homelab intelligence and monitoring.
+**Version**: 2.0 (Post-Refactoring)  
+**Last Updated**: December 16, 2025
 
-## Directory Layout
+## Overview
+
+This document provides a complete reference for the Unity codebase structure after the comprehensive refactoring completed in December 2025.
+
+## Directory Tree
 
 ```
 unity/
 ├── backend/                    # FastAPI backend application
-│   ├── app/
-│   │   ├── main.py            # FastAPI application entry point
-│   │   ├── database.py        # Database connection and session management
-│   │   ├── models/            # SQLAlchemy ORM models (organized by domain)
-│   │   │   ├── __init__.py    # Exports all models for backward compatibility
-│   │   │   ├── core.py        # Core business models (ServerProfile, Settings, etc.)
-│   │   │   ├── monitoring.py  # Monitoring models (ThresholdRule, Alert, etc.)
-│   │   │   ├── users.py       # User and authentication models
-│   │   │   ├── plugins.py     # Plugin system models
-│   │   │   ├── credentials.py # Credential management models
-│   │   │   ├── infrastructure.py  # Infrastructure monitoring models
-│   │   │   ├── alert_rules.py # Alert rule definitions
-│   │   │   └── error_tracking.py  # Collection error tracking
-│   │   ├── routers/           # FastAPI route handlers
-│   │   │   ├── profiles.py    # Server profile management
-│   │   │   ├── knowledge.py   # Knowledge base operations
-│   │   │   ├── reports.py     # Report generation
-│   │   │   ├── plugins*.py    # Plugin API endpoints
-│   │   │   ├── credentials.py # Credential management
-│   │   │   └── infrastructure.py  # Infrastructure monitoring (45+ endpoints)
-│   │   ├── services/          # Business logic services
-│   │   │   ├── infrastructure/    # Infrastructure monitoring services (10 services)
-│   │   │   │   ├── ssh_service.py         # SSH connection management
-│   │   │   │   ├── collection_task.py     # Data collection orchestration
-│   │   │   │   ├── server_discovery.py    # Server discovery
-│   │   │   │   ├── storage_discovery.py   # Storage device discovery
-│   │   │   │   ├── pool_discovery.py      # Storage pool discovery
-│   │   │   │   ├── database_discovery.py  # Database discovery
-│   │   │   │   ├── mdadm_discovery.py     # RAID discovery
-│   │   │   │   ├── mysql_metrics.py       # MySQL metrics collection
-│   │   │   │   ├── postgres_metrics.py    # PostgreSQL metrics collection
-│   │   │   │   ├── alert_evaluator.py     # Alert rule evaluation
-│   │   │   │   └── data_retention.py      # Data retention policies
-│   │   │   ├── credentials/       # Credential services
-│   │   │   │   └── encryption.py  # Encryption/decryption service
-│   │   │   └── notification_service.py    # Multi-channel notifications
-│   │   ├── utils/             # Utility functions and parsers
-│   │   │   └── parsers.py     # System output parsers (lsblk, smartctl, etc.)
-│   │   ├── schedulers/        # Background task schedulers
-│   │   │   ├── snapshot_tasks.py          # Snapshot scheduling
-│   │   │   └── infrastructure_tasks.py    # Infrastructure collection scheduling
-│   │   └── schemas_*.py       # Pydantic request/response schemas
-│   ├── tests/                 # Test suite
-│   │   ├── conftest.py        # Pytest fixtures and configuration
-│   │   ├── test_infrastructure_models.py  # Infrastructure model tests
-│   │   └── test_alert_evaluator.py        # Alert evaluator tests
-│   ├── scripts/               # Utility scripts
-│   │   ├── validate_imports.py    # Import validation
-│   │   ├── split_models.py        # Model refactoring script
-│   │   └── generate_encryption_key.py  # Key generation
-│   ├── data/                  # Data directory (SQLite removed, now PostgreSQL)
-│   ├── Dockerfile             # Backend container definition
+│   ├── app/                   # Main application code
+│   │   ├── core/              # Core configuration and database
+│   │   │   ├── __init__.py
+│   │   │   ├── config.py      # Centralized settings (30+ options)
+│   │   │   └── database.py    # SQLAlchemy setup
+│   │   │
+│   │   ├── models/            # SQLAlchemy ORM models (9 modules)
+│   │   │   ├── __init__.py
+│   │   │   ├── core.py        # Core entities
+│   │   │   ├── users.py
+│   │   │   ├── monitoring.py
+│   │   │   ├── infrastructure.py
+│   │   │   ├── containers.py
+│   │   │   ├── credentials.py
+│   │   │   ├── plugins.py
+│   │   │   ├── alert_rules.py
+│   │   │   └── error_tracking.py
+│   │   │
+│   │   ├── schemas/           # Pydantic validation schemas (9 modules)
+│   │   │   ├── __init__.py
+│   │   │   ├── core.py
+│   │   │   ├── users.py
+│   │   │   ├── alerts.py
+│   │   │   ├── credentials.py
+│   │   │   ├── knowledge.py
+│   │   │   ├── notifications.py
+│   │   │   ├── plugins.py
+│   │   │   └── reports.py
+│   │   │
+│   │   ├── services/          # Business logic layer (7 modules)
+│   │   │   ├── auth/
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── auth_service.py
+│   │   │   ├── monitoring/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── threshold_monitor.py
+│   │   │   │   ├── alert_channels.py
+│   │   │   │   ├── notification_service.py
+│   │   │   │   └── push_notifications.py
+│   │   │   ├── plugins/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── plugin_manager.py
+│   │   │   │   ├── plugin_registry.py
+│   │   │   │   └── plugin_security.py
+│   │   │   ├── core/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── snapshot_service.py
+│   │   │   │   ├── system_info.py
+│   │   │   │   ├── report_generation.py
+│   │   │   │   ├── ssh.py
+│   │   │   │   └── encryption.py
+│   │   │   ├── ai/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── ai.py
+│   │   │   │   └── ai_provider.py
+│   │   │   ├── containers/    # Container management services
+│   │   │   ├── credentials/   # Credential management services
+│   │   │   └── infrastructure/ # Infrastructure monitoring services
+│   │   │
+│   │   ├── routers/           # FastAPI route definitions
+│   │   │   ├── plugins/       # Plugin API endpoints (4 routers)
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── legacy.py  # v1 API
+│   │   │   │   ├── v2.py      # v2 API
+│   │   │   │   ├── v2_secure.py # Production v2 API
+│   │   │   │   └── keys.py    # API key management
+│   │   │   ├── monitoring/    # Monitoring endpoints (3 routers)
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── alerts.py
+│   │   │   │   ├── thresholds.py
+│   │   │   │   └── push.py
+│   │   │   ├── auth.py        # Authentication
+│   │   │   ├── users.py
+│   │   │   ├── profiles.py
+│   │   │   ├── system.py
+│   │   │   ├── ai.py
+│   │   │   ├── settings.py
+│   │   │   ├── reports.py
+│   │   │   ├── knowledge.py
+│   │   │   ├── terminal.py
+│   │   │   ├── containers.py
+│   │   │   ├── credentials.py
+│   │   │   └── infrastructure.py
+│   │   │
+│   │   ├── utils/             # Utility functions
+│   │   │   ├── __init__.py
+│   │   │   └── parsers.py     # System command parsers
+│   │   │
+│   │   ├── schedulers/        # Background job schedulers
+│   │   │   ├── container_tasks.py
+│   │   │   ├── credential_tasks.py
+│   │   │   └── infrastructure_tasks.py
+│   │   │
+│   │   ├── plugins/           # Plugin system
+│   │   │   ├── base.py
+│   │   │   ├── hub_client.py
+│   │   │   ├── loader.py
+│   │   │   └── builtin/       # Built-in plugins
+│   │   │
+│   │   └── main.py            # FastAPI application entry point
+│   │
+│   ├── tests/                 # Test suite (48 tests)
+│   │   ├── conftest.py        # Test fixtures
+│   │   ├── pytest.ini         # Pytest configuration
+│   │   ├── README.md          # Testing documentation
+│   │   ├── test_core_config.py
+│   │   ├── test_api_endpoints.py
+│   │   ├── test_alert_evaluator.py
+│   │   ├── test_infrastructure_models.py
+│   │   └── test_containers/
+│   │       ├── test_models.py
+│   │       └── test_api.py
+│   │
+│   ├── alembic/               # Database migrations
 │   ├── requirements.txt       # Python dependencies
-│   └── .dockerignore          # Docker build exclusions
-├── frontend/                  # React/TypeScript frontend
+│   ├── Dockerfile
+│   └── .dockerignore
+│
+├── frontend/                  # React frontend (Vue in transition)
+│   ├── public/
 │   ├── src/
-│   │   ├── App.tsx            # Main application component
-│   │   ├── components/        # React components
-│   │   ├── pages/             # Page components
-│   │   ├── hooks/             # Custom React hooks
-│   │   └── utils/             # Frontend utilities
-│   ├── public/                # Static assets
-│   ├── nginx/                 # Nginx configuration
-│   ├── Dockerfile             # Frontend container definition
-│   ├── package.json           # Node.js dependencies
-│   └── vite.config.ts         # Vite build configuration
-├── bd-store-staging/          # BD-Store reference codebase (for integration)
-├── kc-booth-staging/          # KC-Booth reference codebase (integrated)
-├── docker-compose.yml         # Production Docker Compose
-├── docker-compose.dev.yml     # Development Docker Compose (hot-reload)
-├── .env                       # Environment variables (not in git)
-├── .env.example               # Environment variable template
-├── .gitignore                 # Git exclusions
-├── README.md                  # Project overview
-├── START_HERE.md              # Getting started guide
-├── CONTRIBUTING.md            # Development guidelines
-├── DOCKER.md                  # Docker usage guide
-├── PHASE-3-COMPLETE.md        # Phase 3 completion summary
-├── PROJECT-STRUCTURE.md       # This file
-├── SECURITY.md                # Security documentation
-├── TESTING-GUIDE.md           # Testing documentation
-└── README_ALEMBIC.md          # Database migration guide
+│   └── package.json
+│
+├── wiki/                      # GitHub wiki content
+│   ├── Home.md
+│   ├── API-Documentation.md
+│   └── Setup-Guide.md
+│
+├── docs/                      # Additional documentation
+│   └── [various docs]
+│
+├── scripts/                   # Utility scripts
+│   └── push-wiki.sh
+│
+├── docker-compose.yml         # Docker orchestration
+├── .gitignore
+├── .env.example              # Environment template
+│
+└── Documentation Files
+    ├── README.md              # Main project README
+    ├── ARCHITECTURE.md        # Architecture documentation (NEW)
+    ├── PROJECT-STRUCTURE.md   # This file (NEW)
+    ├── MIGRATION_GUIDE.md     # Migration guide (NEW)
+    ├── CONTRIBUTING.md        # Development guidelines
+    ├── REFACTORING_PROGRESS.md # Refactoring history
+    ├── SESSION_SUMMARY.md     # Latest session summary
+    ├── ROADMAP.md             # Development roadmap
+    └── PHASE7_VALIDATION.md   # Validation report
 ```
 
-## Key Patterns
+## Module Details
 
-### Models (Domain-Driven Design)
-Models are organized by domain:
-- **core.py**: Business entities (ServerProfile, Settings, Report, etc.)
-- **monitoring.py**: Monitoring and alerting (ThresholdRule, Alert, etc.)
-- **users.py**: Authentication and users
-- **plugins.py**: Plugin system
-- **credentials.py**: Secure credential storage
-- **infrastructure.py**: Infrastructure resources (servers, storage, databases)
-- **alert_rules.py**: Alert rule definitions
+### Core Module (`app/core/`)
 
-### Services (Business Logic Layer)
-Services contain business logic and are organized by functionality:
-- **infrastructure/**: 10 services for infrastructure monitoring
-- **credentials/**: Credential encryption/decryption
-- **notification_service.py**: Multi-channel notifications (SMTP, Telegram, etc.)
+**Purpose**: Fundamental application configuration
 
-### Routers (API Layer)
-Routers define FastAPI endpoints and handle HTTP requests:
-- Each router corresponds to a major feature area
-- **infrastructure.py** has 45+ endpoints for infrastructure monitoring
+| File | Purpose | Key Features |
+|------|---------|--------------|
+| `config.py` | Settings management | 30+ config options, env var support, type-safe |
+| `database.py` | Database setup | SQLAlchemy engine, session factory, Base model |
 
-### Utils (Shared Utilities)
-- **parsers.py**: Parse system command output (lsblk, smartctl, zpool, etc.)
+### Models Module (`app/models/`)
 
-### Schedulers (Background Tasks)
-- **snapshot_tasks.py**: Scheduled snapshots
-- **infrastructure_tasks.py**: 5-minute infrastructure collection cycle
+**Purpose**: Database schema definitions
 
-## Database
+| File | Entities | Purpose |
+|------|----------|---------|
+| `core.py` | ServerProfile, KnowledgeBase | Core entities |
+| `users.py` | User | Authentication |
+| `monitoring.py` | Alert, AlertRule, ThresholdRule | Monitoring system |
+| `infrastructure.py` | MonitoredServer, StorageDevice, NetworkInterface | Infrastructure tracking |
+| `containers.py` | Container, ContainerImage | Container management |
+| `credentials.py` | Credential, Certificate | Secure storage |
+| `plugins.py` | Plugin, PluginMetric, PluginAPIKey | Plugin system |
+| `alert_rules.py` | AlertRule, AlertCondition | Alert configuration |
+| `error_tracking.py` | ErrorLog | Error tracking |
 
-- **Production**: PostgreSQL 16 (via Docker)
-- **Development**: PostgreSQL 16 (via Docker)
-- **Migrations**: Alembic (configured, see README_ALEMBIC.md)
-- **ORM**: SQLAlchemy 2.0
+### Schemas Module (`app/schemas/`)
+
+**Purpose**: Request/response validation
+
+Mirrors model organization for consistency. Each schema module contains:
+- Request schemas (Create, Update)
+- Response schemas
+- List/pagination schemas
+
+### Services Module (`app/services/`)
+
+**Purpose**: Business logic implementation
+
+| Module | Files | Purpose |
+|--------|-------|---------|
+| `auth/` | auth_service.py | JWT, password hashing |
+| `monitoring/` | 4 files | Alerts, notifications, thresholds |
+| `plugins/` | 3 files | Plugin lifecycle, security |
+| `core/` | 5 files | Snapshots, reports, SSH, encryption |
+| `ai/` | 2 files | AI integration |
+| `containers/` | Multiple | Container management |
+| `credentials/` | Multiple | Credential management |
+| `infrastructure/` | Multiple | Infrastructure monitoring |
+
+### Routers Module (`app/routers/`)
+
+**Purpose**: API endpoint definitions
+
+**Organized Routers**:
+- `plugins/` - 4 plugin API versions
+- `monitoring/` - 3 monitoring endpoints
+
+**Flat Routers**: 12 single-purpose routers (auth, users, profiles, etc.)
+
+### Utils Module (`app/utils/`)
+
+**Purpose**: Reusable utilities
+
+Currently contains parsers for:
+- lsblk (block devices)
+- smartctl (SMART data)
+- nvme (NVMe metrics)
+- zpool (ZFS pools)
+- lvm (LVM volumes)
+
+### Tests Module (`backend/tests/`)
+
+**Purpose**: Automated testing
+
+- 48 tests total
+- Comprehensive fixtures in conftest.py
+- Test markers for organization (unit, api, smoke, etc.)
+- Full testing documentation in README.md
+
+## Import Patterns
+
+### Correct Import Examples
+
+```python
+# Core
+from app.core.config import settings
+from app.core.database import get_db, Base
+
+# Models
+from app import models
+from app.models import User, Plugin
+
+# Schemas
+from app.schemas.users import UserCreate, UserResponse
+from app.schemas.plugins import PluginInfo
+
+# Services
+from app.services.auth.auth_service import create_access_token
+from app.services.plugins.plugin_manager import PluginManager
+
+# Routers (in main.py)
+from app.routers import auth, users, profiles
+from app.routers.plugins import legacy, v2_secure, keys
+from app.routers.monitoring import alerts, thresholds, push
+
+# Utils
+from app.utils import LsblkParser, SmartctlParser
+```
+
+## File Naming Conventions
+
+- **Modules**: `lowercase_with_underscores.py`
+- **Classes**: `PascalCase`
+- **Functions**: `snake_case`
+- **Constants**: `UPPER_SNAKE_CASE`
+- **Test files**: `test_*.py` or `*_test.py`
 
 ## Configuration Files
 
-### Docker
-- `docker-compose.yml` - Production (port 80 frontend, 8000 backend, 5432 db)
-- `docker-compose.dev.yml` - Development with hot-reload and mounted volumes
-
-### Environment Variables
-- `.env` - Local configuration (not committed)
-- `.env.example` - Template with all required variables
-
-### Dependencies
-- `backend/requirements.txt` - Python packages
-- `frontend/package.json` - Node.js packages
-
-## Testing
-
-- **Framework**: pytest with pytest-asyncio
-- **Location**: `backend/tests/`
-- **Fixtures**: `conftest.py`
-- **Coverage**: 80%+ of critical paths
-- **Run**: `pytest backend/tests/`
-
-## Port Allocation
-
-| Service | Production Port | Dev Port | Purpose |
-|---------|----------------|----------|---------|
-| Frontend | 80 | 80 | React UI |
-| Backend | 8000 | 8000 | FastAPI |
-| Frontend Dev | - | 5173 | Vite dev server |
-| PostgreSQL | 5432 | 5432 | Database |
-
-## API Documentation
-
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-- **OpenAPI JSON**: http://localhost:8000/openapi.json
-
-## Development Workflow
-
-1. **Start Development Environment**
-   ```bash
-   docker compose -f docker-compose.dev.yml up
-   ```
-
-2. **Make Changes**
-   - Backend: Auto-reload on file changes
-   - Frontend: Vite hot-reload
-
-3. **Run Tests**
-   ```bash
-   docker exec homelab-backend-dev pytest
-   ```
-
-4. **Database Migrations**
-   ```bash
-   docker exec homelab-backend-dev alembic revision --autogenerate -m "Description"
-   docker exec homelab-backend-dev alembic upgrade head
-   ```
-
-5. **Access Logs**
-   ```bash
-   docker logs -f homelab-backend-dev
-   docker logs -f homelab-frontend-dev
-   ```
-
-## Production Deployment
-
-1. **Build Images**
-   ```bash
-   docker compose build
-   ```
-
-2. **Start Services**
-   ```bash
-   docker compose up -d
-   ```
-
-3. **Check Health**
-   ```bash
-   curl http://localhost:8000/
-   curl http://localhost:8000/api/infrastructure/health/detailed
-   ```
-
-## Git Workflow
-
-- **main**: Production-ready code
-- **feature/kc-booth-integration**: KC-Booth integration (Phase 1-2)
-- **feature/bd-store-integration**: BD-Store integration (Phase 3-3.5) ← Current
-- **feature/uptainer-integration**: Uptainer integration (Phase 4) ← Next
-
-## Key Dependencies
-
-### Backend (Python)
-- FastAPI - Web framework
-- SQLAlchemy - ORM
-- Alembic - Database migrations
-- APScheduler - Task scheduling
-- asyncssh - SSH connections
-- pymysql / psycopg2 - Database drivers
-- pytest - Testing framework
-
-### Frontend (Node.js)
-- React - UI framework
-- TypeScript - Type safety
-- Vite - Build tool
-- TanStack Query - Data fetching
-- Tailwind CSS - Styling
-
-## Staging Directories
-
-- **bd-store-staging/**: Reference implementation for Phase 3 (integrated)
-- **kc-booth-staging/**: Reference implementation for Phase 1-2 (integrated)
-- These directories contain original codebases for reference during integration
+| File | Purpose |
+|------|---------|
+| `requirements.txt` | Python dependencies |
+| `pytest.ini` | Pytest configuration |
+| `.env.example` | Environment variable template |
+| `docker-compose.yml` | Container orchestration |
+| `Dockerfile` | Backend container definition |
+| `alembic.ini` | Database migration config |
 
 ## Documentation Files
 
-- **START_HERE.md**: Quick start guide
-- **README.md**: Project overview
-- **CONTRIBUTING.md**: Development guidelines
-- **DOCKER.md**: Docker usage guide
-- **SECURITY.md**: Security best practices
-- **TESTING-GUIDE.md**: Testing documentation
-- **README_ALEMBIC.md**: Migration instructions
-- **PHASE-3-COMPLETE.md**: Phase 3 completion summary
-- **PROJECT-STRUCTURE.md**: This file
+| File | Purpose |
+|------|---------|
+| `README.md` | Project overview |
+| `ARCHITECTURE.md` | High-level architecture |
+| `PROJECT-STRUCTURE.md` | This file - structure reference |
+| `MIGRATION_GUIDE.md` | Migration from old structure |
+| `CONTRIBUTING.md` | Development guidelines |
+| `REFACTORING_PROGRESS.md` | Refactoring history |
+| `ROADMAP.md` | Development roadmap |
+| `backend/tests/README.md` | Testing guide |
 
-## Next Steps
+## Quick Navigation
 
-See `PHASE-3-COMPLETE.md` for current status and next actions (Phase 4: Uptainer integration).
+### Adding a New Feature
+
+1. **Model**: `app/models/{domain}.py`
+2. **Schema**: `app/schemas/{domain}.py`
+3. **Service**: `app/services/{domain}/{service}.py`
+4. **Router**: `app/routers/{domain}.py`
+5. **Tests**: `backend/tests/test_{domain}.py`
+
+### Finding Code
+
+- **Configuration**: `app/core/config.py`
+- **Database**: `app/core/database.py`
+- **Auth**: `app/services/auth/` and `app/routers/auth.py`
+- **Plugins**: `app/services/plugins/` and `app/routers/plugins/`
+- **Monitoring**: `app/services/monitoring/` and `app/routers/monitoring/`
+- **Tests**: `backend/tests/`
+
+## Metrics
+
+- **Total Modules**: 20+ organized modules
+- **Total Files**: 100+ Python files
+- **Lines of Code**: ~20,000+ LOC
+- **Test Coverage**: 48 tests
+- **Breaking Changes**: 0 (maintained compatibility)
+
+## See Also
+
+- `ARCHITECTURE.md` - Architectural patterns and decisions
+- `MIGRATION_GUIDE.md` - Migrating from old structure
+- `CONTRIBUTING.md` - Development workflow
+- `backend/tests/README.md` - Testing documentation
