@@ -8,7 +8,7 @@ from datetime import datetime
 from app.models import MonitoredServer
 from app.models import StoragePool, PoolType, HealthStatus
 from app.services.infrastructure.ssh_service import InfrastructureSSHService, SSHConnectionError, SSHCommandError
-from app.utils.parsers import ZpoolParser, LvmParser
+from app.utils import ZpoolParser, LvmParser
 
 logger = logging.getLogger(__name__)
 

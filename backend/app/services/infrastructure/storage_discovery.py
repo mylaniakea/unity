@@ -8,7 +8,7 @@ from datetime import datetime
 from app.models import MonitoredServer
 from app.models import StorageDevice, DeviceType, HealthStatus
 from app.services.infrastructure.ssh_service import InfrastructureSSHService, SSHConnectionError, SSHCommandError
-from app.utils.parsers import LsblkParser, SmartctlParser, NvmeParser
+from app.utils import LsblkParser, SmartctlParser, NvmeParser
 
 logger = logging.getLogger(__name__)
 
