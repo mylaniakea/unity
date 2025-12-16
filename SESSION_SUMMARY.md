@@ -2,7 +2,7 @@
 
 **Date**: December 16, 2025  
 **Branch**: `feature/kc-booth-integration`  
-**Focus**: Phase 4 - Router Organization
+**Focus**: Phase 4 Complete + Roadmap Planning
 
 ## Session Accomplishments
 
@@ -47,99 +47,137 @@ Reorganized 19 router files to reduce fragmentation and improve code organizatio
 - **1,776 LOC** organized into logical groupings
 - **Zero breaking changes** maintained
 
+### 📋 Roadmap & Phase Reordering
+
+Created comprehensive `ROADMAP.md` outlining:
+- **Phase 1**: Backend Refactoring (current, 50% complete)
+- **Phase 2**: UI/UX Improvements (next major phase)
+- **Phase 3**: Plugin Library Development (can run parallel with UI/UX)
+- **Future Phases**: Advanced features, performance, security, production readiness
+
+#### Revised Refactoring Phase Order
+
+**Rationale**: Documentation should be last to capture all changes
+
+**Old Order**:
+1. ✅ Schema Organization
+2. ✅ Core Configuration
+3. ✅ Service Layer Organization
+4. ✅ Router Organization
+5. ❌ Model Documentation
+6. ⏭ Utility Organization
+7. ⏭ Testing Infrastructure
+8. ⏭ Documentation & Cleanup
+
+**New Order**:
+1. ✅ Schema Organization
+2. ✅ Core Configuration
+3. ✅ Service Layer Organization
+4. ✅ Router Organization
+5. 🎯 **Utility Organization** (next)
+6. ⏭ Testing Infrastructure
+7. ⏭ Final Cleanup & Validation
+8. ⏭ Comprehensive Documentation (moved to end)
+
 ### Commits
 
 **Phase 4 Commit** (`62d69af`):
 ```
 Phase 4: Router Organization - Group plugin and monitoring routers
+```
 
-Reorganized 19 router files with minimal disruption approach:
-- Created routers/plugins/ module (4 routers)
-- Created routers/monitoring/ module (3 routers)
-- Updated main.py imports and registration
-- All endpoints tested and verified working
+**Documentation Commit** (`34439e8`):
+```
+Update documentation for Phase 4 completion
+```
+
+**Roadmap Commit** (pending):
+```
+Add comprehensive roadmap and revise phase order
 ```
 
 ## Overall Refactoring Progress
 
 **Completed Phases**: 4/8 (50%)  
 **Cumulative Time**: ~10 hours  
+**Remaining Time**: ~10 hours  
 **Impact**: 19 modules created, 90+ files modified, zero breaking changes
 
-### Phase Summary
-1. ✅ **Schema Organization** - 9 organized schema modules
-2. ✅ **Core Configuration** - Centralized config with 30+ settings
-3. ✅ **Service Layer Organization** - 57 services into 7 modules
-4. ✅ **Router Organization** - 19 routers, created plugins/ and monitoring/ modules
-5. 📋 **Model Documentation** - Add comprehensive docstrings (next)
-6. 📋 **Utility Organization** - Organize utility functions
-7. 📋 **Testing Infrastructure** - Set up proper testing
-8. 📋 **Documentation & Cleanup** - Final polish
+### Revised Phase Summary
+1. ✅ **Schema Organization** (2.5h) - 9 organized schema modules
+2. ✅ **Core Configuration** (2h) - Centralized config with 30+ settings
+3. ✅ **Service Layer Organization** (3h) - 57 services into 7 modules
+4. ✅ **Router Organization** (2h) - plugins/ and monitoring/ modules
+5. 🎯 **Utility Organization** (2h) - Organize helper functions (NEXT)
+6. 📋 **Testing Infrastructure** (2-3h) - Set up proper testing
+7. 📋 **Final Cleanup & Validation** (2h) - Remove dead code, validate
+8. 📋 **Comprehensive Documentation** (3-4h) - Document everything
+
+## Post-Refactoring Work
+
+### Phase 2: UI/UX Improvements
+- Design template finalization
+- User interface enhancements
+- User experience improvements
+- Frontend modernization
+
+### Phase 3: Plugin Library Development
+- Build plugin ecosystem
+- Plugin development framework
+- Core plugins development
+- Plugin documentation
+- **Can run in parallel with UI/UX work**
 
 ## Next Session Recommendations
 
-### Phase 5: Model Documentation (2-3 hours)
+### Phase 5: Utility Organization (2 hours)
 
-**Goal**: Add comprehensive documentation to all SQLAlchemy models
+**Goal**: Organize scattered utility functions into cohesive modules
 
 **Tasks**:
-1. Add docstrings to all model classes
-2. Document field purposes and constraints
-3. Document relationships between models
-4. Add usage examples for complex models
-5. Document model lifecycle (created → updated → deleted)
+1. Identify all utility/helper functions across codebase
+2. Group by functionality (validation, formatting, parsing, etc.)
+3. Create `app/utils/` module with submodules
+4. Update imports throughout codebase
+5. Remove duplicate utility code
 
 **Approach**:
-- Start with core models (User, Server, Plugin)
-- Document domain models next (Alert, Threshold, Container)
-- Finish with supporting models
-- Use consistent docstring format across all models
+- Search for common patterns (helper.py, utils.py, etc.)
+- Identify standalone functions not part of services
+- Group by domain (data processing, validation, formatting)
+- Create clear module boundaries
 
 **Expected Outcome**:
-- Every model has class-level docstring
-- Every field has inline documentation
-- All relationships documented with purpose
-- 30+ models documented
-- Improved developer onboarding experience
+- Centralized utility functions
+- No more scattered helpers
+- Clear utility module structure
+- Reduced code duplication
 
 ## Key Decisions Made
 
-1. **Minimal Disruption**: Only grouped routers with clear need (plugin fragmentation, monitoring cohesion)
-2. **Flat Structure**: Kept well-organized single-purpose routers at top level
-3. **Clear Naming**: Used descriptive names (legacy, v2_secure) instead of technical names
-4. **Module Documentation**: Added __init__.py files explaining each module's purpose
-
-## Lessons Learned
-
-1. **Organization Strategy**: Minimal disruption approach prevents unnecessary complexity
-2. **Import Patterns**: Module-level imports (`from app.routers.plugins import`) are cleaner than flat imports
-3. **Testing Critical**: Verifying all endpoints after reorganization caught no issues because imports were correct
-4. **Documentation Value**: __init__.py files with clear descriptions help navigation
+1. **Documentation Last**: Moved comprehensive documentation to Phase 8 to capture all changes
+2. **Roadmap Created**: Established clear path from refactoring → UI/UX → plugins
+3. **Parallel Work**: UI/UX and plugin library can overlap after refactoring
+4. **Phase Focus**: Utility organization next to clean up remaining scattered code
 
 ## Files Modified This Session
 
 ### Created
+- `ROADMAP.md` - Comprehensive development roadmap
 - `backend/app/routers/plugins/__init__.py`
 - `backend/app/routers/monitoring/__init__.py`
 
 ### Moved/Renamed
-- `backend/app/routers/plugins.py` → `backend/app/routers/plugins/legacy.py`
-- `backend/app/routers/plugins_v2.py` → `backend/app/routers/plugins/v2.py`
-- `backend/app/routers/plugins_v2_secure.py` → `backend/app/routers/plugins/v2_secure.py`
-- `backend/app/routers/plugin_keys.py` → `backend/app/routers/plugins/keys.py`
-- `backend/app/routers/alerts.py` → `backend/app/routers/monitoring/alerts.py`
-- `backend/app/routers/thresholds.py` → `backend/app/routers/monitoring/thresholds.py`
-- `backend/app/routers/push.py` → `backend/app/routers/monitoring/push.py`
+- 7 router files reorganized into modules
 
 ### Modified
-- `backend/app/main.py` (updated imports and router registration)
-
-### Documentation
-- `REFACTORING_PROGRESS.md` (added Phase 4 details)
+- `backend/app/main.py` (updated imports)
+- `REFACTORING_PROGRESS.md` (Phase 4 details + revised next steps)
 - `SESSION_SUMMARY.md` (this file)
+- `wiki/Home.md` (updated phase order)
 
 ---
 
 **Session Status**: ✅ Complete  
 **Phase 4 Status**: ✅ Complete (50% of refactoring done)  
-**Ready for**: Phase 5 - Model Documentation
+**Ready for**: Phase 5 - Utility Organization

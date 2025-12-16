@@ -399,11 +399,11 @@ backend/app/routers/
 
 ### Next Steps
 
-**Phase 5: Model Documentation**
-- Add comprehensive docstrings to all models
-- Document relationships and constraints
-- Add usage examples
-- Estimated time: 2-3 hours
+**Phase 5: Utility Organization**
+- Organize helper functions and utilities
+- Clean up scattered utility code
+- Create cohesive utility modules
+- Estimated time: 2 hours
 
 ---
 
