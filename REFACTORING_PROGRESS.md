@@ -410,3 +410,93 @@ backend/app/routers/
 **Phase 4 Complete**: 50% of 8-phase refactoring done (4/8 phases)
 **Cumulative Time**: ~10 hours
 **Cumulative Impact**: 19 modules created, 90+ files modified, zero breaking changes
+
+---
+
+## ✅ Phase 5: Utility Organization
+
+**Status**: Complete  
+**Branch**: `feature/kc-booth-integration`  
+**Commit**: `25de8b4`  
+**Duration**: < 1 hour  
+**Date**: December 16, 2025
+
+### Overview
+Audited and enhanced existing utils module. Analysis revealed utilities were already well-organized with no scattered helper code.
+
+### Analysis Findings
+
+**Existing Utils Module** (`app/utils/`):
+- ✅ `parsers.py` (173 LOC) - Comprehensive storage/system parsers
+  - LsblkParser - Block device JSON parser
+  - SmartctlParser - SMART data parser with health/temp/power-on extraction
+  - NvmeParser - NVMe SMART log parser with wear level calculation
+  - ZpoolParser - ZFS pool status and list parser
+  - LvmParser - LVM volume group, logical volume, and physical volume parsers
+- ✅ Used by 2 infrastructure services (pool_discovery, storage_discovery)
+- ✅ Already domain-appropriate organization
+
+**Not Utility Code** (Correctly Placed):
+- Validation functions in domain services (e.g., validate_domain in cert_providers)
+- JSON/datetime usage via standard library (no utility wrapper needed)
+- Service-specific helpers remain in services (domain-appropriate)
+
+### Changes Made
+
+**Enhanced utils/__init__.py**:
+```python
+"""
+Utility functions and helpers.
+...
+"""
+
+from app.utils.parsers import (
+    LsblkParser, SmartctlParser, NvmeParser, ZpoolParser, LvmParser
+)
+
+__all__ = [...]
+```
+
+**Updated Import Paths** (2 files):
+- `services/infrastructure/pool_discovery.py`
+- `services/infrastructure/storage_discovery.py`
+- Changed from `app.utils.parsers import` → `app.utils import`
+
+### Benefits
+
+1. **Cleaner Imports**: Shorter, more intuitive import paths
+2. **Better Discoverability**: __init__.py documents available utilities
+3. **Validation**: Confirmed no scattered utility code exists
+4. **Maintained Organization**: Utils already well-structured, no forced reorganization
+
+### Statistics
+
+- **Files Modified**: 3
+- **Import Paths Updated**: 2
+- **New Utility Code**: 0 (existing code already optimal)
+- **Lines Added**: 27 (documentation and exports)
+- **Breaking Changes**: 0
+- **Build Status**: ✅ Successful
+- **Tests**: ✅ All endpoints verified
+
+### Key Insights
+
+1. **Don't Force Organization**: Utils were already well-organized; no need to create unnecessary structure
+2. **Domain-Specific != Utility**: Validation/helper functions in services belong there
+3. **Standard Library Sufficient**: No need to wrap json, datetime, etc.
+4. **Fast Phase**: Sometimes the best refactoring is recognizing what's already good
+
+### Next Steps
+
+**Phase 6: Testing Infrastructure**
+- Set up pytest framework
+- Create test fixtures and utilities
+- Write tests for critical paths
+- Establish CI/CD testing hooks
+- Estimated time: 2-3 hours
+
+---
+
+**Phase 5 Complete**: 62.5% of 8-phase refactoring done (5/8 phases)
+**Cumulative Time**: ~11 hours
+**Cumulative Impact**: 20 modules created, 93 files modified, zero breaking changes
