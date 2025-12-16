@@ -2,15 +2,15 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app import models
-from app.services.ai import AIService
-from app.services.system_info import SystemInfoService
-from app.services.ssh import SSHService
+from app.services.ai.ai import AIService
+from app.services.core.system_info import SystemInfoService
+from app.services.core.ssh import SSHService
 from pydantic import BaseModel
 from typing import List, Dict, Optional, Any
 import json
 from datetime import datetime
 
-from app.services.ai_provider import AIOrchestrator # Import AIOrchestrator
+from app.services.ai.ai_provider import AIOrchestrator # Import AIOrchestrator
 from app.routers.settings import get_settings # Import get_settings
 from app.schemas.core import Settings, SettingsUpdate # Import schemas_settings
 

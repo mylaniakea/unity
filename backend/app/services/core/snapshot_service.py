@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 from datetime import datetime
 from app import models
-from app.services.system_info import SystemInfoService
-from app.services.ssh import SSHService # Assuming an existing SSH service
+from app.services.core.system_info import SystemInfoService
+from app.services.core.ssh import SSHService # Assuming an existing SSH service
 import json
 import asyncio
 import platform
@@ -202,7 +202,7 @@ class SnapshotService:
             # Collect data from enabled plugins
             enabled_plugins = server_profile.enabled_plugins or []
             if enabled_plugins:
-                from app.services.plugin_registry import get_plugin
+                from app.services.plugins.plugin_registry import get_plugin
                 plugin_data = {}
                 
                 for plugin_id in enabled_plugins:

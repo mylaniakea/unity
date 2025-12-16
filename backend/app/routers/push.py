@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app import models
 from app.schemas.notifications import *
-from app.services.push_notifications import send_push_notification, VAPID_PUBLIC_KEY
+from app.services.monitoring.push_notifications import send_push_notification, VAPID_PUBLIC_KEY
 
 router = APIRouter(
     prefix="/push",

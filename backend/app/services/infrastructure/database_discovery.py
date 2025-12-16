@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.models import DatabaseInstance, DatabaseType, DatabaseStatus
 from app.models import MonitoredServer
 from app.services.infrastructure.ssh_service import InfrastructureSSHService
-from app.services.encryption import EncryptionService
+from app.services.core.encryption import EncryptionService
 
 logger = logging.getLogger(__name__)
 

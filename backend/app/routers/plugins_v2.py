@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 
 from app.core.database import get_db
 from app.models import Plugin, PluginMetric, PluginExecution
-from app.services.plugin_manager import PluginManager
+from app.services.plugins.plugin_manager import PluginManager
 from app.schemas.plugins import (
     PluginListResponse,
     PluginInfo,

@@ -14,7 +14,7 @@ import os
 
 from app.core.database import get_db
 from app.models import User, SSHKey, Certificate, ServerCredential
-from app.services.auth import get_current_active_user as get_current_user
+from app.services.auth.auth_service import get_current_active_user as get_current_user
 from app.schemas.credentials import (
     # SSH Key schemas
     SSHKeyCreate, SSHKeyGenerate, SSHKeyResponse, SSHKeyWithPrivateKey,

@@ -263,7 +263,7 @@ def db():
 @pytest.fixture
 def admin_token(db: Session):
     """Admin user token fixture."""
-    from app.services.auth import AuthService
+    from app.services.auth.auth_service import AuthService
     
     # Create admin user
     admin = User(
@@ -283,7 +283,7 @@ def admin_token(db: Session):
 @pytest.fixture
 def user_token(db: Session):
     """Regular user token fixture."""
-    from app.services.auth import AuthService
+    from app.services.auth.auth_service import AuthService
     
     # Create user
     user = User(

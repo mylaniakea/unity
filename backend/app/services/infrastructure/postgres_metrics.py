@@ -4,7 +4,7 @@ import psycopg2
 from typing import Dict, Optional
 from datetime import datetime
 
-from app.services.encryption import EncryptionService
+from app.services.core.encryption import EncryptionService
 
 logger = logging.getLogger(__name__)
 

@@ -13,8 +13,8 @@ from pydantic import BaseModel, Field
 
 from app.core.database import get_db
 from app.models import PluginAPIKey, Plugin, User
-from app.services.auth import get_current_active_user
-from app.services.plugin_security import PluginSecurityService
+from app.services.auth.auth_service import get_current_active_user
+from app.services.plugins.plugin_security import PluginSecurityService
 
 router = APIRouter(
     prefix="/plugins/keys",

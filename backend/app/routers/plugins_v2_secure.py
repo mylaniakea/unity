@@ -19,9 +19,9 @@ from datetime import datetime, timedelta
 
 from app.core.database import get_db
 from app.models import Plugin, PluginMetric, PluginExecution, PluginAPIKey, User
-from app.services.plugin_manager import PluginManager
-from app.services.plugin_security import PluginSecurityService, rate_limiter
-from app.services.auth import get_current_active_user
+from app.services.plugins.plugin_manager import PluginManager
+from app.services.plugins.plugin_security import PluginSecurityService, rate_limiter
+from app.services.auth.auth_service import get_current_active_user
 from app.schemas.plugins import (
     PluginListResponse,
     PluginInfo,

@@ -6,7 +6,7 @@ from app.schemas.core import *
 from app.schemas.users import *
 from app import models
 from app.core.database import get_db
-from app.services.auth import AuthService, get_current_active_user
+from app.services.auth.auth_service import AuthService, get_current_active_user
 
 router = APIRouter(prefix="/users", tags=["users"])
 

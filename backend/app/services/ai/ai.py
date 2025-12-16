@@ -2,8 +2,8 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app import models
-from app.services.ai_provider import AIOrchestrator
-from app.services.system_info import SystemInfoService
+from app.services.ai.ai_provider import AIOrchestrator
+from app.services.core.system_info import SystemInfoService
 from typing import List, Dict, Any
 import json # Added import for json.dumps
 

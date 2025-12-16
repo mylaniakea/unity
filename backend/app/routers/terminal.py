@@ -5,7 +5,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPExce
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app import models
-from app.services.ssh import SSHService
+from app.services.core.ssh import SSHService
 import asyncssh
 
 router = APIRouter(

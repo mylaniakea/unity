@@ -11,11 +11,11 @@ from app.routers import infrastructure
 from app.routers import containers
 
 from app.core.database import engine, Base, get_db
-from app.services import report_generation
-from app.services.snapshot_service import SnapshotService
-from app.services.ssh import SSHService
-from app.services.threshold_monitor import ThresholdMonitor
-from app.services.plugin_manager import PluginManager
+from app.services.core import report_generation
+from app.services.core.snapshot_service import SnapshotService
+from app.services.core.ssh import SSHService
+from app.services.monitoring.threshold_monitor import ThresholdMonitor
+from app.services.plugins.plugin_manager import PluginManager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy.orm import Session
 import logging

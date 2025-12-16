@@ -12,7 +12,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 from app.models import SSHKey, ServerProfile, ServerCredential
-from app.services.ssh import SSHService
+from app.services.core.ssh import SSHService
 from .ssh_keys import SSHKeyService
 from .audit import CredentialAuditService
 from .encryption import EncryptionService

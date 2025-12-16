@@ -12,7 +12,7 @@ from app.services.infrastructure import storage_discovery, pool_discovery, datab
 from app.services.infrastructure.alert_evaluator import AlertEvaluator
 from app.services.infrastructure.mysql_metrics import MySQLMetricsService
 from app.services.infrastructure.postgres_metrics import PostgreSQLMetricsService
-from app.services.notification_service import NotificationService
+from app.services.monitoring.notification_service import NotificationService
 
 logger = logging.getLogger(__name__)
 

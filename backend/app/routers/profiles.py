@@ -4,9 +4,9 @@ from typing import List
 from app.core.database import get_db
 from app import models
 from app.schemas.core import *
-from app.services.system_info import SystemInfoService
-from app.services.ssh import SSHService
-from app.services.snapshot_service import SnapshotService
+from app.services.core.system_info import SystemInfoService
+from app.services.core.ssh import SSHService
+from app.services.core.snapshot_service import SnapshotService
 
 router = APIRouter(
     prefix="/profiles",

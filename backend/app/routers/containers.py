@@ -10,7 +10,7 @@ from app.models.containers import (
     MaintenanceWindow, VulnerabilityScan, ContainerBackup,
     AIRecommendation, UpdateNotification, RegistryCredential
 )
-from app.services.auth import get_current_active_user as get_current_user
+from app.services.auth.auth_service import get_current_active_user as get_current_user
 from app.models.users import User
 
 router = APIRouter(prefix="/api/containers", tags=["containers"])

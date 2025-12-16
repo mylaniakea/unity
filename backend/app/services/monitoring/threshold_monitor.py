@@ -8,8 +8,8 @@ from datetime import datetime, timedelta
 from typing import Dict, Any
 import logging
 from app import models
-from app.services.notification_service import NotificationService
-from app.services.push_notifications import send_push_notification
+from app.services.monitoring.notification_service import NotificationService
+from app.services.monitoring.push_notifications import send_push_notification
 
 logger = logging.getLogger(__name__)
 

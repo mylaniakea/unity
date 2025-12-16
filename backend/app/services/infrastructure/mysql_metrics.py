@@ -3,7 +3,7 @@ import logging
 import pymysql
 from typing import Dict, Optional
 
-from app.services.encryption import EncryptionService
+from app.services.core.encryption import EncryptionService
 
 logger = logging.getLogger(__name__)
 

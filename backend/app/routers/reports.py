@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from app.core.database import get_db
 from app import models
 from app.schemas.reports import Report as ReportSchema, ReportCreate
-from app.services import report_generation
+from app.services.core import report_generation
 from fastapi.responses import Response, StreamingResponse # Import for file responses
 import io # Import io for file-like objects
 from datetime import datetime
