@@ -22,7 +22,7 @@ from app.models import Plugin, PluginMetric, PluginExecution, PluginAPIKey, User
 from app.services.plugin_manager import PluginManager
 from app.services.plugin_security import PluginSecurityService, rate_limiter
 from app.services.auth import get_current_active_user
-from app.schemas_plugins import (
+from app.schemas.plugins import (
     PluginListResponse,
     PluginInfo,
     PluginDetailInfo,

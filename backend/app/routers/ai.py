@@ -12,7 +12,7 @@ from datetime import datetime
 
 from app.services.ai_provider import AIOrchestrator # Import AIOrchestrator
 from app.routers.settings import get_settings # Import get_settings
-from app import schemas_settings # Import schemas_settings
+from app.schemas.core import Settings, SettingsUpdate # Import schemas_settings
 
 router = APIRouter(
     prefix="/ai",
@@ -64,7 +64,7 @@ async def chat_with_ai(request: ChatRequest, db: Session = Depends(get_db)):
 async def get_ai_models(db: Session = Depends(get_db)):
     settings_obj = get_settings(db) # Get settings from the database (SQLAlchemy model)
     # Convert to Pydantic model to ensure we have a clean dict structure
-    settings_schema = schemas_settings.Settings.model_validate(settings_obj)
+    settings_schema = SettingsSettings.model_validate(settings_obj)
     orchestrator = AIOrchestrator(settings_schema.model_dump()) # Initialize orchestrator with dict
     all_models = await orchestrator.get_all_provider_models()
     return {"models": all_models}

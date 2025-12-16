@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
 from app import models
-from app.schemas_alerts import ThresholdRule, ThresholdRuleCreate, ThresholdRuleUpdate
+from app.schemas.alerts import ThresholdRule, ThresholdRuleCreate, ThresholdRuleUpdate
 
 router = APIRouter(prefix="/thresholds", tags=["thresholds"])
 

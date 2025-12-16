@@ -5,7 +5,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 from app.database import get_db
 from app import models
-from app.schemas_alerts import Alert, AlertUpdate, AlertChannel, AlertChannelCreate, AlertChannelUpdate, NotificationLogResponse
+from app.schemas.alerts import Alert, AlertUpdate, AlertChannel, AlertChannelCreate, AlertChannelUpdate, NotificationLogResponse
 from app.services.alert_channels import get_all_channels
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])

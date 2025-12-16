@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app import models, schemas_push
+from app import models
+from app.schemas.notifications import *
 from app.services.push_notifications import send_push_notification, VAPID_PUBLIC_KEY
 
 router = APIRouter(
@@ -14,8 +15,8 @@ router = APIRouter(
 def get_vapid_public_key():
     return {"publicKey": VAPID_PUBLIC_KEY}
 
-@router.post("/subscribe", response_model=schemas_push.PushSubscriptionResponse)
-def subscribe_push(subscription_in: schemas_push.PushSubscriptionCreate, db: Session = Depends(get_db)):
+@router.post("/subscribe", response_model=PushSubscriptionResponse)
+def subscribe_push(subscription_in: PushSubscriptionCreate, db: Session = Depends(get_db)):
     # Check if subscription already exists
     existing_subscription = db.query(models.PushSubscription).filter(
         models.PushSubscription.endpoint == subscription_in.endpoint
@@ -35,7 +36,7 @@ def subscribe_push(subscription_in: schemas_push.PushSubscriptionCreate, db: Ses
     return db_subscription
 
 @router.post("/unsubscribe", status_code=204)
-def unsubscribe_push(subscription_in: schemas_push.PushSubscriptionCreate, db: Session = Depends(get_db)):
+def unsubscribe_push(subscription_in: PushSubscriptionCreate, db: Session = Depends(get_db)):
     subscription = db.query(models.PushSubscription).filter(
         models.PushSubscription.endpoint == subscription_in.endpoint
     ).first()
