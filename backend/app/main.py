@@ -8,6 +8,7 @@ from app.routers import (
 # Import new plugin routers
 from app.routers import plugins_v2_secure, plugin_keys
 from app.routers import infrastructure
+from app.routers import containers
 
 from app.database import engine, Base, get_db
 from app.services import report_generation
@@ -171,6 +172,7 @@ app.include_router(credentials.router)  # Credential management
 app.include_router(thresholds.router)
 app.include_router(alerts.router)
 app.include_router(push.router)
+app.include_router(containers.router)  # Phase 4: Container management
 app.include_router(infrastructure.router)  # Phase 3: Infrastructure monitoring
 
 
