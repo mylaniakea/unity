@@ -288,8 +288,6 @@ async def startup_event():
         # Setup infrastructure monitoring tasks (Phase 3)
         from app.schedulers.infrastructure_tasks import setup_infrastructure_scheduler
         setup_infrastructure_scheduler(scheduler)
-        from app.schedulers.container_tasks import setup_container_scheduler
-        setup_container_scheduler(scheduler)
         print(f"   - Infrastructure monitoring: every 5 minutes", flush=True)
 
         scheduler.start()

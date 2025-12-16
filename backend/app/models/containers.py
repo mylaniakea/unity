@@ -413,7 +413,7 @@ class VulnerabilityScan(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships
-    container = relationship("Container", back_populates="vulnerability_scans")
+    container = relationship("Container", back_populates="vulnerability_scans", foreign_keys="[VulnerabilityScan.container_id]")
     vulnerabilities = relationship("ContainerVulnerability", back_populates="scan", cascade="all, delete-orphan")
 
 
