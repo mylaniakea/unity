@@ -262,3 +262,151 @@ tree backend/app/services/ -L 2
 ---
 
 **Ready for Phase 4?** Let's organize those routers! 🎯
+
+---
+
+## ✅ Phase 4: Router Organization
+
+**Status**: Complete  
+**Branch**: `feature/kc-booth-integration`  
+**Commit**: `62d69af`  
+**Duration**: ~2 hours  
+**Date**: December 16, 2025
+
+### Overview
+Reorganized 19 router files using a minimal disruption approach - only grouping routers with clear fragmentation (plugins) or tight coupling (monitoring).
+
+### Changes Made
+
+#### Created Module Directories
+
+**routers/plugins/** (4 routers, 1,410 LOC)
+- `legacy.py` (was `plugins.py`) - Original v1 plugin API (217 LOC)
+- `v2.py` (was `plugins_v2.py`) - New plugin architecture (379 LOC)
+- `v2_secure.py` (was `plugins_v2_secure.py`) - Production plugin API with security (577 LOC)
+- `keys.py` (was `plugin_keys.py`) - API key management for external plugins (228 LOC)
+- `__init__.py` - Module documentation (9 LOC)
+
+**routers/monitoring/** (3 routers, 366 LOC)
+- `alerts.py` - Alert management and notification logs (248 LOC)
+- `thresholds.py` - Threshold rule configuration (69 LOC)
+- `push.py` - Push notification subscriptions (49 LOC)
+- `__init__.py` - Module documentation (8 LOC)
+
+#### Flat Structure Maintained (12 routers)
+Single-purpose routers kept at top level:
+- `auth.py` - Authentication
+- `users.py` - User management
+- `ai.py` - AI integration
+- `containers.py` - Container management
+- `credentials.py` - Credential management
+- `infrastructure.py` - Infrastructure monitoring
+- `profiles.py` - Server profiles
+- `system.py` - System endpoints
+- `settings.py` - Application settings
+- `knowledge.py` - Knowledge base
+- `reports.py` - Report generation
+- `terminal.py` - Terminal access
+
+### Main.py Updates
+
+**Import Statements**:
+```python
+# Before (lines 4-11)
+from app.routers import (
+    profiles, ai, settings, reports, knowledge, system, 
+    terminal, plugins, thresholds, alerts, push, auth, users, credentials
+)
+from app.routers import plugins_v2_secure, plugin_keys
+from app.routers import infrastructure, containers
+
+# After (lines 4-11)
+from app.routers import (
+    profiles, ai, settings, reports, knowledge, system, 
+    terminal, auth, users, credentials, infrastructure, containers
+)
+from app.routers.plugins import legacy, v2_secure, keys
+from app.routers.monitoring import alerts, thresholds, push
+```
+
+**Router Registration**:
+- `plugins.router` → `legacy.router`
+- `plugins_v2_secure.router` → `v2_secure.router`
+- `plugin_keys.router` → `keys.router`
+- Monitoring routers: no name changes needed
+
+### Testing Completed
+
+✅ Docker build successful  
+✅ Backend starts cleanly with no import errors  
+✅ All 25+ API endpoints verified working:
+- `/plugins/` - Legacy plugin API
+- `/plugins/v2` - v2 secure plugin endpoints
+- `/plugins/keys` - API key management
+- `/alerts/`, `/thresholds/`, `/push/` - Monitoring endpoints
+- All other routers functioning normally
+✅ API documentation accessible at `/docs`  
+✅ OpenAPI schema generated correctly  
+✅ Zero breaking changes maintained
+
+### Final Router Structure
+
+```
+backend/app/routers/
+├── plugins/              # Plugin routers module (4 routers)
+│   ├── __init__.py
+│   ├── legacy.py        # v1 API
+│   ├── v2.py            # v2 API (unsecured)
+│   ├── v2_secure.py     # v2 API (secured, production)
+│   └── keys.py          # API key management
+├── monitoring/          # Monitoring routers module (3 routers)
+│   ├── __init__.py
+│   ├── alerts.py        # Alert management
+│   ├── thresholds.py    # Threshold rules
+│   └── push.py          # Push notifications
+├── ai.py                # 12 single-purpose routers
+├── auth.py              # maintained in flat structure
+├── containers.py
+├── credentials.py
+├── infrastructure.py
+├── knowledge.py
+├── profiles.py
+├── reports.py
+├── settings.py
+├── system.py
+├── terminal.py
+└── users.py
+```
+
+### Benefits
+
+1. **Reduced Plugin Fragmentation**: Consolidated 4 scattered plugin routers into single module
+2. **Cohesive Monitoring**: Grouped related monitoring/alerting functionality
+3. **Minimal Disruption**: Kept well-organized single routers in place
+4. **Clear Versioning**: Plugin versions (legacy, v2, v2_secure) now obvious from structure
+5. **Easier Navigation**: Related functionality grouped together
+6. **Import Clarity**: Module imports make relationships explicit
+
+### Statistics
+
+- **Files Moved**: 7 routers reorganized into 2 modules
+- **Files Created**: 2 __init__.py files
+- **Files Modified**: 1 (main.py)
+- **Lines of Code**: 1,776 LOC in organized modules
+- **Import Statements**: Reduced from 3 to 2 plugin import lines
+- **Breaking Changes**: 0
+- **Time Saved**: Future developers can instantly identify plugin version hierarchy
+
+### Next Steps
+
+**Phase 5: Model Documentation**
+- Add comprehensive docstrings to all models
+- Document relationships and constraints
+- Add usage examples
+- Estimated time: 2-3 hours
+
+---
+
+**Phase 4 Complete**: 50% of 8-phase refactoring done (4/8 phases)
+**Cumulative Time**: ~10 hours
+**Cumulative Impact**: 19 modules created, 90+ files modified, zero breaking changes
