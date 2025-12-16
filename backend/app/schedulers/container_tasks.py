@@ -4,7 +4,7 @@ import os
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy.orm import Session
 
-from app.database import SessionLocal
+from app.core.database import SessionLocal
 from app.models.containers import ContainerHost, Container
 from app.services.containers.container_monitor import ContainerMonitor
 from app.services.containers.update_checker import UpdateChecker

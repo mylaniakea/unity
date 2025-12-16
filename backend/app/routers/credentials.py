@@ -12,7 +12,7 @@ from sqlalchemy import select, func
 from typing import List, Optional
 import os
 
-from app.database import get_db
+from app.core.database import get_db
 from app.models import User, SSHKey, Certificate, ServerCredential
 from app.services.auth import get_current_active_user as get_current_user
 from app.schemas.credentials import (

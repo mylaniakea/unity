@@ -10,7 +10,7 @@ from app.routers import plugins_v2_secure, plugin_keys
 from app.routers import infrastructure
 from app.routers import containers
 
-from app.database import engine, Base, get_db
+from app.core.database import engine, Base, get_db
 from app.services import report_generation
 from app.services.snapshot_service import SnapshotService
 from app.services.ssh import SSHService

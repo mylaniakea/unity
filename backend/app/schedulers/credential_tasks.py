@@ -1,6 +1,6 @@
 """Credential background tasks for APScheduler"""
 from datetime import datetime
-from app.database import get_db
+from app.core.database import get_db
 from app.services.credentials.cert_providers import CertificateRenewalService
 from app.services.credentials.ssh_keys import SSHKeyService
 

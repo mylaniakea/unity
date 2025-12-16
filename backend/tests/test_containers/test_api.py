@@ -251,7 +251,7 @@ def client():
 @pytest.fixture
 def db():
     """Database session fixture."""
-    from app.database import SessionLocal, engine, Base
+    from app.core.database import SessionLocal, engine, Base
     
     Base.metadata.create_all(bind=engine)
     session = SessionLocal()

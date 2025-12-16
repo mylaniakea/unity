@@ -1,6 +1,6 @@
 from fastapi import Depends
 from sqlalchemy.orm import Session
-from app.database import SessionLocal
+from app.core.database import SessionLocal
 from app import models
 from app.services.ai_provider import AIOrchestrator
 from app.services.system_info import SystemInfoService

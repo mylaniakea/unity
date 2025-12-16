@@ -5,7 +5,7 @@ from typing import List, Optional
 from datetime import datetime, timezone
 import logging
 
-from app.database import get_db
+from app.core.database import get_db
 from app import models
 from app.services.infrastructure.collection_task import collect_server_data, collect_all_servers
 from app.services.infrastructure.ssh_service import ssh_service

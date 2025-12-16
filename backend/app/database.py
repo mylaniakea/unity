@@ -1,24 +1,20 @@
-import os
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+"""
+DEPRECATED: This module has been moved to app.core.database
 
-SQLALCHEMY_DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./data/homelab.db")
+This file is kept for backward compatibility.
+Please update your imports to:
+    from app.core.database import engine, SessionLocal, Base, get_db
+"""
+import warnings
 
-connect_args = {}
-if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
-    connect_args = {"check_same_thread": False}
-
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args=connect_args
+# Issue deprecation warning when this module is imported
+warnings.warn(
+    "app.database is deprecated. Use app.core.database instead.",
+    DeprecationWarning,
+    stacklevel=2
 )
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-Base = declarative_base()
+# Re-export from new location for backward compatibility
+from app.core.database import engine, SessionLocal, Base, get_db
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+__all__ = ["engine", "SessionLocal", "Base", "get_db"]

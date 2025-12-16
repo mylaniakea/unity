@@ -10,7 +10,7 @@ from sqlalchemy import select, and_
 from typing import List, Optional
 from datetime import datetime, timedelta
 
-from app.database import get_db
+from app.core.database import get_db
 from app.models import Plugin, PluginMetric, PluginExecution
 from app.services.plugin_manager import PluginManager
 from app.schemas.plugins import (

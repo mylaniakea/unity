@@ -3,7 +3,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.core.database import get_db
 from app import models
 
 logger = logging.getLogger(__name__)

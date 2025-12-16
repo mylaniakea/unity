@@ -4,7 +4,7 @@ from sqlalchemy import BigInteger, Enum, Column, Integer, String, DateTime, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from app.database import Base
+from app.core.database import Base
 
 
 class RuntimeType(str, enum.Enum):

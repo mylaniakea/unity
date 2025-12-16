@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from sqlalchemy.orm import Session
-from app.database import get_db
+from app.core.database import get_db
 from app import models
 from app.services.ai import AIService
 from app.services.system_info import SystemInfoService

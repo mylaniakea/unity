@@ -252,8 +252,8 @@ class TestAIRecommendation:
 @pytest.fixture
 def db():
     """Database session fixture."""
-    from app.database import SessionLocal, engine
-    from app.database import Base
+    from app.core.database import SessionLocal, engine
+    from app.core.database import Base
     
     # Create tables
     Base.metadata.create_all(bind=engine)

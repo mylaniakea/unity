@@ -85,3 +85,4 @@ kc-booth-staging/frontend/dist/
 kc-booth-staging/.venv/
 bd-store-staging/.venv/
 bd-store-staging/frontend/node_modules/
+backend/.venv_new/

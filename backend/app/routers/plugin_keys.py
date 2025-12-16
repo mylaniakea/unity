@@ -11,7 +11,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 from pydantic import BaseModel, Field
 
-from app.database import get_db
+from app.core.database import get_db
 from app.models import PluginAPIKey, Plugin, User
 from app.services.auth import get_current_active_user
 from app.services.plugin_security import PluginSecurityService

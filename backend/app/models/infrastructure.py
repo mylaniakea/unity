@@ -4,7 +4,7 @@ from sqlalchemy import JSON
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship # Import relationship for ORM
-from app.database import Base
+from app.core.database import Base
 
 
 

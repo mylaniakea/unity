@@ -14,7 +14,7 @@ import os
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from app.database import engine, Base
+from app.core.database import engine, Base
 from app.models import Plugin, PluginMetric, PluginExecution, PluginAPIKey
 
 def create_tables():

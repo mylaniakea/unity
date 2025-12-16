@@ -17,7 +17,7 @@ from sqlalchemy import select, and_
 from typing import List, Optional
 from datetime import datetime, timedelta
 
-from app.database import get_db
+from app.core.database import get_db
 from app.models import Plugin, PluginMetric, PluginExecution, PluginAPIKey, User
 from app.services.plugin_manager import PluginManager
 from app.services.plugin_security import PluginSecurityService, rate_limiter

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.schemas.core import *
 from app.schemas.users import *
 from app import models
-from app.database import get_db
+from app.core.database import get_db
 from app.services.auth import AuthService, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_active_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])

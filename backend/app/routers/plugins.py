@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from typing import List, Dict
 from pydantic import BaseModel
 
-from app.database import get_db
+from app.core.database import get_db
 from app import models
 from app.services.plugin_registry import PLUGINS, PLUGIN_CATEGORIES, get_all_plugins, get_plugin
 from app.services.ssh import SSHService

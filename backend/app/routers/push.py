@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.database import get_db
+from app.core.database import get_db
 from app import models
 from app.schemas.notifications import *
 from app.services.push_notifications import send_push_notification, VAPID_PUBLIC_KEY

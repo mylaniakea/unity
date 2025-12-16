@@ -6,7 +6,7 @@ from typing import Tuple
 from sqlalchemy.orm import Session
 
 from app import models
-from app.database import get_db
+from app.core.database import get_db
 from app.services.infrastructure.ssh_service import ssh_service, SSHConnectionError
 from app.services.infrastructure import storage_discovery, pool_discovery, database_discovery
 from app.services.infrastructure.alert_evaluator import AlertEvaluator

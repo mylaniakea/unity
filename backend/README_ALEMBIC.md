@@ -15,7 +15,7 @@ alembic init alembic
 
 Edit `alembic/env.py` to import models:
 ```python
-from app.database import Base
+from app.core.database import Base
 from app import models
 target_metadata = Base.metadata
 ```

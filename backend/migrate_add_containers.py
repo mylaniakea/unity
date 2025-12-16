@@ -9,7 +9,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from sqlalchemy import text
-from app.database import engine, SessionLocal
+from app.core.database import engine, SessionLocal
 from app.models.containers import (
     ContainerHost, Container, UpdateCheck, UpdateHistory,
     UpdatePolicy, MaintenanceWindow, VulnerabilityScan,
@@ -24,7 +24,7 @@ def run_migration():
     db = SessionLocal()
     try:
         # Import Base to create all tables
-        from app.database import Base
+        from app.core.database import Base
         
         # Create all container tables
         print("Creating container tables...")
