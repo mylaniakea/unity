@@ -6,6 +6,7 @@ from .plugins import *
 from .credentials import *
 from .infrastructure import *
 from .alert_rules import *
+from .containers import *
 
 __all__ = [
     # Core
@@ -22,6 +23,12 @@ __all__ = [
     "ServerStatus", "DeviceType", "HealthStatus", "PoolType", "DatabaseType", "DatabaseStatus",
     "MonitoredServer", "StorageDevice", "StoragePool", "DatabaseInstance",
     # Alert Rules
-    "ResourceType", "AlertCondition", "AlertSeverity", "AlertStatus", "AlertRule"
+    "ResourceType", "AlertCondition", "AlertSeverity", "AlertStatus", "AlertRule",
+    # Containers
+    "RuntimeType", "ConnectionType", "ContainerStatus", "UpdateStatus", "RecommendationType",
+    "Severity", "PolicyScope", "BackupStatus", "NotificationStatus", "ScanStatus",
+    "ContainerHost", "Container", "UpdateCheck", "UpdateHistory", "UpdatePolicy",
+    "MaintenanceWindow", "VulnerabilityScan", "ContainerVulnerability", "UpdateNotification",
+    "ContainerBackup", "AIRecommendation", "RegistryCredential",
 ]
 from .error_tracking import *
