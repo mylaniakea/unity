@@ -3,13 +3,12 @@ import app.models as models
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import (
     profiles, ai, settings, reports, knowledge, system, 
-    terminal, plugins, thresholds, alerts, push, auth, users, credentials
+    terminal, auth, users, credentials, infrastructure, containers
 )
-# Import new plugin routers
-from app.routers import plugins_v2_secure, plugin_keys
-from app.routers import infrastructure
-from app.routers import containers
-
+# Plugin routers
+from app.routers.plugins import legacy, v2_secure, keys
+# Monitoring routers
+from app.routers.monitoring import alerts, thresholds, push
 from app.core.database import engine, Base, get_db
 from app.services.core import report_generation
 from app.services.core.snapshot_service import SnapshotService
@@ -165,9 +164,9 @@ app.include_router(settings.router)
 app.include_router(reports.router)
 app.include_router(knowledge.router)
 app.include_router(terminal.router)
-app.include_router(plugins.router)  # Old plugin system (legacy)
-app.include_router(plugins_v2_secure.router)  # New secure plugin system
-app.include_router(plugin_keys.router)  # API key management
+app.include_router(legacy.router)  # Old plugin system (legacy)
+app.include_router(v2_secure.router)  # New secure plugin system
+app.include_router(keys.router)  # API key management
 app.include_router(credentials.router)  # Credential management
 app.include_router(thresholds.router)
 app.include_router(alerts.router)

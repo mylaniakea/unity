@@ -283,3 +283,45 @@ See LICENSE file for details.
 **Last Updated**: December 16, 2025
 
 Welcome aboard! 🚀
+
+---
+
+## 🔄 Current Development: Codebase Refactoring
+
+**Status**: In Progress (37.5% Complete)  
+**Branch**: `feature/kc-booth-integration`  
+**Goal**: Improve code organization, maintainability, and developer experience
+
+### Refactoring Progress
+
+**Completed Phases**:
+- ✅ **Phase 1**: Schema Organization (2.5 hours) - 9 organized schema modules
+- ✅ **Phase 2**: Core Configuration (2 hours) - Centralized config with 30+ settings
+- ✅ **Phase 3**: Service Layer Organization (3 hours) - 57 services into 7 modules
+
+**Upcoming Phases**:
+- 🎯 **Phase 4**: Router Organization (3-4 hours)
+- 📋 **Phase 5**: Model Documentation (2-3 hours)
+- 📋 **Phase 6**: Utility Organization (2 hours)
+- 📋 **Phase 7**: Testing Infrastructure (2-3 hours)
+- 📋 **Phase 8**: Documentation & Cleanup (2-3 hours)
+
+### Refactoring Benefits
+
+The refactoring effort provides:
+- **Better Code Organization**: Clear module structure with separation of concerns
+- **Improved Discoverability**: Easy to find and navigate code
+- **Type Safety**: Comprehensive type hints and pydantic validation
+- **Centralized Configuration**: Single source of truth for all settings
+- **Zero Breaking Changes**: Maintained backward compatibility throughout
+- **Reduced Technical Debt**: Removed 11,650+ lines of code
+
+### Development Documentation
+
+For detailed refactoring status and developer guides:
+- `REFACTORING_PROGRESS.md` - Detailed progress tracking
+- `SESSION_SUMMARY.md` - Latest session work
+- `PROJECT-STRUCTURE.md` - Codebase navigation guide
+- `CONTRIBUTING.md` - Development guidelines
+
+---
