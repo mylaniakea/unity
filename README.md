@@ -6,13 +6,28 @@
 
 **Unity** is the unified homelab intelligence platform that brings together monitoring, automation, and management into a single, extensible hub with a plugin architecture.
 
+## 🏠 Built for Homelabbers
+
+Unity is designed from the ground up for homelab enthusiasts who want comprehensive monitoring without the enterprise complexity. Monitor your entire stack:
+
+- **Popular Apps**: Nextcloud, WordPress, Immich, Paperless-ngx, Home Assistant, UniFi Controller
+- **Databases**: MySQL, PostgreSQL, Redis, MongoDB, InfluxDB, SQLite
+- **Containers**: Docker monitoring with resource tracking
+- **System Health**: CPU, memory, disk, network, temperatures
+- **Application Monitoring**: HTTP endpoints, SSL certificates, log analysis
+- **Storage**: RAID arrays, ZFS pools, LVM volumes
+
+**14 Built-in Plugins** covering the most common homelab scenarios - batteries included! 🔋
+
 ## What is Unity?
 
 Unity evolved from the homelab-intelligence project and serves as the central hub for:
-- **System Monitoring** - Track CPU, memory, disk, network, and more
-- **Container Management** - Monitor and update Docker containers (via uptainer plugin)
-- **Storage Intelligence** - Database and storage monitoring (via bd-store plugin)
+- **System Monitoring** - Track CPU, memory, disk, network, temperatures, and more
+- **Database Monitoring** - MySQL, PostgreSQL, Redis, MongoDB, InfluxDB, SQLite support
+- **Container Management** - Monitor and manage Docker containers with real-time stats
+- **Storage Intelligence** - Database and storage monitoring across your infrastructure
 - **Credential Management** - SSH keys and certificate management (integrated from kc-booth)
+- **Application Monitoring** - HTTP/HTTPS health checks, SSL expiration, log analysis
 - **AI-Powered Insights** - Intelligent analysis and recommendations
 - **Extensible Plugin System** - Add custom monitoring and automation capabilities
 
@@ -118,22 +133,44 @@ See [HUB-IMPLEMENTATION-PLAN.md](./HUB-IMPLEMENTATION-PLAN.md) for detailed road
 
 ## Features
 
-### Current Features
+### 🔌 14 Built-in Monitoring Plugins
+
+**System Monitoring**
+- CPU, memory, disk usage and I/O
+- Process monitoring and management
+- Network interface statistics
+- Temperature monitoring (CPU/GPU)
+- Docker container monitoring
+
+**Database Monitoring**
+- MySQL/MariaDB - Connection pools, query stats, replication
+- PostgreSQL - Transactions, locks, cache hit ratios
+- Redis - Memory usage, keyspace stats, slowlog
+- MongoDB - Operations, replication, database sizes
+- InfluxDB - Time-series metrics, bucket stats
+- SQLite - Embedded database monitoring
+
+**Application Monitoring**
+- HTTP/HTTPS endpoint health checks
+- SSL certificate expiration warnings
+- Log file parsing with regex patterns
+- Response time tracking
+
+### Core Features
 - **Authentication & RBAC** - JWT-based auth with role-based access control
-- **System Monitoring** - CPU, memory, disk, network metrics
 - **Plugin System** - Extensible architecture for built-in and external plugins
 - **Terminal Access** - Web-based SSH terminal
 - **Alert System** - Configurable thresholds and notifications
 - **AI Integration** - Intelligent insights and recommendations
 - **Multi-Profile Support** - Monitor multiple systems
+- **Credential Management** - SSH keys and certificates
 
-### Planned Features (Plugin System)
+### Planned Features
 - **Plugin Marketplace** - Discover and install community plugins
 - **External Plugin Support** - Run plugins as standalone services
 - **Real-time Event Streams** - Redis-based plugin communication
 - **Health Dashboard** - Monitor plugin status and performance
 - **Configuration Management** - Web UI for plugin settings
-
 ## Development
 
 ### Adding a Plugin
