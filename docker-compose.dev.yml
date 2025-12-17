@@ -1,0 +1,66 @@
+# Development Docker Compose with hot-reloading and dev tools
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: homelab-db-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: homelab_db
+      POSTGRES_USER: homelab_user
+      POSTGRES_PASSWORD: homelab_password
+    volumes:
+      - homelab_db_data_dev:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - homelab-net
+
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: homelab-backend-dev
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app  # Mount entire backend for hot-reloading
+      - /app/.venv      # Exclude venv from mount
+      - /app/__pycache__  # Exclude pycache
+    environment:
+      - ALLOW_ORIGINS=*
+      - DATABASE_URL=postgresql+psycopg2://homelab_user:homelab_password@db:5432/homelab_db
+      - ENCRYPTION_KEY=6ty12Z9TYTSM5ESuOuXd_RxLBgunI3G0_TJbCpBb9FU=
+      - DEBUG=true
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --log-level debug
+    depends_on:
+      - db
+    networks:
+      - homelab-net
+
+  frontend:
+    build: ./frontend
+    container_name: homelab-frontend-dev
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "5173:5173"  # Vite dev server
+      - "8080:80"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - homelab-net
+    environment:
+      - VITE_API_URL=http://localhost:8000
+
+volumes:
+  homelab_db_data_dev:
+
+networks:
+  homelab-net:
+    driver: bridge

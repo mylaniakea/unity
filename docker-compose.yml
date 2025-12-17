@@ -27,6 +27,7 @@ services:
     environment:
       - ALLOW_ORIGINS=*
       - DATABASE_URL=postgresql+psycopg2://homelab_user:homelab_password@db:5432/homelab_db
+      - ENCRYPTION_KEY=6ty12Z9TYTSM5ESuOuXd_RxLBgunI3G0_TJbCpBb9FU=
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level debug
     depends_on:
       - db

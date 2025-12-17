@@ -6,7 +6,7 @@ import os
 sys.path.append(os.path.join(os.getcwd(), 'backend'))
 
 from app import models, schemas_settings
-from app.services.ai_provider import AIOrchestrator
+from app.services.ai.ai_provider import AIOrchestrator
 
 async def test_ai_config():
     print("--- Testing AI Configuration & Orchestrator ---")

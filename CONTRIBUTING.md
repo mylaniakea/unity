@@ -1,12 +1,114 @@
 # Contributing to Unity
 
-Thank you for your interest in contributing to Unity - the Homelab Intelligence Hub!
+Thank you for your interest in contributing to Unity!
 
 ## Development Setup
 
-See the [README.md](./README.md) for initial setup instructions.
+### Prerequisites
+- Python 3.11+
+- Node.js 18+
+- Docker & Docker Compose
+- PostgreSQL 16
 
-## Development Workflow
+### Initial Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/mylaniakea/unity.git
+   cd unity
+   ```
+
+2. **Backend setup**
+   ```bash
+   cd backend
+   python -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
+   ```
+
+3. **Environment configuration**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your settings
+   ```
+
+4. **Database setup**
+   ```bash
+   # Using Docker Compose
+   docker-compose up -d db
+   
+   # Or locally
+   createdb homelab_db
+   ```
+
+## Code Organization
+
+### Backend Structure
+```
+backend/app/
+├── models/              # Domain-organized models
+│   ├── core.py         # ServerProfile, Settings
+│   ├── credentials.py  # SSH keys, certificates
+│   ├── infrastructure.py # MonitoredServer, Storage, DB
+│   └── alert_rules.py  # Alert rule system
+├── routers/            # API endpoints
+├── services/           # Business logic
+│   ├── infrastructure/ # Infrastructure monitoring
+│   └── credentials/    # Credential management
+└── schedulers/         # Background tasks
+```
+
+## Testing
+
+### Running Tests
+```bash
+cd backend
+pytest tests/ -v
+
+# With coverage
+pytest tests/ --cov=app --cov-report=html
+
+# Specific test file
+pytest tests/test_infrastructure_models.py -v
+```
+
+### Writing Tests
+- Place tests in `backend/tests/`
+- Use fixtures from `conftest.py`
+- Follow naming convention: `test_*.py`
+- Aim for >80% coverage on new features
+
+## Database Migrations
+
+We use Alembic for schema management:
+
+```bash
+# Create migration after model changes
+alembic revision --autogenerate -m "description"
+
+# Review and apply
+alembic upgrade head
+```
+
+See `backend/README_ALEMBIC.md` for details.
+
+## Code Style
+
+### Python
+- Follow PEP 8
+- Use type hints where practical
+- Docstrings for public functions
+- Keep functions focused and testable
+
+### Git Commits
+Follow conventional commits:
+- `feat:` New features
+- `fix:` Bug fixes
+- `refactor:` Code restructuring
+- `test:` Adding tests
+- `docs:` Documentation updates
+
+## Pull Request Process
 
 1. **Create a feature branch**
    ```bash
@@ -14,91 +116,66 @@ See the [README.md](./README.md) for initial setup instructions.
    ```
 
 2. **Make your changes**
-   - Follow existing code style
-   - Add tests for new functionality
-   - Update documentation as needed
+   - Write tests for new features
+   - Update documentation
+   - Follow code style guidelines
 
-3. **Test your changes**
+3. **Run tests**
    ```bash
-   # Backend
-   cd backend && pytest
-   
-   # Frontend
-   cd frontend && npm test
+   pytest tests/ -v
    ```
 
 4. **Commit with clear messages**
    ```bash
-   git commit -m "Add: brief description of changes"
+   git commit -m "feat: add storage pool monitoring"
    ```
 
-5. **Push and create a pull request**
+5. **Push and create PR**
    ```bash
    git push origin feature/your-feature-name
    ```
 
-## Code Style
+6. **PR Guidelines**
+   - Clear description of changes
+   - Reference related issues
+   - Include test results
+   - Update CHANGELOG if applicable
 
-### Python (Backend)
-- Follow PEP 8
-- Use type hints
-- Write docstrings for functions and classes
-- Keep functions focused and small
+## Development Workflow
 
-### JavaScript/React (Frontend)
-- Use functional components with hooks
-- Follow existing component structure
-- Use TypeScript where possible
-- Keep components reusable
+### Adding a New Model
+1. Add model to appropriate file in `app/models/`
+2. Import in `app/models/__init__.py`
+3. Create migration: `alembic revision --autogenerate`
+4. Write tests in `tests/test_*_models.py`
+5. Apply migration: `alembic upgrade head`
 
-## Plugin Development
+### Adding an API Endpoint
+1. Add endpoint to appropriate router in `app/routers/`
+2. Write business logic in `app/services/`
+3. Add tests in `tests/test_*_api.py`
+4. Update API documentation
 
-See [HUB-IMPLEMENTATION-PLAN.md](./HUB-IMPLEMENTATION-PLAN.md) for plugin architecture details.
+### Adding a Service
+1. Create service in `app/services/`
+2. Follow dependency injection pattern
+3. Write unit tests
+4. Document public methods
 
-### Creating a Built-in Plugin
+## Security
 
-1. Create plugin file in `backend/app/plugins/builtin/`
-2. Extend `PluginBase` class
-3. Implement required methods
-4. Register in plugin loader
-5. Add tests
+- **Never commit secrets** (API keys, passwords, certificates)
+- Use `.env` for configuration
+- Follow principle of least privilege
+- Encrypt sensitive data at rest
+- Use parameterized queries (SQLAlchemy handles this)
 
-### Creating an External Plugin
+## Getting Help
 
-1. Use the Plugin SDK (coming soon)
-2. Implement the plugin interface
-3. Deploy as standalone service
-4. Register with hub via API
-
-## Testing
-
-- Write unit tests for all new functionality
-- Ensure existing tests pass
-- Add integration tests for plugin interactions
-
-## Documentation
-
-- Update README.md for user-facing changes
-- Update HUB-IMPLEMENTATION-PLAN.md for architectural changes
-- Add inline code comments for complex logic
-- Update API documentation
-
-## Pull Request Process
-
-1. Ensure all tests pass
-2. Update documentation
-3. Add clear description of changes
-4. Reference any related issues
-5. Wait for review and address feedback
-
-## Questions?
-
-Open an issue for questions or discussion about:
-- Feature ideas
-- Bug reports
-- Documentation improvements
-- Architecture decisions
+- Check existing issues
+- Read documentation in `docs/`
+- Ask in discussions
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the same license as the project.
+By contributing, you agree that your contributions will be licensed under the project's license.

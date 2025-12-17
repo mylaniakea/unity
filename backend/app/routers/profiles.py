@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from app.database import get_db
-from app import models, schemas
-from app.services.system_info import SystemInfoService
-from app.services.ssh import SSHService
-from app.services.snapshot_service import SnapshotService
+from app.core.database import get_db
+from app import models
+from app.schemas.core import *
+from app.services.core.system_info import SystemInfoService
+from app.services.core.ssh import SSHService
+from app.services.core.snapshot_service import SnapshotService
 
 router = APIRouter(
     prefix="/profiles",
@@ -13,20 +14,20 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-@router.post("/", response_model=schemas.ServerProfile)
-def create_profile(profile: schemas.ServerProfileCreate, db: Session = Depends(get_db)):
+@router.post("/", response_model=ServerProfile)
+def create_profile(profile: ServerProfileCreate, db: Session = Depends(get_db)):
     db_profile = models.ServerProfile(**profile.model_dump())
     db.add(db_profile)
     db.commit()
     db.refresh(db_profile)
     return db_profile
 
-@router.get("/", response_model=List[schemas.ServerProfile])
+@router.get("/", response_model=List[ServerProfile])
 def read_profiles(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     profiles = db.query(models.ServerProfile).offset(skip).limit(limit).all()
     return profiles
 
-@router.get("/{profile_id}", response_model=schemas.ServerProfile)
+@router.get("/{profile_id}", response_model=ServerProfile)
 def read_profile(profile_id: int, db: Session = Depends(get_db)):
     profile = db.query(models.ServerProfile).filter(models.ServerProfile.id == profile_id).first()
     if profile is None:
@@ -42,8 +43,8 @@ def delete_profile(profile_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"ok": True}
 
-@router.put("/{profile_id}", response_model=schemas.ServerProfile)
-def update_profile(profile_id: int, profile_data: schemas.ServerProfileUpdate, db: Session = Depends(get_db)):
+@router.put("/{profile_id}", response_model=ServerProfile)
+def update_profile(profile_id: int, profile_data: ServerProfileUpdate, db: Session = Depends(get_db)):
     db_profile = db.query(models.ServerProfile).filter(models.ServerProfile.id == profile_id).first()
     if db_profile is None:
         raise HTTPException(status_code=404, detail="Profile not found")
@@ -67,7 +68,7 @@ async def test_ssh_connection(profile_id: int, db: Session = Depends(get_db)):
     result = await ssh_service.verify_connection()
     return result
 
-@router.post("/{profile_id}/refresh", response_model=schemas.ServerProfile)
+@router.post("/{profile_id}/refresh", response_model=ServerProfile)
 async def refresh_profile_stats(profile_id: int, db: Session = Depends(get_db)):
     profile = db.query(models.ServerProfile).filter(models.ServerProfile.id == profile_id).first()
     if not profile:
@@ -121,7 +122,7 @@ async def setup_ssh_keys(profile_id: int, request: PasswordRequest, db: Session 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Key Setup Failed: {str(e)}")
 
-@router.post("/{profile_id}/scan-hardware", response_model=schemas.ServerProfile)
+@router.post("/{profile_id}/scan-hardware", response_model=ServerProfile)
 async def scan_hardware_profile(profile_id: int, db: Session = Depends(get_db)):
     profile = db.query(models.ServerProfile).filter(models.ServerProfile.id == profile_id).first()
     if not profile:
@@ -145,14 +146,14 @@ async def scan_hardware_profile(profile_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Hardware Scan Failed: {str(e)}")
 
-@router.post("/scan-local", response_model=schemas.ServerProfile)
+@router.post("/scan-local", response_model=ServerProfile)
 def create_profile_from_local(db: Session = Depends(get_db)):
     """Auto-generate a profile from the current server's stats"""
     hardware = SystemInfoService.get_hardware_info()
     os_info = SystemInfoService.get_os_info()
     # TODO: Get packages
     
-    profile_data = schemas.ServerProfileCreate(
+    profile_data = ServerProfileCreate(
         name=os_info.get("hostname", "Local Server"),
         description="Auto-generated from local system",
         ip_address="127.0.0.1", # Placeholder

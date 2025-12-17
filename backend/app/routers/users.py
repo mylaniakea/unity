@@ -2,9 +2,11 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app import schemas, models
-from app.database import get_db
-from app.services.auth import AuthService, get_current_active_user
+from app.schemas.core import *
+from app.schemas.users import *
+from app import models
+from app.core.database import get_db
+from app.services.auth.auth_service import AuthService, get_current_active_user
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -21,7 +23,7 @@ async def get_current_admin(
     return current_user
 
 
-@router.get("/", response_model=List[schemas.User])
+@router.get("/", response_model=List[User])
 async def list_users(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_admin)
@@ -31,9 +33,9 @@ async def list_users(
     return users
 
 
-@router.post("/", response_model=schemas.User, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=User, status_code=status.HTTP_201_CREATED)
 async def create_user(
-    user: schemas.UserCreate,
+    user: UserCreate,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_admin)
 ):
@@ -84,7 +86,7 @@ async def create_user(
     return db_user
 
 
-@router.get("/{user_id}", response_model=schemas.User)
+@router.get("/{user_id}", response_model=User)
 async def get_user(
     user_id: int,
     db: Session = Depends(get_db),
@@ -100,10 +102,10 @@ async def get_user(
     return user
 
 
-@router.put("/{user_id}", response_model=schemas.User)
+@router.put("/{user_id}", response_model=User)
 async def update_user(
     user_id: int,
-    user_update: schemas.UserUpdate,
+    user_update: UserUpdate,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_admin)
 ):

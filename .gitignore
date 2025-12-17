@@ -78,3 +78,11 @@ docker-compose.override.yml
 *.bak
 *.tmp
 .cache/
+
+# Staging directory artifacts
+kc-booth-staging/frontend/node_modules/
+kc-booth-staging/frontend/dist/
+kc-booth-staging/.venv/
+bd-store-staging/.venv/
+bd-store-staging/frontend/node_modules/
+backend/.venv_new/

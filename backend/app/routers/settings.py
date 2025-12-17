@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app import models, schemas_settings
+from app.core.database import get_db
+from app import models
+from app.schemas.core import Settings, SettingsUpdate
 
 router = APIRouter(
     prefix="/settings",
@@ -9,7 +10,7 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-@router.get("/", response_model=schemas_settings.Settings)
+@router.get("/", response_model=Settings)
 def get_settings(db: Session = Depends(get_db)):
     settings = db.query(models.Settings).first()
     if not settings:
@@ -20,8 +21,8 @@ def get_settings(db: Session = Depends(get_db)):
         db.refresh(settings)
     return settings
 
-@router.put("/", response_model=schemas_settings.Settings)
-def update_settings(settings_in: schemas_settings.SettingsUpdate, db: Session = Depends(get_db)):
+@router.put("/", response_model=Settings)
+def update_settings(settings_in: SettingsUpdate, db: Session = Depends(get_db)):
     settings = db.query(models.Settings).first()
     if not settings:
         settings = models.Settings()
