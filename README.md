@@ -193,10 +193,13 @@ This is a **PUBLIC repository**. Please review [PUBLIC-REPO-SECURITY.md](./PUBLI
 - Encrypted credential storage
 
 See [SECURITY.md](./SECURITY.md) for details.
-
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+
+### Moonshot Ideas 🚀
+
+Interested in ambitious features and future possibilities? Check out [MOONSHOT.md](./MOONSHOT.md) for creative ideas we'd love to explore. These are aspirational "reach goals" that could significantly enhance Unity's capabilities.
 
 ## License
 

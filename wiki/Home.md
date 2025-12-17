@@ -263,6 +263,10 @@ We welcome contributions! See [[Contributing]] for guidelines.
 - `INTEGRATION-COMPLETE.md` - Phase 1-4 integration summary
 - `PHASE-4-FINAL-SUMMARY.md` - Complete Phase 4 details
 
+### Moonshot Ideas 🚀
+- `MOONSHOT.md` - Ambitious ideas and future possibilities
+- `ROADMAP.md` - Development roadmap and phases
+
 ### API Documentation
 Visit http://localhost:8000/docs for interactive API documentation (Swagger UI)
 
