@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unity Plugins Showcase - 40 Homelab Monitoring Plugins</title>
+    <title>Unity Plugin Showcase</title>
     <style>
         * {
             margin: 0;
@@ -11,12 +11,29 @@
             box-sizing: border-box;
         }
         
+        :root {
+            --bg-primary: #0a0e27;
+            --bg-secondary: #111729;
+            --bg-card: #1a1f3a;
+            --text-primary: #e4e7eb;
+            --text-secondary: #9ca3af;
+            --accent-blue: #3b82f6;
+            --accent-purple: #8b5cf6;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-cyan: #06b6d4;
+            --border-color: #2d3548;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
             min-height: 100vh;
-            padding: 20px;
-            color: #fff;
+            padding: 2rem;
         }
         
         .container {
@@ -26,562 +43,716 @@
         
         header {
             text-align: center;
-            margin-bottom: 50px;
-            animation: fadeInDown 0.8s ease;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: var(--bg-card);
+            border-radius: 1rem;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 32px var(--shadow);
         }
         
         h1 {
-            font-size: 3.5em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            font-size: 3rem;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
         }
         
         .subtitle {
-            font-size: 1.3em;
-            opacity: 0.95;
-            margin-bottom: 20px;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
         }
         
         .stats {
-            display: flex;
-            justify-content: center;
-            gap: 30px;
-            margin: 30px 0;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
         }
         
-        .stat-box {
-            background: rgba(255,255,255,0.2);
-            backdrop-filter: blur(10px);
-            padding: 20px 40px;
-            border-radius: 15px;
-            border: 1px solid rgba(255,255,255,0.3);
+        .stat-card {
+            background: var(--bg-card);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px var(--shadow);
         }
         
         .stat-number {
-            font-size: 2.5em;
+            font-size: 2.5rem;
             font-weight: bold;
-            display: block;
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
         .stat-label {
-            font-size: 0.9em;
-            opacity: 0.9;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.05em;
         }
         
-        .tier-section {
-            margin-bottom: 60px;
-            animation: fadeIn 1s ease;
+        .category-section {
+            margin-bottom: 3rem;
         }
         
-        .tier-header {
-            background: rgba(255,255,255,0.15);
-            backdrop-filter: blur(10px);
-            padding: 25px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            border: 1px solid rgba(255,255,255,0.2);
+        .category-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding: 1rem 1.5rem;
+            background: var(--bg-card);
+            border-radius: 0.75rem;
+            border-left: 4px solid var(--accent-blue);
         }
         
-        .tier-title {
-            font-size: 2em;
-            margin-bottom: 10px;
+        .category-icon {
+            font-size: 2rem;
         }
         
-        .tier-description {
-            font-size: 1.1em;
-            opacity: 0.9;
+        .category-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        
+        .category-count {
+            margin-left: auto;
+            background: var(--accent-blue);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.9rem;
+            font-weight: 600;
         }
         
         .plugins-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 25px;
-            margin-bottom: 40px;
+            gap: 1.5rem;
         }
         
         .plugin-card {
-            background: rgba(255,255,255,0.95);
-            color: #333;
-            border-radius: 15px;
-            padding: 25px;
+            background: var(--bg-card);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-color);
             transition: all 0.3s ease;
-            cursor: pointer;
-            border: 2px solid transparent;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .plugin-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
         }
         
         .plugin-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 15px rgba(0,0,0,0.3);
-            border-color: #667eea;
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px var(--shadow);
+            border-color: var(--accent-blue);
         }
         
-        .plugin-icon {
-            font-size: 2.5em;
-            margin-bottom: 15px;
+        .plugin-card:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .plugin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 1rem;
         }
         
         .plugin-name {
-            font-size: 1.4em;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #667eea;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+        
+        .plugin-version {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            font-family: monospace;
+        }
+        
+        .plugin-id {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-family: monospace;
+            margin-bottom: 1rem;
         }
         
         .plugin-description {
-            font-size: 0.95em;
-            line-height: 1.6;
-            color: #555;
-            margin-bottom: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            line-height: 1.5;
         }
         
         .plugin-tags {
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
+            gap: 0.5rem;
+            margin-top: 1rem;
         }
         
         .tag {
-            background: #667eea;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.8em;
-            font-weight: 500;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            border: 1px solid var(--border-color);
         }
         
-        .category-hardware { border-left: 4px solid #e74c3c; }
-        .category-storage { border-left: 4px solid #3498db; }
-        .category-container { border-left: 4px solid #2ecc71; }
-        .category-network { border-left: 4px solid #f39c12; }
-        .category-security { border-left: 4px solid #9b59b6; }
-        .category-media { border-left: 4px solid #1abc9c; }
-        .category-application { border-left: 4px solid #e67e22; }
+        .plugin-footer {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .plugin-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        
+        .badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .badge-sudo {
+            background: var(--accent-red);
+            color: white;
+        }
         
         footer {
             text-align: center;
-            margin-top: 60px;
-            padding: 30px;
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            animation: fadeIn 1.5s ease;
+            margin-top: 4rem;
+            padding: 2rem;
+            color: var(--text-secondary);
+            border-top: 1px solid var(--border-color);
         }
         
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
+        /* Category Colors */
+        .category-SYSTEM .category-header { border-left-color: var(--accent-blue); }
+        .category-NETWORK .category-header { border-left-color: var(--accent-cyan); }
+        .category-STORAGE .category-header { border-left-color: var(--accent-orange); }
+        .category-DATABASE .category-header { border-left-color: var(--accent-green); }
+        .category-SECURITY .category-header { border-left-color: var(--accent-red); }
+        .category-CONTAINER .category-header { border-left-color: var(--accent-purple); }
+        .category-APPLICATION .category-header { border-left-color: var(--accent-orange); }
         
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        @media (max-width: 768px) {
-            h1 { font-size: 2em; }
-            .plugins-grid { grid-template-columns: 1fr; }
-        }
+        .category-SYSTEM .category-count { background: var(--accent-blue); }
+        .category-NETWORK .category-count { background: var(--accent-cyan); }
+        .category-STORAGE .category-count { background: var(--accent-orange); }
+        .category-DATABASE .category-count { background: var(--accent-green); }
+        .category-SECURITY .category-count { background: var(--accent-red); }
+        .category-CONTAINER .category-count { background: var(--accent-purple); }
+        .category-APPLICATION .category-count { background: var(--accent-orange); }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🏠 Unity Plugins Showcase</h1>
-            <p class="subtitle">Comprehensive Homelab Monitoring</p>
-            <div class="stats">
-                <div class="stat-box">
-                    <span class="stat-number">40</span>
-                    <span class="stat-label">Total Plugins</span>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-number">3</span>
-                    <span class="stat-label">Tiers</span>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-number">7</span>
-                    <span class="stat-label">Categories</span>
-                </div>
-            </div>
+            <h1>🎯 Unity Plugin Showcase</h1>
+            <p class="subtitle">Comprehensive Monitoring & Management Plugins</p>
+            <p class="subtitle" style="font-size: 0.9rem; margin-top: 0.5rem;">Generated: December 17, 2025</p>
         </header>
-
-        <!-- Tier 1: Essential Pain Points -->
-        <div class="tier-section">
-            <div class="tier-header">
-                <h2 class="tier-title">🔴 Tier 1: Essential Pain Points</h2>
-                <p class="tier-description">Critical infrastructure monitoring that prevents 3am wake-up calls</p>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number">16</div>
+                <div class="stat-label">Total Plugins</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">7</div>
+                <div class="stat-label">Categories</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">5</div>
+                <div class="stat-label">Database Monitors</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">2</div>
+                <div class="stat-label">Security Monitors</div>
+            </div>
+        </div>
+        
+        <!-- SYSTEM -->
+        <div class="category-section category-SYSTEM">
+            <div class="category-header">
+                <span class="category-icon">🖥️</span>
+                <h2 class="category-title">System Monitoring</h2>
+                <span class="category-count">3 plugins</span>
             </div>
             <div class="plugins-grid">
-                <div class="plugin-card category-security">
-                    <div class="plugin-icon">🔒</div>
-                    <h3 class="plugin-name">Certificate Expiration Monitor</h3>
-                    <p class="plugin-description">Never let your SSL certificates expire again. Tracks all your certs and alerts before expiration.</p>
+                <div class="plugin-card">
+                    <div class="plugin-header">
+                        <div>
+                            <div class="plugin-name">System Info</div>
+                            <div class="plugin-id">system-info</div>
+                        </div>
+                        <div class="plugin-version">v1.0.0</div>
+                    </div>
+                    <div class="plugin-description">
+                        Provides comprehensive system information including CPU, memory, OS details, and hardware specifications
+                    </div>
                     <div class="plugin-tags">
-                        <span class="tag">SSL/TLS</span>
-                        <span class="tag">Security</span>
-                        <span class="tag">Alerts</span>
+                        <span class="tag">system</span>
+                        <span class="tag">hardware</span>
+                        <span class="tag">info</span>
+                    </div>
+                    <div class="plugin-footer">
+                        <div class="plugin-meta">📦 psutil</div>
+                        <div class="plugin-meta">🌍 Multi-platform</div>
                     </div>
                 </div>
-
-                <div class="plugin-card category-hardware">
-                    <div class="plugin-icon">🔋</div>
-                    <h3 class="plugin-name">UPS Monitor (NUT)</h3>
-                    <p class="plugin-description">Network UPS Tools integration for battery status, load monitoring, and power event tracking.</p>
+                
+                <div class="plugin-card">
+                    <div class="plugin-header">
+                        <div>
+                            <div class="plugin-name">Process Monitor</div>
+                            <div class="plugin-id">process-monitor</div>
+                        </div>
+                        <div class="plugin-version">v1.0.0</div>
+                    </div>
+                    <div class="plugin-description">
+                        Monitors system processes, resource usage, and top consumers
+                    </div>
                     <div class="plugin-tags">
-                        <span class="tag">Power</span>
-                        <span class="tag">Hardware</span>
-                        <span class="tag">NUT</span>
+                        <span class="tag">processes</span>
+                        <span class="tag">monitoring</span>
+                        <span class="tag">resources</span>
+                    </div>
+                    <div class="plugin-footer">
+                        <div class="plugin-meta">📦 psutil</div>
+                        <div class="plugin-meta">🌍 Multi-platform</div>
                     </div>
                 </div>
-
-                <div class="plugin-card category-storage">
-                    <div class="plugin-icon">💾</div>
-                    <h3 class="plugin-name">Backup Monitor</h3>
-                    <p class="plugin-description">Tracks Restic, Borg, Duplicati, and rsync backups. Know your data is safe.</p>
-                    <div class="plugin-tags">
-                        <span class="tag">Backups</span>
-                        <span class="tag">Restic</span>
-                        <span class="tag">Borg</span>
+                
+                <div class="plugin-card">
+                    <div class="plugin-header">
+                        <div>
+                            <div class="plugin-name">Thermal Monitor</div>
+                            <div class="plugin-id">thermal-monitor</div>
+                        </div>
+                        <div class="plugin-version">v1.0.0</div>
                     </div>
-                </div>
-
-                <div class="plugin-card category-storage">
-                    <div class="plugin-icon">💿</div>
-                    <h3 class="plugin-name">SMART Disk Health Monitor</h3>
-                    <p class="plugin-description">Monitors drive health, pending sectors, temperature, and predicts failures before they happen.</p>
-                    <div class="plugin-tags">
-                        <span class="tag">Storage</span>
-                        <span class="tag">SMART</span>
-                        <span class="tag">Health</span>
+                    <div class="plugin-description">
+                        Monitors CPU and system temperatures, fan speeds, and thermal zones
                     </div>
-                </div>
-
-                <div class="plugin-card category-network">
-                    <div class="plugin-icon">🔀</div>
-                    <h3 class="plugin-name">Reverse Proxy Monitor</h3>
-                    <p class="plugin-description">Monitors NPM, Traefik, and Caddy. Backend health, proxy host status, and SSL management.</p>
                     <div class="plugin-tags">
-                        <span class="tag">Proxy</span>
-                        <span class="tag">NPM</span>
-                        <span class="tag">Traefik</span>
+                        <span class="tag">temperature</span>
+                        <span class="tag">thermal</span>
+                        <span class="tag">sensors</span>
+                        <span class="tag">cooling</span>
+                    </div>
+                    <div class="plugin-footer">
+                        <div class="plugin-meta">📦 psutil</div>
+                        <div class="plugin-meta">🐧 Linux/macOS</div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Tier 2: Quality of Life Essentials -->
-        <div class="tier-section">
-            <div class="tier-header">
-                <h2 class="tier-title">🟡 Tier 2: Quality of Life Essentials</h2>
-                <p class="tier-description">Daily drivers and must-have services that make your homelab shine</p>
+        
+        <!-- NETWORK -->
+        <div class="category-section category-NETWORK">
+            <div class="category-header">
+                <span class="category-icon">🌐</span>
+                <h2 class="category-title">Network Monitoring</h2>
+                <span class="category-count">1 plugin</span>
             </div>
             <div class="plugins-grid">
-                <div class="plugin-card category-network">
-                    <div class="plugin-icon">🛡️</div>
-                    <h3 class="plugin-name">DNS Monitor</h3>
-                    <p class="plugin-description">Pi-hole, AdGuard Home, and Unbound monitoring. Query stats, blocklist health, and resolver status.</p>
-                    <div class="plugin-tags">
-                        <span class="tag">DNS</span>
-                        <span class="tag">Pi-hole</span>
-                        <span class="tag">AdGuard</span>
+                <div class="plugin-card">
+                    <div class="plugin-header">
+                        <div>
+                            <div class="plugin-name">Network Monitor</div>
+                            <div class="plugin-id">network-monitor</div>
+                        </div>
+                        <div class="plugin-version">v1.0.0</div>
                     </div>
-                </div>
-
-                <div class="plugin-card category-network">
-                    <div class="plugin-icon">🔐</div>
-                    <h3 class="plugin-name">VPN Monitor</h3>
-                    <p class="plugin-description">WireGuard and OpenVPN monitoring. Active connections, bandwidth, and tunnel health.</p>
-                    <div class="plugin-tags">
-                        <span class="tag">VPN</span>
-                        <span class="tag">WireGuard</span>
-                        <span class="tag">OpenVPN</span>
+                    <div class="plugin-description">
+                        Monitors network interfaces, throughput, errors, and active connections
                     </div>
-                </div>
-
-                <div class="plugin-card category-media">
-                    <div class="plugin-icon">🎬</div>
-                    <h3 class="plugin-name">Media Server Monitor</h3>
-                    <p class="plugin-description">Plex, Jellyfin, and Emby monitoring. Active streams, library stats, and transcoding load.</p>
                     <div class="plugin-tags">
-                        <span class="tag">Media</span>
-                        <span class="tag">Plex</span>
-                        <span class="tag">Jellyfin</span>
+                        <span class="tag">network</span>
+                        <span class="tag">throughput</span>
+                        <span class="tag">connections</span>
+                        <span class="tag">interfaces</span>
                     </div>
-                </div>
-
-                <div class="plugin-card category-application">
-                    <div class="plugin-icon">📥</div>
-                    <h3 class="plugin-name">Download Manager Monitor</h3>
-                    <p class="plugin-description">qBittorrent, Transmission, SABnzbd monitoring. Transfer stats, queue depth, and speeds.</p>
-                    <div class="plugin-tags">
-                        <span class="tag">Downloads</span>
-                        <span class="tag">Torrents</span>
-                        <span class="tag">Usenet</span>
-                    </div>
-                </div>
-
-                <div class="plugin-card category-application">
-                    <div class="plugin-icon">🏡</div>
-                    <h3 class="plugin-name">Home Assistant Monitor</h3>
-                    <p class="plugin-description">Home automation monitoring. Entity counts, automation states, and system health.</p>
-                    <div class="plugin-tags">
-                        <span class="tag">Smart Home</span>
-                        <span class="tag">Automation</span>
-                        <span class="tag">IoT</span>
-                    </div>
-                </div>
-
-                <div class="plugin-card category-storage">
-                    <div class="plugin-icon">☁️</div>
-                    <h3 class="plugin-name">Nextcloud Monitor</h3>
-                    <p class="plugin-description">Private cloud monitoring. User activity, storage usage, sync status, and app health.</p>
-                    <div class="plugin-tags">
-                        <span class="tag">Cloud</span>
-                        <span class="tag">Storage</span>
-                        <span class="tag">Sync</span>
-                    </div>
-                </div>
-
-                <div class="plugin-card category-application">
-                    <div class="plugin-icon">🔱</div>
-                    <h3 class="plugin-name">Git Server Monitor</h3>
-                    <p class="plugin-description">Gitea, Gogs, and GitLab monitoring. Repository stats, user activity, and service health.</p>
-                    <div class="plugin-tags">
-                        <span class="tag">Git</span>
-                        <span class="tag">Development</span>
-                        <span class="tag">SCM</span>
-                    </div>
-                </div>
-
-                <div class="plugin-card category-network">
-                    <div class="plugin-icon">🌐</div>
-                    <h3 class="plugin-name">HTTP Endpoint Monitor</h3>
-                    <p class="plugin-description">Generic HTTP/HTTPS monitoring with response time, status codes, and custom checks.</p>
-                    <div class="plugin-tags">
-                        <span class="tag">HTTP</span>
-                        <span class="tag">Uptime</span>
-                        <span class="tag">API</span>
+                    <div class="plugin-footer">
+                        <div class="plugin-meta">📦 psutil</div>
+                        <div class="plugin-meta">🌍 Multi-platform</div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Tier 3: Power User Sophistication -->
-        <div class="tier-section">
-            <div class="tier-header">
-                <h2 class="tier-title">🟢 Tier 3: Power User Sophistication</h2>
-                <p class="tier-description">Enterprise-grade features for the ultimate homelabber</p>
+        
+        <!-- STORAGE -->
+        <div class="category-section category-STORAGE">
+            <div class="category-header">
+                <span class="category-icon">💾</span>
+                <h2 class="category-title">Storage Monitoring</h2>
+                <span class="category-count">1 plugin</span>
             </div>
             <div class="plugins-grid">
-                <div class="plugin-card category-storage">
-                    <div class="plugin-icon">🗄️</div>
-                    <h3 class="plugin-name">ZFS/BTRFS Monitor</h3>
-                    <p class="plugin-description">Advanced filesystem monitoring. Pool health, scrub status, compression ratios, and dataset usage.</p>
-                    <div class="plugin-tags">
-                        <span class="tag">ZFS</span>
-                        <span class="tag">BTRFS</span>
-                        <span class="tag">Storage</span>
+                <div class="plugin-card">
+                    <div class="plugin-header">
+                        <div>
+                            <div class="plugin-name">Disk Monitor</div>
+                            <div class="plugin-id">disk-monitor</div>
+                        </div>
+                        <div class="plugin-version">v1.0.0</div>
                     </div>
-                </div>
-
-                <div class="plugin-card category-hardware">
-                    <div class="plugin-icon">🌡️</div>
-                    <h3 class="plugin-name">Temperature Monitor</h3>
-                    <p class="plugin-description">Comprehensive thermal monitoring. CPU, GPU, motherboard, and disk temperatures via lm-sensors.</p>
-                    <div class="plugin-tags">
-                        <span class="tag">Temperature</span>
-                        <span class="tag">Sensors</span>
-                        <span class="tag">Thermal</span>
+                    <div class="plugin-description">
+                        Monitors disk usage, I/O statistics, and mounted partitions
                     </div>
-                </div>
-
-                <div class="plugin-card category-container">
-                    <div class="plugin-icon">☸️</div>
-                    <h3 class="plugin-name">Kubernetes Monitor</h3>
-                    <p class="plugin-description">Full K8s cluster observability. Node health, pod stats, namespace distribution, multi-context support.</p>
                     <div class="plugin-tags">
-                        <span class="tag">Kubernetes</span>
-                        <span class="tag">K8s</span>
-                        <span class="tag">Orchestration</span>
+                        <span class="tag">disk</span>
+                        <span class="tag">storage</span>
+                        <span class="tag">io</span>
+                        <span class="tag">partitions</span>
                     </div>
-                </div>
-
-                <div class="plugin-card category-network">
-                    <div class="plugin-icon">🔌</div>
-                    <h3 class="plugin-name">Network Switch Monitor</h3>
-                    <p class="plugin-description">Enterprise networking via SNMP. Port status, uptime, system info for managed switches.</p>
-                    <div class="plugin-tags">
-                        <span class="tag">SNMP</span>
-                        <span class="tag">Switch</span>
-                        <span class="tag">Network</span>
-                    </div>
-                </div>
-
-                <div class="plugin-card category-network">
-                    <div class="plugin-icon">🕸️</div>
-                    <h3 class="plugin-name">VPN Mesh Monitor</h3>
-                    <p class="plugin-description">WireGuard and Tailscale peer tracking. Handshake monitoring, transfer stats, connection status.</p>
-                    <div class="plugin-tags">
-                        <span class="tag">Mesh</span>
-                        <span class="tag">WireGuard</span>
-                        <span class="tag">Tailscale</span>
-                    </div>
-                </div>
-
-                <div class="plugin-card category-network">
-                    <div class="plugin-icon">📧</div>
-                    <h3 class="plugin-name">Email Server Monitor</h3>
-                    <p class="plugin-description">Self-hosted email monitoring. Postfix/Exim queue tracking, service health, mail delivery verification.</p>
-                    <div class="plugin-tags">
-                        <span class="tag">Email</span>
-                        <span class="tag">SMTP</span>
-                        <span class="tag">Postfix</span>
-                    </div>
-                </div>
-
-                <div class="plugin-card category-application">
-                    <div class="plugin-icon">🎮</div>
-                    <h3 class="plugin-name">Game Server Monitor</h3>
-                    <p class="plugin-description">Because homelabbers game too! Minecraft, Valheim, and generic server monitoring.</p>
-                    <div class="plugin-tags">
-                        <span class="tag">Gaming</span>
-                        <span class="tag">Minecraft</span>
-                        <span class="tag">Valheim</span>
-                    </div>
-                </div>
-
-                <div class="plugin-card category-media">
-                    <div class="plugin-icon">📸</div>
-                    <h3 class="plugin-name">Photo Manager Monitor</h3>
-                    <p class="plugin-description">PhotoPrism and Immich health tracking. API monitoring, version tracking, availability checks.</p>
-                    <div class="plugin-tags">
-                        <span class="tag">Photos</span>
-                        <span class="tag">PhotoPrism</span>
-                        <span class="tag">Immich</span>
-                    </div>
-                </div>
-
-                <div class="plugin-card category-hardware">
-                    <div class="plugin-icon">🖥️</div>
-                    <h3 class="plugin-name">IPMI/BMC Monitor</h3>
-                    <p class="plugin-description">Out-of-band hardware monitoring. Temperature sensors, fan speeds, power status, SEL tracking via IPMI.</p>
-                    <div class="plugin-tags">
-                        <span class="tag">IPMI</span>
-                        <span class="tag">BMC</span>
-                        <span class="tag">iDRAC</span>
-                    </div>
-                </div>
-
-                <div class="plugin-card category-security">
-                    <div class="plugin-icon">🔑</div>
-                    <h3 class="plugin-name">Bitwarden Monitor</h3>
-                    <p class="plugin-description">Critical password vault monitoring. API health, web vault accessibility, admin diagnostics.</p>
-                    <div class="plugin-tags">
-                        <span class="tag">Security</span>
-                        <span class="tag">Passwords</span>
-                        <span class="tag">Vaultwarden</span>
-                    </div>
-                </div>
-
-                <div class="plugin-card category-storage">
-                    <div class="plugin-icon">🔄</div>
-                    <h3 class="plugin-name">Syncthing Monitor</h3>
-                    <p class="plugin-description">P2P file sync monitoring. Device connectivity, folder sync status, system resource usage.</p>
-                    <div class="plugin-tags">
-                        <span class="tag">Sync</span>
-                        <span class="tag">P2P</span>
-                        <span class="tag">Replication</span>
+                    <div class="plugin-footer">
+                        <div class="plugin-meta">📦 psutil</div>
+                        <div class="plugin-meta">🌍 Multi-platform</div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Original 16 Plugins (keeping for completeness) -->
-        <div class="tier-section">
-            <div class="tier-header">
-                <h2 class="tier-title">🔵 Foundation Plugins</h2>
-                <p class="tier-description">The original 16 plugins that started it all</p>
+        
+        <!-- DATABASE -->
+        <div class="category-section category-DATABASE">
+            <div class="category-header">
+                <span class="category-icon">🗄️</span>
+                <h2 class="category-title">Database Monitoring</h2>
+                <span class="category-count">5 plugins</span>
             </div>
             <div class="plugins-grid">
-                <div class="plugin-card category-container">
-                    <div class="plugin-icon">🐳</div>
-                    <h3 class="plugin-name">Docker Monitor</h3>
-                    <p class="plugin-description">Container monitoring with resource tracking, health checks, and status updates.</p>
+                <div class="plugin-card">
+                    <div class="plugin-header">
+                        <div>
+                            <div class="plugin-name">PostgreSQL Monitor</div>
+                            <div class="plugin-id">postgres-monitor</div>
+                        </div>
+                        <div class="plugin-version">v1.0.0</div>
+                    </div>
+                    <div class="plugin-description">
+                        Monitors PostgreSQL server metrics including connections, transactions, locks, and cache performance
+                    </div>
                     <div class="plugin-tags">
-                        <span class="tag">Docker</span>
-                        <span class="tag">Containers</span>
+                        <span class="tag">postgresql</span>
+                        <span class="tag">postgres</span>
+                        <span class="tag">database</span>
+                        <span class="tag">sql</span>
+                    </div>
+                    <div class="plugin-footer">
+                        <div class="plugin-meta">📦 psycopg2-binary</div>
+                        <div class="plugin-meta">🌍 Multi-platform</div>
                     </div>
                 </div>
-
-                <div class="plugin-card category-hardware">
-                    <div class="plugin-icon">⚡</div>
-                    <h3 class="plugin-name">System Monitor</h3>
-                    <p class="plugin-description">Core system metrics: CPU, memory, disk, network, and process monitoring.</p>
+                
+                <div class="plugin-card">
+                    <div class="plugin-header">
+                        <div>
+                            <div class="plugin-name">MySQL/MariaDB Monitor</div>
+                            <div class="plugin-id">mysql-monitor</div>
+                        </div>
+                        <div class="plugin-version">v1.0.0</div>
+                    </div>
+                    <div class="plugin-description">
+                        Monitors MySQL and MariaDB server metrics including connections, queries, and replication status
+                    </div>
                     <div class="plugin-tags">
-                        <span class="tag">System</span>
-                        <span class="tag">Resources</span>
+                        <span class="tag">mysql</span>
+                        <span class="tag">mariadb</span>
+                        <span class="tag">database</span>
+                        <span class="tag">sql</span>
+                    </div>
+                    <div class="plugin-footer">
+                        <div class="plugin-meta">📦 pymysql</div>
+                        <div class="plugin-meta">🌍 Multi-platform</div>
                     </div>
                 </div>
-
-                <div class="plugin-card category-application">
-                    <div class="plugin-icon">📦</div>
-                    <h3 class="plugin-name">Application Monitor</h3>
-                    <p class="plugin-description">Generic application health checks and custom metrics collection.</p>
+                
+                <div class="plugin-card">
+                    <div class="plugin-header">
+                        <div>
+                            <div class="plugin-name">MongoDB Monitor</div>
+                            <div class="plugin-id">mongodb-monitor</div>
+                        </div>
+                        <div class="plugin-version">v1.0.0</div>
+                    </div>
+                    <div class="plugin-description">
+                        Monitors MongoDB server metrics including connections, operations, and replication status
+                    </div>
                     <div class="plugin-tags">
-                        <span class="tag">Apps</span>
-                        <span class="tag">Services</span>
+                        <span class="tag">mongodb</span>
+                        <span class="tag">database</span>
+                        <span class="tag">nosql</span>
+                        <span class="tag">document-store</span>
+                    </div>
+                    <div class="plugin-footer">
+                        <div class="plugin-meta">📦 pymongo</div>
+                        <div class="plugin-meta">🌍 Multi-platform</div>
                     </div>
                 </div>
-
-                <!-- Add other foundation plugins as needed -->
+                
+                <div class="plugin-card">
+                    <div class="plugin-header">
+                        <div>
+                            <div class="plugin-name">Redis Monitor</div>
+                            <div class="plugin-id">redis-monitor</div>
+                        </div>
+                        <div class="plugin-version">v1.0.0</div>
+                    </div>
+                    <div class="plugin-description">
+                        Monitors Redis server metrics including memory usage, commands/sec, connected clients, and keyspace stats
+                    </div>
+                    <div class="plugin-tags">
+                        <span class="tag">redis</span>
+                        <span class="tag">cache</span>
+                        <span class="tag">key-value</span>
+                        <span class="tag">in-memory</span>
+                    </div>
+                    <div class="plugin-footer">
+                        <div class="plugin-meta">📦 redis</div>
+                        <div class="plugin-meta">🌍 Multi-platform</div>
+                    </div>
+                </div>
+                
+                <div class="plugin-card">
+                    <div class="plugin-header">
+                        <div>
+                            <div class="plugin-name">InfluxDB Monitor</div>
+                            <div class="plugin-id">influxdb-monitor</div>
+                        </div>
+                        <div class="plugin-version">v1.0.0</div>
+                    </div>
+                    <div class="plugin-description">
+                        Monitors InfluxDB time-series database including write/query rates, series cardinality, and storage
+                    </div>
+                    <div class="plugin-tags">
+                        <span class="tag">influxdb</span>
+                        <span class="tag">time-series</span>
+                        <span class="tag">database</span>
+                        <span class="tag">metrics</span>
+                    </div>
+                    <div class="plugin-footer">
+                        <div class="plugin-meta">📦 influxdb-client</div>
+                        <div class="plugin-meta">🌍 Multi-platform</div>
+                    </div>
+                </div>
+                
+                <div class="plugin-card">
+                    <div class="plugin-header">
+                        <div>
+                            <div class="plugin-name">SQLite Monitor</div>
+                            <div class="plugin-id">sqlite-monitor</div>
+                        </div>
+                        <div class="plugin-version">v1.0.0</div>
+                    </div>
+                    <div class="plugin-description">
+                        Monitors SQLite database files including size, table counts, query performance, and integrity checks
+                    </div>
+                    <div class="plugin-tags">
+                        <span class="tag">sqlite</span>
+                        <span class="tag">database</span>
+                        <span class="tag">embedded</span>
+                        <span class="tag">sql</span>
+                    </div>
+                    <div class="plugin-footer">
+                        <div class="plugin-meta">📦 Built-in</div>
+                        <div class="plugin-meta">🌍 Multi-platform</div>
+                    </div>
+                </div>
             </div>
         </div>
-
+        
+        <!-- SECURITY -->
+        <div class="category-section category-SECURITY">
+            <div class="category-header">
+                <span class="category-icon">🔒</span>
+                <h2 class="category-title">Security Monitoring</h2>
+                <span class="category-count">2 plugins</span>
+            </div>
+            <div class="plugins-grid">
+                <div class="plugin-card">
+                    <div class="plugin-header">
+                        <div>
+                            <div class="plugin-name">Authentication Monitor</div>
+                            <div class="plugin-id">auth-monitor</div>
+                        </div>
+                        <div class="plugin-version">v1.0.0</div>
+                    </div>
+                    <div class="plugin-description">
+                        Monitors authentication attempts, failures, and suspicious patterns
+                    </div>
+                    <div class="plugin-tags">
+                        <span class="tag">security</span>
+                        <span class="tag">authentication</span>
+                        <span class="tag">ssh</span>
+                        <span class="tag">pam</span>
+                        <span class="tag">login</span>
+                    </div>
+                    <div class="plugin-footer">
+                        <div class="plugin-meta">📦 Built-in</div>
+                        <div class="plugin-meta">🐧 Linux/macOS</div>
+                        <span class="badge badge-sudo">REQUIRES SUDO</span>
+                    </div>
+                </div>
+                
+                <div class="plugin-card">
+                    <div class="plugin-header">
+                        <div>
+                            <div class="plugin-name">Firewall Monitor</div>
+                            <div class="plugin-id">firewall-monitor</div>
+                        </div>
+                        <div class="plugin-version">v1.0.0</div>
+                    </div>
+                    <div class="plugin-description">
+                        Monitors firewall rules, blocked connections, and security events
+                    </div>
+                    <div class="plugin-tags">
+                        <span class="tag">security</span>
+                        <span class="tag">firewall</span>
+                        <span class="tag">iptables</span>
+                        <span class="tag">ufw</span>
+                        <span class="tag">firewalld</span>
+                        <span class="tag">network</span>
+                    </div>
+                    <div class="plugin-footer">
+                        <div class="plugin-meta">📦 Built-in</div>
+                        <div class="plugin-meta">🐧 Linux Only</div>
+                        <span class="badge badge-sudo">REQUIRES SUDO</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- CONTAINER -->
+        <div class="category-section category-CONTAINER">
+            <div class="category-header">
+                <span class="category-icon">🐳</span>
+                <h2 class="category-title">Container Monitoring</h2>
+                <span class="category-count">1 plugin</span>
+            </div>
+            <div class="plugins-grid">
+                <div class="plugin-card">
+                    <div class="plugin-header">
+                        <div>
+                            <div class="plugin-name">Docker Monitor</div>
+                            <div class="plugin-id">docker-monitor</div>
+                        </div>
+                        <div class="plugin-version">v1.0.0</div>
+                    </div>
+                    <div class="plugin-description">
+                        Monitors Docker containers, images, and resource usage
+                    </div>
+                    <div class="plugin-tags">
+                        <span class="tag">docker</span>
+                        <span class="tag">containers</span>
+                        <span class="tag">orchestration</span>
+                    </div>
+                    <div class="plugin-footer">
+                        <div class="plugin-meta">📦 docker</div>
+                        <div class="plugin-meta">🌍 Multi-platform</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- APPLICATION -->
+        <div class="category-section category-APPLICATION">
+            <div class="category-header">
+                <span class="category-icon">📱</span>
+                <h2 class="category-title">Application Monitoring</h2>
+                <span class="category-count">2 plugins</span>
+            </div>
+            <div class="plugins-grid">
+                <div class="plugin-card">
+                    <div class="plugin-header">
+                        <div>
+                            <div class="plugin-name">Log Monitor</div>
+                            <div class="plugin-id">log-monitor</div>
+                        </div>
+                        <div class="plugin-version">v1.0.0</div>
+                    </div>
+                    <div class="plugin-description">
+                        Monitors log files for patterns, errors, and anomalies with regex support
+                    </div>
+                    <div class="plugin-tags">
+                        <span class="tag">logs</span>
+                        <span class="tag">monitoring</span>
+                        <span class="tag">errors</span>
+                        <span class="tag">regex</span>
+                        <span class="tag">parsing</span>
+                    </div>
+                    <div class="plugin-footer">
+                        <div class="plugin-meta">📦 Built-in</div>
+                        <div class="plugin-meta">🌍 Multi-platform</div>
+                    </div>
+                </div>
+                
+                <div class="plugin-card">
+                    <div class="plugin-header">
+                        <div>
+                            <div class="plugin-name">Web Service Monitor</div>
+                            <div class="plugin-id">web-service-monitor</div>
+                        </div>
+                        <div class="plugin-version">v1.0.0</div>
+                    </div>
+                    <div class="plugin-description">
+                        Monitors web services and APIs including response time, status codes, and SSL certificate expiration
+                    </div>
+                    <div class="plugin-tags">
+                        <span class="tag">http</span>
+                        <span class="tag">https</span>
+                        <span class="tag">api</span>
+                        <span class="tag">ssl</span>
+                        <span class="tag">uptime</span>
+                    </div>
+                    <div class="plugin-footer">
+                        <div class="plugin-meta">📦 requests</div>
+                        <div class="plugin-meta">🌍 Multi-platform</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <footer>
-            <h3>🎉 40 Plugins. One Platform. Infinite Possibilities.</h3>
-            <p style="margin-top: 15px; opacity: 0.9;">Built with passion for the homelab community</p>
-            <p style="margin-top: 10px; font-size: 0.9em;">Unity - Homelab Intelligence Hub</p>
-            <p style="margin-top: 5px; font-size: 0.85em; opacity: 0.8;">Co-Authored-By: Warp &lt;agent@warp.dev&gt;</p>
+            <p><strong>Unity</strong> - Homelab Intelligence Platform</p>
+            <p style="margin-top: 0.5rem; font-size: 0.9rem;">All plugins v1.0.0 • 16 Plugins across 7 Categories</p>
         </footer>
     </div>
-
-    <script>
-        // Add click animation to cards
-        document.querySelectorAll('.plugin-card').forEach(card => {
-            card.addEventListener('click', function() {
-                this.style.transform = 'scale(0.98)';
-                setTimeout(() => {
-                    this.style.transform = '';
-                }, 100);
-            });
-        });
-
-        // Animate cards on scroll
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
-
-        const observer = new IntersectionObserver(entries => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.animation = 'fadeIn 0.6s ease forwards';
-                }
-            });
-        }, observerOptions);
-
-        document.querySelectorAll('.plugin-card').forEach(card => {
-            observer.observe(card);
-        });
-    </script>
 </body>
 </html>
