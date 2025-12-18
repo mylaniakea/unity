@@ -120,6 +120,7 @@ Given a GitHub repository URL, the system would:
 - Natural language query interface for metrics
 - Autonomous system healing and optimization
 - Multi-cluster orchestration and synchronization
+- Skill tree UI for plugin selection/management (dark/light theme support, grouped by category/dependencies)
 
 ---
 

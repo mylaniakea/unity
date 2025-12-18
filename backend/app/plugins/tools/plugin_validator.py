@@ -145,7 +145,7 @@ class PluginValidator:
         if not hasattr(self, 'plugin_class'):
             return
         
-        methods = {node.name: node for node in self.plugin_class.body if isinstance(node, ast.FunctionDef)}
+        methods = {node.name: node for node in self.plugin_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
         
         required_methods = {
             "get_metadata": "Returns plugin metadata",
