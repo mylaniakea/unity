@@ -6,7 +6,7 @@
 
 **Unity** is the unified homelab intelligence platform that brings together monitoring, automation, and management into a single, extensible hub with a plugin architecture.
 
-![Python](https://img.shields.io/badge/python-3.11+-blue.svg) ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg) ![React](https://img.shields.io/badge/React-18+-61dafb.svg) ![Plugins](https://img.shields.io/badge/plugins-16-orange.svg) ![License](https://img.shields.io/badge/license-MIT-green.svg) ![Status](https://img.shields.io/badge/status-active_development-yellow.svg)
+![Python](https://img.shields.io/badge/python-3.11+-blue.svg) ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg) ![React](https://img.shields.io/badge/React-18+-61dafb.svg) ![Plugins](https://img.shields.io/badge/plugins-40-orange.svg) ![License](https://img.shields.io/badge/license-MIT-green.svg) ![Status](https://img.shields.io/badge/status-active_development-yellow.svg)
 
 ## 🏠 Built for Homelabbers
 
