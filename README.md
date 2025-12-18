@@ -8,6 +8,19 @@
 
 ![Python](https://img.shields.io/badge/python-3.11+-blue.svg) ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg) ![React](https://img.shields.io/badge/React-18+-61dafb.svg) ![Plugins](https://img.shields.io/badge/plugins-40-orange.svg) ![License](https://img.shields.io/badge/license-MIT-green.svg) ![Status](https://img.shields.io/badge/status-active_development-yellow.svg)
 
+## 🎨 Plugin Showcase
+
+**[✨ View Interactive Plugin Showcase ✨](https://mylaniakea.github.io/unity/)**
+
+Explore all 40 monitoring plugins in a beautiful, interactive dark-mode showcase! Click through to see:
+- 🔴 **Tier 1: Essential Pain Points** - Critical infrastructure monitoring
+- 🟡 **Tier 2: Quality of Life** - Daily driver services
+- 🟢 **Tier 3: Power User Sophistication** - Enterprise-grade features
+- 🔵 **Foundation Plugins** - The original Unity monitoring suite
+
+From SSL certificates to Kubernetes clusters, from game servers to password vaults - Unity monitors it all! 🏠⚡
+
+
 ## 🏠 Built for Homelabbers
 
 Unity is designed from the ground up for homelab enthusiasts who want comprehensive monitoring without the enterprise complexity. Monitor your entire stack:
