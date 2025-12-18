@@ -6,6 +6,8 @@
 
 **Unity** is the unified homelab intelligence platform that brings together monitoring, automation, and management into a single, extensible hub with a plugin architecture.
 
+![Python](https://img.shields.io/badge/python-3.11+-blue.svg) ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg) ![React](https://img.shields.io/badge/React-18+-61dafb.svg) ![Plugins](https://img.shields.io/badge/plugins-16-orange.svg) ![License](https://img.shields.io/badge/license-MIT-green.svg) ![Status](https://img.shields.io/badge/status-active_development-yellow.svg)
+
 ## 🏠 Built for Homelabbers
 
 Unity is designed from the ground up for homelab enthusiasts who want comprehensive monitoring without the enterprise complexity. Monitor your entire stack:
@@ -17,7 +19,7 @@ Unity is designed from the ground up for homelab enthusiasts who want comprehens
 - **Application Monitoring**: HTTP endpoints, SSL certificates, log analysis
 - **Storage**: RAID arrays, ZFS pools, LVM volumes
 
-**14 Built-in Plugins** covering the most common homelab scenarios - batteries included! 🔋
+**16 Built-in Plugins** covering the most common homelab scenarios - batteries included! 🔋
 
 ## What is Unity?
 
@@ -125,7 +127,7 @@ unity/
 - **Core System**: Authentication, RBAC, monitoring, alerts
 - **Backend Refactoring**: Complete code reorganization (208 files, 34K+ lines)
 - **Plugin Architecture**: Validated and production-ready
-- **14 Built-in Plugins**: System, database, and application monitoring
+- **16 Built-in Plugins**: System, database, and application monitoring
 - **KC-Booth Integration**: Complete credential management integration
 - **Documentation**: Comprehensive docs, plans, and roadmap
 
