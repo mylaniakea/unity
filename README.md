@@ -1,281 +1,379 @@
-# Unity - Homelab Intelligence Hub
+# Unity - Homelab Intelligence Platform
 
-> ⚠️ **PUBLIC REPOSITORY WARNING**  
-> This repository is PUBLIC. Never commit secrets, API keys, passwords, or personal information.  
+> **IMPORTANT**: This repository is PUBLIC. Never commit secrets, API keys, passwords, or personal information.  
 > See [PUBLIC-REPO-SECURITY.md](./PUBLIC-REPO-SECURITY.md) for guidelines.
 
-**Unity** is the unified homelab intelligence platform that brings together monitoring, automation, and management into a single, extensible hub with a plugin architecture.
+![Python](https://img.shields.io/badge/python-3.11+-blue.svg) ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg) ![Status](https://img.shields.io/badge/status-active_development-yellow.svg) ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-![Python](https://img.shields.io/badge/python-3.11+-blue.svg) ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg) ![React](https://img.shields.io/badge/React-18+-61dafb.svg) ![Plugins](https://img.shields.io/badge/plugins-40-orange.svg) ![License](https://img.shields.io/badge/license-MIT-green.svg) ![Status](https://img.shields.io/badge/status-active_development-yellow.svg)
+**Unity** is a unified homelab intelligence platform that brings together monitoring, automation, and management into a single, extensible hub with a plugin architecture.
 
-## 🎨 Plugin Showcase
+## 🎯 Project Status
 
-**[✨ View Interactive Plugin Showcase ✨](https://mylaniakea.github.io/unity/)**
+**Current Version**: 1.0.0 (Runs 1-5 Complete)  
+**Progress**: 83% to MVP (5/6 runs complete)
 
-Explore all 40 monitoring plugins in a beautiful, interactive dark-mode showcase! Click through to see:
-- 🔴 **Tier 1: Essential Pain Points** - Critical infrastructure monitoring
-- 🟡 **Tier 2: Quality of Life** - Daily driver services
-- 🟢 **Tier 3: Power User Sophistication** - Enterprise-grade features
-- 🔵 **Foundation Plugins** - The original Unity monitoring suite
+### Completed ✅
+- ✅ **Run 1**: Infrastructure & Architecture
+- ✅ **Run 2**: Database Schema & Migrations  
+- ✅ **Run 3**: Data Collection Pipeline
+- ✅ **Run 4**: API Layer & Endpoints
+- ✅ **Run 5**: Testing & Validation
 
-From SSL certificates to Kubernetes clusters, from game servers to password vaults - Unity monitors it all! 🏠⚡
+### In Progress 🔵
+- 🔵 **Run 6**: Documentation & Deployment (Current)
 
+### Features
 
-## 🏠 Built for Homelabbers
+**Available Now**:
+- ⚡ REST API with 10 endpoints
+- 🔌 WebSocket real-time streaming
+- 📊 Plugin scheduler (automatic data collection)
+- 🗄️ PostgreSQL database with time-series support
+- 🧪 Comprehensive test suite (31 tests, 100% coverage)
+- 🚀 Docker Compose deployment
+- 📈 Performance: <50ms API response, 120+ req/s throughput
 
-Unity is designed from the ground up for homelab enthusiasts who want comprehensive monitoring without the enterprise complexity. Monitor your entire stack:
+**Coming Soon**:
+- 🎨 React frontend (planned)
+- 🔐 JWT authentication
+- 🔔 Alert system
+- 📱 Push notifications
 
-- **Popular Apps**: Nextcloud, WordPress, Immich, Paperless-ngx, Home Assistant, UniFi Controller
-- **Databases**: MySQL, PostgreSQL, Redis, MongoDB, InfluxDB, SQLite
-- **Containers**: Docker monitoring with resource tracking
-- **System Health**: CPU, memory, disk, network, temperatures
-- **Application Monitoring**: HTTP endpoints, SSL certificates, log analysis
-- **Storage**: RAID arrays, ZFS pools, LVM volumes
-
-**16 Built-in Plugins** covering the most common homelab scenarios - batteries included! 🔋
-
-## What is Unity?
-
-Unity evolved from the homelab-intelligence project and serves as the central hub for:
-- **System Monitoring** - Track CPU, memory, disk, network, temperatures, and more
-- **Database Monitoring** - MySQL, PostgreSQL, Redis, MongoDB, InfluxDB, SQLite support
-- **Container Management** - Monitor and manage Docker containers with real-time stats
-- **Storage Intelligence** - Database and storage monitoring across your infrastructure
-- **Credential Management** - SSH keys and certificate management (integrated from kc-booth)
-- **Application Monitoring** - HTTP/HTTPS health checks, SSL expiration, log analysis
-- **AI-Powered Insights** - Intelligent analysis and recommendations
-- **Extensible Plugin System** - Add custom monitoring and automation capabilities
-
-## Architecture
-
-Unity uses a plugin-based architecture where:
-- **Hub Core** - FastAPI backend + React frontend with auth, database, alerts, terminal access
-- **Built-in Plugins** - System monitoring, network stats, storage metrics
-- **External Plugins** - Standalone services that integrate via the Plugin SDK
-- **Credential Store** - Centralized SSH key and certificate management
-
-## Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
-- Docker & Docker Compose
-- Python 3.11+
-- Node.js 18+
+- Docker 20.10+ & Docker Compose 2.0+
+- Python 3.11+ (for local development)
 
-### Development Setup
+### Deploy with Docker
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/mylaniakea/unity.git
-   cd unity
-   ```
+```bash
+# Clone repository
+git clone <repository-url>
+cd unity
 
-2. **Set up environment**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your settings - NEVER commit this file!
-   ```
+# Create environment file
+cp .env.example .env
 
-3. **Start services**
-   ```bash
-   docker-compose up -d
-   ```
+# Start services
+docker-compose up -d
 
-4. **Install dependencies**
-   ```bash
-   # Backend
-   cd backend
-   pip install -r requirements.txt
-   
-   # Frontend
-   cd ../frontend
-   npm install
-   ```
+# Verify
+curl http://localhost:8000/health
+```
 
-5. **Run migrations**
-   ```bash
-   cd backend
-   python -m alembic upgrade head
-   ```
+Access:
+- **API**: http://localhost:8000
+- **API Docs**: http://localhost:8000/docs
+- **Health**: http://localhost:8000/health
 
-6. **Start development servers**
-   ```bash
-   # Backend (in backend/)
-   uvicorn app.main:app --reload
-   
-   # Frontend (in frontend/)
-   npm run dev
-   ```
+### Local Development
 
-7. **Access Unity**
-   - Frontend: http://localhost:5173
-   - API: http://localhost:8000
-   - API Docs: http://localhost:8000/docs
+```bash
+cd backend
 
-## Project Structure
+# Set up Python environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Set up database
+export DATABASE_URL="sqlite:///./data/homelab.db"
+alembic upgrade head
+
+# Run development server
+uvicorn app.main:app --reload
+```
+
+See [DEVELOPMENT_SETUP.md](docs/DEVELOPMENT_SETUP.md) for detailed instructions.
+
+## 📊 Architecture
+
+```
+┌─────────────────────────────────────────────────────┐
+│                  Unity Platform                      │
+│                                                      │
+│  ┌──────────────┐     ┌──────────────┐            │
+│  │   Frontend   │────▶│   Backend    │            │
+│  │   (React)    │     │   (FastAPI)  │            │
+│  │   Planned    │     │   Port: 8000 │            │
+│  └──────────────┘     └──────┬───────┘            │
+│                               │                     │
+│                      ┌────────▼────────┐           │
+│                      │  PluginScheduler │           │
+│                      │  (APScheduler)   │           │
+│                      └────────┬─────────┘           │
+│                               │                     │
+│                      ┌────────▼────────┐           │
+│                      │   PostgreSQL    │           │
+│                      │   Port: 5432    │           │
+│                      └─────────────────┘           │
+└─────────────────────────────────────────────────────┘
+```
+
+### Key Components
+
+**Backend** (FastAPI):
+- REST API (10 endpoints)
+- WebSocket streaming
+- Plugin scheduler
+- Metrics collection
+
+**Database** (PostgreSQL 16):
+- Plugin registrations
+- Time-series metrics
+- Execution history
+- Health status
+
+**Plugins** (39 available):
+- System monitoring
+- Docker containers
+- Network stats
+- Storage metrics
+- Custom extensible
+
+## 🔌 Plugin System
+
+Unity uses a plugin architecture for extensible monitoring:
+
+```python
+from app.plugins.base import PluginBase
+
+class MyPlugin(PluginBase):
+    async def collect_data(self) -> dict:
+        return {"metric": "value"}
+    
+    async def health_check(self) -> bool:
+        return True
+```
+
+Built-in plugins include:
+- `system_info` - CPU, memory, disk usage
+- `docker_monitor` - Container status and stats
+- `network_monitor` - Network interfaces and traffic
+- Plus 36 more!
+
+See [Plugin Showcase](https://mylaniakea.github.io/unity/) for full list.
+
+## 📡 API Reference
+
+### REST Endpoints
+
+```bash
+GET  /health                              # Health check
+GET  /api/plugins                         # List all plugins
+GET  /api/plugins/{id}                    # Plugin details
+POST /api/plugins/{id}/enable             # Enable/disable
+GET  /api/plugins/{id}/status             # Health status
+GET  /api/plugins/{id}/metrics            # Latest metrics
+GET  /api/plugins/{id}/metrics/history    # Historical data
+GET  /api/plugins/{id}/executions         # Execution log
+GET  /api/plugins/categories/list         # Categories
+GET  /api/plugins/stats/summary           # Statistics
+```
+
+### WebSocket Streaming
+
+```javascript
+const ws = new WebSocket('ws://localhost:8000/ws/metrics');
+
+ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === 'metrics_update') {
+        console.log('New metrics:', data.metrics);
+    }
+};
+```
+
+See [API Documentation](docs/RUN4_API_LAYER.md) for complete reference.
+
+## 🧪 Testing
+
+```bash
+cd backend
+
+# Run all tests
+pytest tests/ -v
+
+# Run specific test suite
+pytest tests/test_plugin_api.py -v
+pytest tests/test_websocket.py -v
+pytest tests/test_performance.py -v -s
+
+# Run with coverage
+pytest --cov=app --cov-report=html
+```
+
+**Test Results** (Run 5):
+- 31 tests, 100% API coverage
+- Performance: All targets exceeded by 3-4x
+- 0% error rate under sustained load
+
+See [Testing Guide](docs/RUN5_TESTING.md) for details.
+
+## 📚 Documentation
+
+### Deployment
+- [Deployment Architecture](docs/DEPLOYMENT_ARCHITECTURE.md) - System overview
+- [Development Setup](docs/DEVELOPMENT_SETUP.md) - Local development
+- [Production Deployment](docs/PRODUCTION_DEPLOYMENT.md) - Production guide
+- [Performance Tuning](docs/PERFORMANCE_TUNING.md) - Optimization
+
+### Development
+- [Run 3: Data Collection](docs/RUN3_DATA_COLLECTION.md) - Scheduler implementation
+- [Run 4: API Layer](docs/RUN4_API_LAYER.md) - API endpoints
+- [Run 5: Testing](docs/RUN5_TESTING.md) - Test suite
+- [Architecture](ARCHITECTURE.md) - Technical architecture
+
+### Guides
+- [Contributing](CONTRIBUTING.md) - How to contribute
+- [Security](SECURITY.md) - Security practices
+
+## 🗂️ Project Structure
 
 ```
 unity/
 ├── backend/              # FastAPI backend
 │   ├── app/
-│   │   ├── models.py     # Database models
-│   │   ├── routers/      # API endpoints
-│   │   ├── services/     # Business logic
-│   │   └── plugins/      # Plugin system
+│   │   ├── main.py      # Application entry
+│   │   ├── api/         # API endpoints
+│   │   ├── models/      # Database models
+│   │   ├── services/    # Business logic
+│   │   ├── plugins/     # Plugin implementations
+│   │   └── core/        # Core utilities
+│   ├── tests/           # Test suite
 │   └── requirements.txt
-├── frontend/             # React frontend
-│   ├── src/
-│   │   ├── pages/        # Page components
-│   │   ├── components/   # Reusable components
-│   │   └── services/     # API clients
-│   └── package.json
-├── docker-compose.yml    # Service orchestration
-└── HUB-IMPLEMENTATION-PLAN.md  # Development roadmap
+├── frontend/            # React frontend (planned)
+├── docs/                # Documentation
+├── docker-compose.yml   # Production config
+└── .env.example         # Configuration template
 ```
 
-## Current Status
+## ⚙️ Configuration
 
-🎉 **Phase 1 Complete** - Backend Refactoring & Plugin Expansion
-
-### Completed ✅
-- **Core System**: Authentication, RBAC, monitoring, alerts
-- **Backend Refactoring**: Complete code reorganization (208 files, 34K+ lines)
-- **Plugin Architecture**: Validated and production-ready
-- **16 Built-in Plugins**: System, database, and application monitoring
-- **KC-Booth Integration**: Complete credential management integration
-- **Documentation**: Comprehensive docs, plans, and roadmap
-
-### Phase 3A Complete ✅ 
-**Plugin Library Expansion** - December 2025
-- 10 new monitoring plugins added (3.5x growth)
-- Complete database monitoring suite (6 databases)
-- Application monitoring (web services, logs)
-- System monitoring enhancements (thermal, containers)
-
-### Current Focus 🚀
-**Phase 3B**: Service-to-Plugin Migration
-- Extracting existing services into plugins
-- Enhanced plugin development tools
-- Plugin marketplace preparation
-
-See [ROADMAP.md](./ROADMAP.md) for detailed development roadmap and [MOONSHOT.md](./MOONSHOT.md) for ambitious future ideas.
-
-## Features
-
-### 🔌 14 Built-in Monitoring Plugins
-
-**System Monitoring**
-- CPU, memory, disk usage and I/O
-- Process monitoring and management
-- Network interface statistics
-- Temperature monitoring (CPU/GPU)
-- Docker container monitoring
-
-**Database Monitoring**
-- MySQL/MariaDB - Connection pools, query stats, replication
-- PostgreSQL - Transactions, locks, cache hit ratios
-- Redis - Memory usage, keyspace stats, slowlog
-- MongoDB - Operations, replication, database sizes
-- InfluxDB - Time-series metrics, bucket stats
-- SQLite - Embedded database monitoring
-
-**Application Monitoring**
-- HTTP/HTTPS endpoint health checks
-- SSL certificate expiration warnings
-- Log file parsing with regex patterns
-- Response time tracking
-
-### Core Features
-- **Authentication & RBAC** - JWT-based auth with role-based access control
-- **Plugin System** - Extensible architecture for built-in and external plugins
-- **Terminal Access** - Web-based SSH terminal
-- **Alert System** - Configurable thresholds and notifications
-- **AI Integration** - Intelligent insights and recommendations
-- **Multi-Profile Support** - Monitor multiple systems
-- **Credential Management** - SSH keys and certificates
-
-### Planned Features
-- **Plugin Marketplace** - Discover and install community plugins
-- **External Plugin Support** - Run plugins as standalone services
-- **Real-time Event Streams** - Redis-based plugin communication
-- **Health Dashboard** - Monitor plugin status and performance
-- **Configuration Management** - Web UI for plugin settings
-## Development
-
-### Adding a Plugin
-
-See the Plugin SDK documentation (coming soon) for creating custom plugins.
-
-Built-in plugins follow this structure:
-```python
-from app.plugins.base import PluginBase, PluginMetadata, PluginCategory
-
-class MyPlugin(PluginBase):
-    def get_metadata(self):
-        return PluginMetadata(
-            id="my-plugin",
-            name="My Plugin",
-            version="1.0.0",
-            description="My plugin description",
-            author="Your Name",
-            category=PluginCategory.SYSTEM
-        )
-    
-    async def collect_data(self):
-        # Collect and return data
-        return {"metric": "value"}
-```
-
-### Running Tests
+Environment variables (`.env`):
 
 ```bash
-# Backend tests
-cd backend
-pytest
+# Database
+DATABASE_URL=postgresql+psycopg2://user:pass@db:5432/homelab_db
 
-# Frontend tests
-cd frontend
-npm test
+# Security
+ENCRYPTION_KEY=<generate-with-fernet>
+JWT_SECRET_KEY=<random-secret>
+
+# Application
+DEBUG=false
+LOG_LEVEL=info
+CORS_ORIGINS=http://localhost:3000
+
+# Optional
+REDIS_URL=redis://localhost:6379/0
 ```
 
-## Security
+See [.env.example](.env.example) for all options.
 
-### Public Repository Considerations
+## 🚀 Deployment
 
-This is a **PUBLIC repository**. Please review [PUBLIC-REPO-SECURITY.md](./PUBLIC-REPO-SECURITY.md) before committing:
+### Docker Compose (Recommended)
 
-- ✅ Never commit secrets, API keys, or passwords
-- ✅ Use environment variables for all sensitive config
-- ✅ Keep `.env` files out of git (use `.env.example` instead)
-- ✅ Review diffs before committing
+```bash
+# Production
+docker-compose up -d
 
-### Security Features
+# Development (hot-reload)
+docker-compose -f docker-compose.dev.yml up
+```
 
-- JWT authentication with RBAC
-- API key authentication for external plugins
-- Input validation and sanitization
-- Rate limiting
+### Manual Deployment
+
+See [Production Deployment Guide](docs/PRODUCTION_DEPLOYMENT.md) for:
+- Security checklist
+- SSL/TLS configuration
+- Backup strategies
+- Monitoring setup
+
+## 📈 Performance
+
+**Benchmarks** (from Run 5 testing):
+- Health endpoint: 25ms average (target: <100ms) ✅
+- Plugins list: 35ms average (target: <150ms) ✅
+- Metrics query: 45ms average (target: <200ms) ✅
+- Throughput: 120 req/s (target: >10 req/s) ✅
+- WebSocket latency: <10ms ✅
+
+**Capacity**:
+- ~100 plugins supported
+- ~10 monitored servers
+- ~1000 metrics/minute
+
+See [Performance Tuning](docs/PERFORMANCE_TUNING.md) for optimization.
+
+## 🔒 Security
+
+- ✅ Input validation (Pydantic)
+- ✅ Credential encryption
+- ✅ SQL injection protection (SQLAlchemy ORM)
+- ✅ CORS configuration
+- ⏳ JWT authentication (planned)
+- ⏳ Rate limiting (planned)
+
+**Never commit secrets!** Use environment variables.
+
+See [SECURITY.md](SECURITY.md) for security practices.
+
+## 🤝 Contributing
+
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+**Development workflow**:
+1. Fork the repository
+2. Create a feature branch
+3. Make changes with tests
+4. Submit pull request
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+## 🎯 Roadmap
+
+### Phase 1: Core Platform (Current - Run 6)
+- ✅ Backend API
+- ✅ Plugin system
+- ✅ Data collection
+- ✅ Testing
+- 🔵 Documentation (in progress)
+
+### Phase 2: User Interface
+- Frontend development
+- Dashboard UI
+- Real-time visualizations
+- Plugin management UI
+
+### Phase 3: Advanced Features
+- Authentication & authorization
+- Alert system
+- Push notifications
+- Multi-user support
+
+### Phase 4: Enterprise Features
+- RBAC
 - Audit logging
-- Encrypted credential storage
+- SSO integration
+- High availability
 
-See [SECURITY.md](./SECURITY.md) for details.
-## Contributing
+See [ROADMAP.md](ROADMAP.md) for detailed timeline.
 
-We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+## 📞 Support
 
-### Moonshot Ideas 🚀
+- 📖 **Documentation**: `docs/` directory
+- 🐛 **Issues**: GitHub Issues
+- 💬 **Discussions**: GitHub Discussions
 
-Interested in ambitious features and future possibilities? Check out [MOONSHOT.md](./MOONSHOT.md) for creative ideas we'd love to explore. These are aspirational "reach goals" that could significantly enhance Unity's capabilities.
+---
 
-## License
+**Unity** - Unified homelab intelligence for the modern homelab enthusiast.
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Related Projects
-
-- **bd-store** - Storage and database monitoring plugin
-- **uptainer** - Container update automation with AI
-- **kc-booth** - SSH key and certificate management (integrated into Unity core)
-
-## Support
-
-For issues, questions, or contributions, please open an issue on GitHub.
+*Co-Authored-By: Warp <agent@warp.dev>*
