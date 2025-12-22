@@ -69,6 +69,34 @@ class Settings(BaseSettings):
     enable_push_notifications: bool = True
     enable_plugins: bool = True
     
+    # Redis Configuration (for session storage)
+    redis_url: str = "redis://localhost:6379/0"
+    redis_max_connections: int = 10
+    
+    # Session Management
+    session_expiry_hours: int = 24
+    session_cookie_name: str = "unity_session"
+    session_cookie_secure: bool = False  # Set to True in production with HTTPS
+    session_cookie_httponly: bool = True
+    session_cookie_samesite: str = "lax"
+    
+    # API Key Configuration
+    api_key_expiry_days: int = 90
+    api_key_prefix: str = "unity_"
+    
+    # Password Policy
+    password_min_length: int = 8
+    password_require_uppercase: bool = True
+    password_require_lowercase: bool = True
+    password_require_digits: bool = True
+    password_require_special: bool = False
+    bcrypt_rounds: int = 12
+    
+    # Rate Limiting & Security
+    max_login_attempts: int = 5
+    login_attempt_window_minutes: int = 15
+    lockout_duration_minutes: int = 30
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -95,3 +123,11 @@ class Settings(BaseSettings):
 
 # Global settings instance
 settings = Settings()
+
+    # OAuth2 Configuration
+    github_client_id: str = ""
+    github_client_secret: str = ""
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    oauth_redirect_uri: str = "http://localhost:8000/api/auth/oauth/callback"
+

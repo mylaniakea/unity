@@ -1,26 +1,24 @@
-"""
-Authentication and authorization services.
-
-This module provides authentication, JWT token management, and user authorization.
-"""
-from app.services.auth.auth_service import (
-    AuthService,
-    SECRET_KEY,
-    ALGORITHM,
-    ACCESS_TOKEN_EXPIRE_MINUTES,
-    pwd_context,
-    oauth2_scheme,
-    get_current_user,
-    get_current_active_user,
+"""Authentication and authorization services."""
+# Only export functions, not modules, to avoid circular imports
+from app.services.auth.password import hash_password, verify_password, needs_rehash
+from app.services.auth.jwt_handler import (
+    create_access_token,
+    decode_token,
+    get_token_subject,
+    verify_token
 )
+from app.services.auth.session_manager import SessionManager
 
 __all__ = [
-    "AuthService",
-    "SECRET_KEY",
-    "ALGORITHM",
-    "ACCESS_TOKEN_EXPIRE_MINUTES",
-    "pwd_context",
-    "oauth2_scheme",
-    "get_current_user",
-    "get_current_active_user",
+    # Password functions
+    "hash_password",
+    "verify_password",
+    "needs_rehash",
+    # JWT functions
+    "create_access_token",
+    "decode_token",
+    "get_token_subject",
+    "verify_token",
+    # Session manager
+    "SessionManager",
 ]

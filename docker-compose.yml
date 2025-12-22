@@ -1,5 +1,22 @@
 services:
   db:
+
+  redis:
+    image: redis:7-alpine
+    container_name: homelab-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - homelab_redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - homelab-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     image: postgres:16-alpine
     container_name: homelab-db
     restart: unless-stopped
@@ -27,10 +44,12 @@ services:
     environment:
       - ALLOW_ORIGINS=*
       - DATABASE_URL=postgresql+psycopg2://homelab_user:homelab_password@db:5432/homelab_db
+      - REDIS_URL=redis://redis:6379/0
       - ENCRYPTION_KEY=6ty12Z9TYTSM5ESuOuXd_RxLBgunI3G0_TJbCpBb9FU=
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level debug
     depends_on:
       - db
+      - redis
     # Network mode host might be needed for some hardware discovery,
     # but bridge is safer. Stick to bridge for now.
     networks:
@@ -48,6 +67,7 @@ services:
       - homelab-net
 
 volumes:
+  homelab_redis_data:
   homelab_db_data:
 
 networks:

@@ -21,6 +21,22 @@ from app.core.database import SessionLocal
 
 logger = logging.getLogger(__name__)
 
+# Import WebSocket broadcasting (lazy import to avoid circular dependencies)
+_websocket_module = None
+
+def get_websocket_module():
+    """Lazy import WebSocket module to avoid circular dependencies."""
+    global _websocket_module
+    if _websocket_module is None:
+        try:
+            from app.api import websocket as ws
+            _websocket_module = ws
+        except ImportError:
+            logger.warning("WebSocket module not available")
+            _websocket_module = False
+    return _websocket_module if _websocket_module is not False else None
+
+
 
 class PluginScheduler:
     """
@@ -196,6 +212,9 @@ class PluginScheduler:
             # Update plugin status
             await self._update_plugin_status(db, plugin_id, success=True)
             
+            # Broadcast WebSocket events
+            await self._broadcast_events(plugin_id, data, execution_record)
+            
             logger.info(f"✅ {plugin_id}: collected {metrics_count} metrics")
             
         except Exception as e:
@@ -288,6 +307,35 @@ class PluginScheduler:
         
         db.commit()
     
+
+    async def _broadcast_events(self, plugin_id: str, data: dict, execution: PluginExecution):
+        """
+        Broadcast WebSocket events for plugin execution.
+        
+        Args:
+            plugin_id: Plugin identifier
+            data: Collected metrics data
+            execution: Execution record
+        """
+        ws = get_websocket_module()
+        if not ws:
+            return
+        
+        try:
+            # Broadcast metrics update
+            await ws.broadcast_metrics_update(plugin_id, data)
+            
+            # Broadcast execution complete
+            await ws.broadcast_execution_complete(plugin_id, {
+                "id": execution.id,
+                "started_at": execution.started_at.isoformat(),
+                "completed_at": execution.completed_at.isoformat() if execution.completed_at else None,
+                "status": execution.status,
+                "metrics_count": execution.metrics_count
+            })
+        except Exception as e:
+            logger.debug(f"WebSocket broadcast skipped: {e}")
+
     async def start(self):
         """Start the scheduler."""
         if self._running:
