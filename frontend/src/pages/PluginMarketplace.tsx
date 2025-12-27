@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect } from 'react';
 import { Search, Star, Download, Check, X, Filter, TrendingUp } from 'lucide-react';
 import marketplaceApi from '../api/marketplace';

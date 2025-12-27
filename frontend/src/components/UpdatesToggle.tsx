@@ -1,3 +1,4 @@
+import React from 'react';
 import { Pause, Play } from 'lucide-react';
 import { useUpdates } from '@/contexts/UpdatesContext';
 import { cn } from '@/lib/utils';

@@ -1,3 +1,4 @@
+import React from 'react';
 import { CheckCircle, XCircle, Clock, MinusCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 

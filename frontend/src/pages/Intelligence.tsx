@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect } from 'react';
 import { Bot, Send, Sparkles, Server, Save } from 'lucide-react';
 import api from '@/api/client';

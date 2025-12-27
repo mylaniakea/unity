@@ -1,3 +1,4 @@
+import React from 'react';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Server, Trash2, RefreshCw, Terminal as TerminalIcon, Activity, Edit2, Play, KeyRound } from 'lucide-react';

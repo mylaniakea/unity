@@ -1,3 +1,4 @@
+import React from 'react';
 import { useEffect, useState } from 'react';
 import { Network, Plus, Trash2, Edit2, Save } from 'lucide-react';
 import api from '@/api/client';

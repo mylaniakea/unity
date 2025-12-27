@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import { useUpdates } from '@/contexts/UpdatesContext';
 import MetricChart from './MetricChart';

@@ -1,3 +1,4 @@
+import React from 'react';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, Search, Server, X, ExternalLink, Hash, Trash2 } from 'lucide-react';

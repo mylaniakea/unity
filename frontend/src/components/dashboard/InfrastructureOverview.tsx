@@ -1,3 +1,4 @@
+import React from 'react';
 import { Server, Database, HardDrive } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 

@@ -1,3 +1,4 @@
+import React from 'react';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Users as UsersIcon, Plus, Edit, Trash2, X, Shield, Eye, EyeOff, Search } from 'lucide-react';

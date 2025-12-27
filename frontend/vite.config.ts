@@ -20,32 +20,15 @@ export default defineConfig({
         },
     },
     build: {
-        // Code splitting configuration
+        sourcemap: false,
         rollupOptions: {
             output: {
-                manualChunks: {
-                    // Vendor chunks
-                    'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-                    'chart-vendor': ['chart.js', 'react-chartjs-2'],
-                    'ui-vendor': ['framer-motion', 'lucide-react'],
-                },
-            },
-        },
-        // Optimize chunk size
-        chunkSizeWarningLimit: 1000,
-        // Enable source maps for production debugging (optional)
-        sourcemap: false,
-    },
-    // Optimize dependencies
-    optimizeDeps: {
-        include: [
-            'react',
-            'react-dom',
-            'react-router-dom',
-            'chart.js',
-            'react-chartjs-2',
-            'framer-motion',
-            'lucide-react',
-        ],
+                manualChunks: (id) => {
+                    if (id.includes('node_modules')) {
+                        return 'vendor';
+                    }
+                }
+            }
+        }
     },
 })

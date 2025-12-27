@@ -1,3 +1,4 @@
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, Info } from 'lucide-react';
 import { cn } from '@/lib/utils'; // Assuming cn utility is available

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Server, Bot, Menu, X, Settings, FileText, Brain, Network, HardDrive, Clock, Plug, AlertTriangle, Bell, LogOut, User, Users, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -52,14 +51,12 @@ export default function Layout() {
     }, [alertStats]);
 
     const fetchAlertStats = useCallback(async () => {
-        /*
         try {
             const res = await api.get('/alerts/stats');
             setAlertStats(res.data);
         } catch (error) {
             console.error('Failed to fetch alert stats', error);
         }
-        */
     }, []);
 
     const handleLogout = () => {

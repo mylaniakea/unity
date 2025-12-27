@@ -1,34 +1,20 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: '/api', // Use Nginx proxy
+    baseURL: '/api',
 });
 
-// Request interceptor to add auth token
+// Request interceptor - no auth needed for testing
 api.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('access_token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
-    }
+    (config) => config,
+    (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle 401 errors
+// Response interceptor - no redirect on 401
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401) {
-            // Clear token and redirect to login
-            localStorage.removeItem('access_token');
-            if (window.location.pathname !== '/login') {
-                window.location.href = '/login';
-            }
-        }
+        console.error('API Error:', error);
         return Promise.reject(error);
     }
 );

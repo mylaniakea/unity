@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect } from 'react';
 import { Save, Plus, Trash2, GripVertical, X } from 'lucide-react';
 import dashboardBuilderApi from '../api/dashboardBuilder';

@@ -1,396 +1,151 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plug, Server, Check, X, Download, RefreshCw, Thermometer, HardDrive, Cpu, Box, AlertTriangle, Network, Activity, Battery, Monitor } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
 import api from '@/api/client';
-import { cn } from '@/lib/utils';
-import { useNotification } from '@/contexts/NotificationContext';
+import { Plug, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 
 interface Plugin {
-    id: string;
-    name: string;
-    description: string;
-    category: string;
-    requires_sudo: boolean;
-    os: string[];
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  category: string;
+  enabled: boolean;
+  author: string;
+  config: Record<string, any>;
 }
-
-interface ServerProfile {
-    id: number;
-    name: string;
-    ip_address: string;
-    enabled_plugins: string[];
-    detected_plugins: { [key: string]: boolean };
-}
-
-interface PluginCategories {
-    [key: string]: { name: string; icon: string };
-}
-
-const categoryIcons: { [key: string]: React.ReactNode } = {
-    thermal: <Thermometer size={18} />,
-    storage: <HardDrive size={18} />,
-    gpu: <Cpu size={18} />,
-    containers: <Box size={18} />,
-    virtualization: <Monitor size={18} />,
-    network: <Network size={18} />,
-    services: <Activity size={18} />,
-    power: <Battery size={18} />
-};
 
 export default function Plugins() {
-    const [plugins, setPlugins] = useState<Plugin[]>([]);
-    const navigate = useNavigate();
-    const [categories, setCategories] = useState<PluginCategories>({});
-    const [servers, setServers] = useState<ServerProfile[]>([]);
-    const [selectedServer, setSelectedServer] = useState<ServerProfile | null>(null);
-    const [checking, setChecking] = useState(false);
-    const [installing, setInstalling] = useState<string | null>(null);
-    const [installOutput, setInstallOutput] = useState<string>('');
-    const [showInstallModal, setShowInstallModal] = useState(false);
-    const [pendingInstall, setPendingInstall] = useState<{ pluginId: string; script: string } | null>(null);
-    const { showNotification } = useNotification();
+  const [plugins, setPlugins] = useState<Plugin[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [toggling, setToggling] = useState<string | null>(null);
 
-    useEffect(() => {
-        fetchPlugins();
-        fetchServers();
-    }, []);
+  useEffect(() => {
+    fetchPlugins();
+  }, []);
 
-    const fetchPlugins = async () => {
-        try {
-            const res = await api.get('/plugins/');
-            setPlugins(res.data.plugins);
-            setCategories(res.data.categories);
-        } catch (error) {
-            console.error('Failed to fetch plugins', error);
-        }
-    };
+  const fetchPlugins = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/plugins');
+      setPlugins(res.data);
+      setError('');
+    } catch (err: any) {
+      console.error('Failed to load plugins:', err);
+      setError(err.message || 'Failed to load plugins');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const fetchServers = async () => {
-        try {
-            const res = await api.get('/profiles/');
-            setServers(res.data);
-            if (res.data.length > 0 && !selectedServer) {
-                setSelectedServer(res.data[0]);
-            }
-        } catch (error) {
-            console.error('Failed to fetch servers', error);
-        }
-    };
+  const togglePlugin = async (pluginId: string, currentState: boolean) => {
+    try {
+      setToggling(pluginId);
+      await api.post(`/plugins/${pluginId}/enable`, {
+        enabled: !currentState
+      });
+      // Update local state
+      setPlugins(prev => prev.map(p => 
+        p.id === pluginId ? { ...p, enabled: !currentState } : p
+      ));
+    } catch (err: any) {
+      console.error('Failed to toggle plugin:', err);
+      alert('Failed to toggle plugin: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setToggling(null);
+    }
+  };
 
-    const checkPlugins = async () => {
-        if (!selectedServer) return;
-        setChecking(true);
-        try {
-            const res = await api.get(`/plugins/check/${selectedServer.id}`);
-            setSelectedServer({
-                ...selectedServer,
-                detected_plugins: res.data.detected_plugins,
-                enabled_plugins: res.data.enabled_plugins
-            });
-            showNotification('Plugin detection completed', 'success');
-        } catch (error) {
-            console.error('Failed to check plugins', error);
-            showNotification('Failed to detect plugins', 'error');
-        } finally {
-            setChecking(false);
-        }
-    };
-
-    const togglePlugin = async (pluginId: string, enabled: boolean) => {
-        if (!selectedServer) return;
-        try {
-            await api.post(`/plugins/toggle/${selectedServer.id}`, {
-                plugin_id: pluginId,
-                enabled
-            });
-            setSelectedServer({
-                ...selectedServer,
-                enabled_plugins: enabled
-                    ? [...selectedServer.enabled_plugins, pluginId]
-                    : selectedServer.enabled_plugins.filter(p => p !== pluginId)
-            });
-            showNotification(`Plugin ${enabled ? 'enabled' : 'disabled'}`, 'success');
-        } catch (error) {
-            console.error('Failed to toggle plugin', error);
-            showNotification('Failed to toggle plugin', 'error');
-        }
-    };
-
-    const previewInstall = async (pluginId: string) => {
-        try {
-            const res = await api.get(`/plugins/install-script/${pluginId}?distro=debian`);
-            setPendingInstall({ pluginId, script: res.data.script });
-            setShowInstallModal(true);
-        } catch (error) {
-            console.error('Failed to get install script', error);
-            showNotification('Failed to get install script', 'error');
-        }
-    };
-
-    const executeInstall = async () => {
-        if (!selectedServer || !pendingInstall) return;
-        setInstalling(pendingInstall.pluginId);
-        setInstallOutput('Installing...\n');
-        setShowInstallModal(false);
-        
-        try {
-            const res = await api.post(`/plugins/install/${selectedServer.id}`, {
-                plugin_id: pendingInstall.pluginId,
-                distro: 'debian'
-            });
-            
-            if (res.data.manual_required) {
-                setInstallOutput(res.data.message);
-                showNotification('Manual installation required', 'info');
-            } else if (res.data.success) {
-                setInstallOutput(res.data.output || 'Installation completed successfully!');
-                showNotification('Plugin installed successfully', 'success');
-                // Refresh detection
-                checkPlugins();
-            } else {
-                setInstallOutput(`Error: ${res.data.stderr || res.data.output}`);
-                showNotification('Installation failed', 'error');
-            }
-        } catch (error: any) {
-            setInstallOutput(`Installation failed: ${error.message}`);
-            showNotification('Installation failed', 'error');
-        } finally {
-            setInstalling(null);
-            setPendingInstall(null);
-        }
-    };
-
-    const groupedPlugins = plugins.reduce((acc, plugin) => {
-        const cat = plugin.category || 'other';
-        if (!acc[cat]) acc[cat] = [];
-        acc[cat].push(plugin);
-        return acc;
-    }, {} as { [key: string]: Plugin[] });
-
+  if (loading) {
     return (
-        <div className="space-y-8">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-                        <Plug className="text-primary" />
-                        Data Plugins
-                    </h1>
-                    <p className="text-muted-foreground">
-                        Extend data collection with specialized monitoring tools
-                    </p>
-                </div>
-            </div>
-
-            {/* Server Selector */}
-            <div className="bg-card border border-border p-4 rounded-xl">
-                <div className="flex items-center gap-4 flex-wrap">
-                    <div className="flex items-center gap-2">
-                        <Server size={18} className="text-muted-foreground" />
-                        <span className="text-sm font-medium">Select Server:</span>
-                    </div>
-                    <select
-                        value={selectedServer?.id || ''}
-                        onChange={(e) => {
-                            const server = servers.find(s => s.id === parseInt(e.target.value));
-                            setSelectedServer(server || null);
-                        }}
-                        className="bg-background border border-border rounded-md px-3 py-2 min-w-[200px]"
-                    >
-                        {servers.map(s => (
-                            <option key={s.id} value={s.id}>{s.name} ({s.ip_address})</option>
-                        ))}
-                    </select>
-                    <button
-                        onClick={checkPlugins}
-                        disabled={checking || !selectedServer}
-                        className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
-                    >
-                        <RefreshCw size={16} className={checking ? 'animate-spin' : ''} />
-                        Detect Installed
-                    </button>
-                </div>
-            </div>
-
-            {/* Plugin Categories */}
-            {Object.entries(groupedPlugins).map(([category, categoryPlugins]) => (
-                <motion.div
-                    key={category}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="space-y-4"
-                >
-                    <div className="flex items-center gap-2 text-lg font-semibold">
-                        {categoryIcons[category] || <Plug size={18} />}
-                        <span>{categories[category]?.name || category}</span>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {categoryPlugins.map(plugin => {
-                            const isDetected = selectedServer?.detected_plugins?.[plugin.id] ?? false;
-                            const isEnabled = selectedServer?.enabled_plugins?.includes(plugin.id) ?? false;
-                            
-                            return (
-                                <motion.div
-                                    key={plugin.id}
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    className={cn(
-                                        "bg-card border p-4 rounded-xl transition-all",
-                                        isEnabled ? "border-primary/50 shadow-sm shadow-primary/10" : "border-border"
-                                    )}
-                                >
-                                    <div className="flex items-start justify-between mb-3">
-                                        <div>
-                                            <h3 className="font-semibold">{plugin.name}</h3>
-                                            <p className="text-xs text-muted-foreground mt-0.5">{plugin.description}</p>
-                                        </div>
-                                        {plugin.requires_sudo && (
-                                            <span className="text-xs bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded">
-                                                sudo
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    <div className="flex items-center justify-between mt-4">
-                                        {/* Status Badge */}
-                                        <div className={cn(
-                                            "flex items-center gap-1.5 text-xs px-2 py-1 rounded",
-                                            isDetected 
-                                                ? "bg-green-500/20 text-green-400" 
-                                                : "bg-muted text-muted-foreground"
-                                        )}>
-                                            {isDetected ? <Check size={12} /> : <X size={12} />}
-                                            {isDetected ? 'Installed' : 'Not Found'}
-                                        </div>
-
-                                        {/* Actions */}
-                                        <div className="flex items-center gap-2">
-                                            {!isDetected && (
-                                                <button
-                                                    onClick={() => previewInstall(plugin.id)}
-                                                    disabled={installing === plugin.id}
-                                                    className={cn(
-                                                        "text-xs flex items-center gap-1 px-2 py-1 rounded transition-colors",
-                                                        installing === plugin.id 
-                                                            ? "bg-primary/20 text-primary cursor-wait" 
-                                                            : "bg-muted hover:bg-muted/80"
-                                                    )}
-                                                >
-                                                    {installing === plugin.id ? (
-                                                        <>
-                                                            <RefreshCw size={12} className="animate-spin" />
-                                                            Installing...
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Download size={12} />
-                                                            Install
-                                                        </>
-                                                    )}
-                                                </button>
-                                            )}
-                                            {isDetected && (
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    <span className="text-xs text-muted-foreground">Enable</span>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isEnabled}
-                                                        onChange={(e) => togglePlugin(plugin.id, e.target.checked)}
-                                                        className="h-4 w-4 accent-primary"
-                                                    />
-                                                </label>
-                                            )}
-                                            {isEnabled && (
-                                                <button
-                                                    onClick={() => navigate(`/plugins/${plugin.id}/metrics`)}
-                                                    className="text-xs flex items-center gap-1 px-2 py-1 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                                                    title="View Metrics"
-                                                >
-                                                    <BarChart size={12} />
-                                                    Metrics
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            );
-                        })}
-                    </div>
-                </motion.div>
-            ))}
-
-            {/* Install Output */}
-            <AnimatePresence>
-                {installOutput && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="bg-card border border-border rounded-xl p-4"
-                    >
-                        <div className="flex items-center justify-between mb-2">
-                            <h3 className="font-semibold">Installation Output</h3>
-                            <button
-                                onClick={() => setInstallOutput('')}
-                                className="text-xs text-muted-foreground hover:text-foreground"
-                            >
-                                Clear
-                            </button>
-                        </div>
-                        <pre className="bg-muted/50 p-3 rounded-md text-xs font-mono overflow-auto max-h-48">
-                            {installOutput}
-                        </pre>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Install Confirmation Modal */}
-            <AnimatePresence>
-                {showInstallModal && pendingInstall && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-                        onClick={() => setShowInstallModal(false)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="bg-card border border-border rounded-xl p-6 max-w-lg w-full mx-4"
-                        >
-                            <div className="flex items-center gap-2 text-lg font-semibold mb-4">
-                                <AlertTriangle className="text-yellow-500" size={20} />
-                                Install Plugin
-                            </div>
-                            <p className="text-sm text-muted-foreground mb-4">
-                                The following commands will be executed on <strong>{selectedServer?.name}</strong>:
-                            </p>
-                            <pre className="bg-muted/50 p-3 rounded-md text-xs font-mono overflow-auto max-h-32 mb-4">
-                                {pendingInstall.script}
-                            </pre>
-                            <div className="flex justify-end gap-3">
-                                <button
-                                    onClick={() => setShowInstallModal(false)}
-                                    className="px-4 py-2 rounded-md bg-muted hover:bg-muted/80 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={executeInstall}
-                                    className="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                                >
-                                    Install
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
+      <div className="p-6">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Plugins</h1>
+        <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+      </div>
     );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Plugins</h1>
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <p className="text-red-800 dark:text-red-200">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const enabledCount = plugins.filter(p => p.enabled).length;
+
+  return (
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Plugins</h1>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            {enabledCount} / {plugins.length} enabled
+          </span>
+          <button
+            onClick={fetchPlugins}
+            className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+            title="Refresh"
+          >
+            <RefreshCw size={18} />
+          </button>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {plugins.map((plugin) => (
+          <div key={plugin.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3 flex-1">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                  <Plug className="text-blue-600 dark:text-blue-400" size={24} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-lg text-gray-900 dark:text-white truncate">{plugin.name}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">v{plugin.version}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => togglePlugin(plugin.id, plugin.enabled)}
+                disabled={toggling === plugin.id}
+                className={`p-2 rounded-lg transition-colors ${
+                  plugin.enabled
+                    ? 'bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50'
+                    : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+                title={plugin.enabled ? 'Disable' : 'Enable'}
+              >
+                {toggling === plugin.id ? (
+                  <RefreshCw className="animate-spin" size={20} />
+                ) : plugin.enabled ? (
+                  <CheckCircle className="text-green-600 dark:text-green-400" size={20} />
+                ) : (
+                  <XCircle className="text-gray-400" size={20} />
+                )}
+              </button>
+            </div>
+            
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 line-clamp-2">{plugin.description}</p>
+            
+            <div className="flex items-center justify-between">
+              <span className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded">
+                {plugin.category}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">{plugin.author}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {plugins.length === 0 && (
+        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow">
+          <Plug className="mx-auto text-gray-400 mb-4" size={48} />
+          <p className="text-gray-500 dark:text-gray-400">No plugins available</p>
+        </div>
+      )}
+    </div>
+  );
 }
