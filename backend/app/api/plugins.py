@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, desc
 
 from app.core.database import get_db
-from app.models import Plugin, PluginMetric, PluginStatus, PluginExecution
+from app.models import Plugin, PluginMetric, PluginExecution
 from app.services.cache import cache
 from pydantic import BaseModel
 
@@ -23,31 +23,30 @@ router = APIRouter(prefix="/api/plugins", tags=["plugins"])
 
 # Pydantic models for request/response
 class PluginResponse(BaseModel):
-    id: UUID
-    plugin_id: str
+    id: str  # Plugin ID is a string like 'network-monitor'
     name: str
-    version: Optional[str]
-    description: Optional[str]
-    category: Optional[str]
+    version: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
     enabled: bool
-    config: Optional[dict]
-    created_at: datetime
-    updated_at: Optional[datetime]
+    config: Optional[dict] = None
+    author: Optional[str] = None
 
     class Config:
         from_attributes = True
+        from_attributes = True
 
 
-class PluginStatusResponse(BaseModel):
-    plugin_id: str
-    last_run: Optional[datetime]
-    last_success: Optional[datetime]
-    last_error: Optional[str]
-    error_count: int
-    consecutive_errors: int
-    health_status: str
-
-    class Config:
+# class PluginStatusResponse(BaseModel):
+#     plugin_id: str
+#     last_run: Optional[datetime]
+#     last_success: Optional[datetime]
+#     last_error: Optional[str]
+#     error_count: int
+#     consecutive_errors: int
+#     health_status: str
+# 
+#     class Config:
         from_attributes = True
 
 
@@ -150,22 +149,22 @@ async def enable_plugin(
     }
 
 
-@router.get("/{plugin_id}/status", response_model=PluginStatusResponse)
-async def get_plugin_status(plugin_id: str, db: Session = Depends(get_db)):
-    """Get plugin health status."""
-    # Check cache first
-    cached = await cache.get_plugin_status(plugin_id)
-    if cached:
-        return cached
-    
-    # Query database
-    status = db.query(PluginStatus).filter_by(plugin_id=plugin_id).first()
-    
-    if not status:
-        raise HTTPException(status_code=404, detail="Plugin status not found")
-    
-    response = PluginStatusResponse.model_validate(status)
-    
+# @router.get("/{plugin_id}/status", response_model=PluginStatusResponse)
+# async def get_plugin_status(plugin_id: str, db: Session = Depends(get_db)):
+#     """Get plugin health status."""
+#     # Check cache first
+#     cached = await cache.get_plugin_status(plugin_id)
+#     if cached:
+#         return cached
+#     
+#     # Query database
+#     status = db.query(PluginStatus).filter_by(plugin_id=plugin_id).first()
+#     
+#     if not status:
+#         raise HTTPException(status_code=404, detail="Plugin status not found")
+#     
+#     response = PluginStatusResponse.model_validate(status)
+#     
     # Cache the response
     await cache.set_plugin_status(plugin_id, response.model_dump())
     
@@ -295,9 +294,9 @@ async def get_stats_summary(db: Session = Depends(get_db)):
     total_executions = db.query(PluginExecution).count()
     
     # Count by health status
-    healthy = db.query(PluginStatus).filter_by(health_status='healthy').count()
-    degraded = db.query(PluginStatus).filter_by(health_status='degraded').count()
-    failing = db.query(PluginStatus).filter_by(health_status='failing').count()
+#     healthy = db.query(PluginStatus).filter_by(health_status='healthy').count()
+#     degraded = db.query(PluginStatus).filter_by(health_status='degraded').count()
+#     failing = db.query(PluginStatus).filter_by(health_status='failing').count()
     
     return {
         "total_plugins": total_plugins,

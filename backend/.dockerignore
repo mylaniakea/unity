@@ -18,7 +18,6 @@ scripts/
 app/models_old.py
 
 # Alembic (migrations run separately)
-alembic/
 
 # Virtual environment
 .venv/

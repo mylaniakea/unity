@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 import inspect
 
-from app.models import Plugin, PluginExecution, PluginStatus, PluginMetric
+from app.models import Plugin, PluginExecution, PluginMetric
 from app.plugins.loader import PluginLoader
 from app.plugins.base import PluginBase
 from app.core.database import SessionLocal

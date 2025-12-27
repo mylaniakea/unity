@@ -4,6 +4,7 @@ from fastapi import Depends, HTTPException, status, Request, Cookie, Query, Head
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+from app.core.config import settings
 from app.models.users import User
 from app.models.auth import UserRole
 from app.services.auth.jwt_handler import decode_token
@@ -26,6 +27,8 @@ async def get_current_user(
     """
     Extract and validate current user from JWT, session, or API key.
     
+    If DISABLE_AUTH is set, returns a mock admin user for testing.
+    
     Checks authentication in this order:
     1. Bearer token (JWT) in Authorization header
     2. API key in X-API-Key header
@@ -35,6 +38,19 @@ async def get_current_user(
     Returns:
         User model if authenticated, None if not authenticated
     """
+    # Testing mode: bypass authentication
+    if settings.disable_auth:
+        # Return a mock admin user
+        mock_user = User(
+            id="00000000-0000-0000-0000-000000000000",
+            username="test_admin",
+            email="test@example.com",
+            full_name="Test Admin",
+            is_active=True,
+            role=UserRole.ADMIN
+        )
+        return mock_user
+    
     user = None
     
     # 1. Check JWT Bearer token

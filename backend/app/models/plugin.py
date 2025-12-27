@@ -54,7 +54,7 @@ class Plugin(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
-    status = relationship("PluginStatus", back_populates="plugin", uselist=False)
+    #     status = relationship("PluginStatus", back_populates="plugin", uselist=False)
     metrics = relationship("PluginMetric", back_populates="plugin")
     executions = relationship("PluginExecution", back_populates="plugin")
     alerts = relationship("PluginAlert", back_populates="plugin")
@@ -67,7 +67,7 @@ class PluginMetric(Base):
     """Time-series metrics from plugins."""
     __tablename__ = "plugin_metrics"
     
-    time = Column(DateTime(timezone=True), primary_key=True, nullable=False)
+    timestamp = Column(DateTime(timezone=True), primary_key=True, nullable=False)
     plugin_id = Column(String(100), ForeignKey("plugins.id"), primary_key=True, nullable=False)
     metric_name = Column(String(200), primary_key=True, nullable=False)
     value = Column(PortableJSON, nullable=False)
@@ -78,36 +78,36 @@ class PluginMetric(Base):
     
     # Indexes for common queries
     __table_args__ = (
-        Index('idx_metrics_plugin_time', 'plugin_id', 'time'),
+        Index('idx_metrics_plugin_time', 'plugin_id', 'timestamp'),
         Index('idx_metrics_name', 'metric_name'),
         # Note: GIN index on tags only for PostgreSQL, will be ignored on SQLite
         Index('idx_metrics_tags', 'tags', postgresql_using='gin'),
     )
     
     def __repr__(self):
-        return f"<PluginMetric(plugin={self.plugin_id}, metric={self.metric_name}, time={self.time})>"
+        return f"<PluginMetric(plugin={self.plugin_id}, metric={self.metric_name}, timestamp={self.timestamp})>"
 
 
-class PluginStatus(Base):
-    """Current status and health of each plugin."""
-    __tablename__ = "plugin_status"
-    
-    plugin_id = Column(String(100), ForeignKey("plugins.id"), primary_key=True)
-    last_run = Column(DateTime(timezone=True))
-    last_success = Column(DateTime(timezone=True))
-    last_error = Column(Text)
-    error_count = Column(Integer, default=0)
-    consecutive_errors = Column(Integer, default=0)
-    health_status = Column(String(20), default="unknown")  # unknown, healthy, degraded, failing
-    
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
-    
-    # Relationships
-    plugin = relationship("Plugin", back_populates="status")
-    
-    def __repr__(self):
-        return f"<PluginStatus(plugin={self.plugin_id}, health={self.health_status})>"
-
+# class PluginStatus(Base):
+#     """Current status and health of each plugin."""
+#     __tablename__ = "plugin_status"
+#     
+#     plugin_id = Column(String(100), ForeignKey("plugins.id"), primary_key=True)
+#     last_run = Column(DateTime(timezone=True))
+#     last_success = Column(DateTime(timezone=True))
+#     last_error = Column(Text)
+#     error_count = Column(Integer, default=0)
+#     consecutive_errors = Column(Integer, default=0)
+#     health_status = Column(String(20), default="unknown")  # unknown, healthy, degraded, failing
+#     
+#     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+#     
+#     # Relationships
+#     plugin = relationship("Plugin", back_populates="status")
+#     
+#     def __repr__(self):
+#         return f"<PluginStatus(plugin={self.plugin_id}, health={self.health_status})>"
+# 
 
 class PluginExecution(Base):
     """Individual plugin execution history."""
@@ -161,7 +161,7 @@ class AlertHistory(Base):
     """Historical record of alert triggers."""
     __tablename__ = "alert_history"
     
-    time = Column(DateTime(timezone=True), primary_key=True, nullable=False)
+    timestamp = Column(DateTime(timezone=True), primary_key=True, nullable=False)
     alert_id = Column(Integer, ForeignKey("plugin_alerts.id"), primary_key=True, nullable=False)
     triggered = Column(Boolean, nullable=False)
     value = Column(PortableJSON)
@@ -172,8 +172,8 @@ class AlertHistory(Base):
     
     # Index for queries
     __table_args__ = (
-        Index('idx_alert_history_time', 'alert_id', 'time'),
+        Index('idx_alert_history_time', 'alert_id', 'timestamp'),
     )
     
     def __repr__(self):
-        return f"<AlertHistory(alert={self.alert_id}, time={self.time}, triggered={self.triggered})>"
+        return f"<AlertHistory(alert={self.alert_id}, timestamp={self.timestamp}, triggered={self.triggered})>"

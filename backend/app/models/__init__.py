@@ -4,7 +4,7 @@ Database models for Unity.
 from app.models.plugin import (
     Plugin, 
     PluginMetric, 
-    PluginStatus, 
+    
     PluginExecution,
     PluginAlert, 
     AlertHistory
