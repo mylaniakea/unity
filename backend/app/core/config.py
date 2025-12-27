@@ -79,7 +79,7 @@ class Settings(BaseSettings):
     enable_ai_analysis: bool = False
     enable_push_notifications: bool = True
     enable_plugins: bool = True
-    disable_auth: bool = False  # Set to True to disable authentication for testing
+    disable_auth: bool = False  # DO NOT enable in production  # Set to True to disable authentication for testing
     
     # Redis Configuration (for session storage)
     redis_url: str = "redis://localhost:6379/0"

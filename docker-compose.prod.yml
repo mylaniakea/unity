@@ -1,0 +1,80 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: homelab-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-homelab_db}
+      POSTGRES_USER: ${POSTGRES_USER:-homelab_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - homelab_db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - homelab-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: homelab-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - homelab_redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - homelab-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    image: ghcr.io/mylaniakea/unity-backend:1.0.0
+    container_name: homelab-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./stacks:/app/stacks
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./backend/data:/app/data
+    environment:
+      ALLOW_ORIGINS: ${ALLOW_ORIGINS:-*}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://${POSTGRES_USER:-homelab_user}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-homelab_db}}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      STACKS_DIR: ${STACKS_DIR:-/app/stacks}
+      DEPLOYMENTS_ENABLED: ${DEPLOYMENTS_ENABLED:-true}
+      DEBUG: ${DEBUG:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    env_file:
+      - .env
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info
+    depends_on:
+      - db
+      - redis
+    networks:
+      - homelab-net
+
+  frontend:
+    image: ghcr.io/mylaniakea/unity-frontend:1.0.0
+    container_name: homelab-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - homelab-net
+
+volumes:
+  homelab_redis_data:
+  homelab_db_data:
+
+networks:
+  homelab-net:
+    driver: bridge
