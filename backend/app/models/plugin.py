@@ -5,45 +5,14 @@ Core models for plugin management, metrics storage, and status tracking.
 """
 from datetime import datetime
 from typing import Optional
-from uuid import uuid4
 
 from sqlalchemy import Column, String, Boolean, DateTime, Integer, Text, ForeignKey, Index, JSON
-from sqlalchemy.dialects.postgresql import UUID as PGUUID, JSONB
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from sqlalchemy.types import TypeDecorator, String as SQLString
-import uuid
+from sqlalchemy.types import TypeDecorator
 
-from app.core.database import Base, engine
-
-
-# Portable UUID type that works with SQLite and PostgreSQL
-class UUID(TypeDecorator):
-    """Platform-independent UUID type."""
-    impl = SQLString
-    cache_ok = True
-
-    def load_dialect_impl(self, dialect):
-        if dialect.name == 'postgresql':
-            return dialect.type_descriptor(PGUUID(as_uuid=True))
-        else:
-            return dialect.type_descriptor(SQLString(36))
-
-    def process_bind_param(self, value, dialect):
-        if value is None:
-            return value
-        elif dialect.name == 'postgresql':
-            return value
-        else:
-            return str(value)
-
-    def process_result_value(self, value, dialect):
-        if value is None:
-            return value
-        elif dialect.name == 'postgresql':
-            return value
-        else:
-            return uuid.UUID(value)
+from app.core.database import Base
 
 
 # Portable JSON type that uses JSONB for PostgreSQL, JSON for others
@@ -63,26 +32,35 @@ class Plugin(Base):
     """Plugin registration and configuration."""
     __tablename__ = "plugins"
     
-    id = Column(UUID, primary_key=True, default=uuid4)
-    plugin_id = Column(String(100), unique=True, nullable=False, index=True)
-    name = Column(String(200), nullable=False)
+    # Match existing database schema
+    id = Column(String(100), primary_key=True)
+    name = Column(String(255), nullable=False)
     version = Column(String(50))
-    description = Column(Text)
     category = Column(String(50))
-    enabled = Column(Boolean, default=False, index=True)
+    description = Column(Text)
+    author = Column(String(255))
+    enabled = Column(Boolean, default=False)
+    external = Column(Boolean, default=False)
+    plugin_metadata = Column(PortableJSON)
     config = Column(PortableJSON)
     
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    # Health tracking fields
+    last_health_check = Column(DateTime(timezone=True))
+    health_status = Column(String(50))
+    health_message = Column(Text)
+    last_error = Column(Text)
+    
+    installed_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
     status = relationship("PluginStatus", back_populates="plugin", uselist=False)
     metrics = relationship("PluginMetric", back_populates="plugin")
     executions = relationship("PluginExecution", back_populates="plugin")
-    alerts = relationship("Alert", back_populates="plugin")
+    alerts = relationship("PluginAlert", back_populates="plugin")
     
     def __repr__(self):
-        return f"<Plugin(id={self.plugin_id}, name={self.name}, enabled={self.enabled})>"
+        return f"<Plugin(id={self.id}, name={self.name}, enabled={self.enabled})>"
 
 
 class PluginMetric(Base):
@@ -90,7 +68,7 @@ class PluginMetric(Base):
     __tablename__ = "plugin_metrics"
     
     time = Column(DateTime(timezone=True), primary_key=True, nullable=False)
-    plugin_id = Column(String(100), ForeignKey("plugins.plugin_id"), primary_key=True, nullable=False)
+    plugin_id = Column(String(100), ForeignKey("plugins.id"), primary_key=True, nullable=False)
     metric_name = Column(String(200), primary_key=True, nullable=False)
     value = Column(PortableJSON, nullable=False)
     tags = Column(PortableJSON)
@@ -114,7 +92,7 @@ class PluginStatus(Base):
     """Current status and health of each plugin."""
     __tablename__ = "plugin_status"
     
-    plugin_id = Column(String(100), ForeignKey("plugins.plugin_id"), primary_key=True)
+    plugin_id = Column(String(100), ForeignKey("plugins.id"), primary_key=True)
     last_run = Column(DateTime(timezone=True))
     last_success = Column(DateTime(timezone=True))
     last_error = Column(Text)
@@ -136,7 +114,7 @@ class PluginExecution(Base):
     __tablename__ = "plugin_executions"
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    plugin_id = Column(String(100), ForeignKey("plugins.plugin_id"), nullable=False, index=True)
+    plugin_id = Column(String(100), ForeignKey("plugins.id"), nullable=False, index=True)
     
     started_at = Column(DateTime(timezone=True), nullable=False, index=True, server_default=func.now())
     completed_at = Column(DateTime(timezone=True))
@@ -156,12 +134,12 @@ class PluginExecution(Base):
         return f"<PluginExecution(plugin={self.plugin_id}, status={self.status}, started={self.started_at})>"
 
 
-class Alert(Base):
+class PluginAlert(Base):
     """Alert configuration for monitoring."""
-    __tablename__ = "alerts"
+    __tablename__ = "plugin_alerts"
     
-    id = Column(UUID, primary_key=True, default=uuid4)
-    plugin_id = Column(String(100), ForeignKey("plugins.plugin_id"), nullable=False)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    plugin_id = Column(String(100), ForeignKey("plugins.id"), nullable=False)
     name = Column(String(200), nullable=False)
     description = Column(Text)
     condition = Column(PortableJSON, nullable=False)
@@ -184,13 +162,13 @@ class AlertHistory(Base):
     __tablename__ = "alert_history"
     
     time = Column(DateTime(timezone=True), primary_key=True, nullable=False)
-    alert_id = Column(UUID, ForeignKey("alerts.id"), primary_key=True, nullable=False)
+    alert_id = Column(Integer, ForeignKey("plugin_alerts.id"), primary_key=True, nullable=False)
     triggered = Column(Boolean, nullable=False)
     value = Column(PortableJSON)
     message = Column(Text)
     
     # Relationships
-    alert = relationship("Alert", back_populates="history")
+    alert = relationship("PluginAlert", back_populates="history")
     
     # Index for queries
     __table_args__ = (

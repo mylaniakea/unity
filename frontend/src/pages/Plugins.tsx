@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plug, Server, Check, X, Download, RefreshCw, Thermometer, HardDrive, Cpu, Box, AlertTriangle, Network, Activity, Battery, Monitor } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/api/client';
@@ -39,6 +40,7 @@ const categoryIcons: { [key: string]: React.ReactNode } = {
 
 export default function Plugins() {
     const [plugins, setPlugins] = useState<Plugin[]>([]);
+    const navigate = useNavigate();
     const [categories, setCategories] = useState<PluginCategories>({});
     const [servers, setServers] = useState<ServerProfile[]>([]);
     const [selectedServer, setSelectedServer] = useState<ServerProfile | null>(null);
@@ -299,6 +301,16 @@ export default function Plugins() {
                                                         className="h-4 w-4 accent-primary"
                                                     />
                                                 </label>
+                                            )}
+                                            {isEnabled && (
+                                                <button
+                                                    onClick={() => navigate(`/plugins/${plugin.id}/metrics`)}
+                                                    className="text-xs flex items-center gap-1 px-2 py-1 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                                                    title="View Metrics"
+                                                >
+                                                    <BarChart size={12} />
+                                                    Metrics
+                                                </button>
                                             )}
                                         </div>
                                     </div>

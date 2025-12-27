@@ -97,6 +97,14 @@ class Settings(BaseSettings):
     login_attempt_window_minutes: int = 15
     lockout_duration_minutes: int = 30
 
+    # OAuth2 Configuration
+    github_client_id: str = ""
+    github_client_secret: str = ""
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    oauth_redirect_uri: str = "http://localhost:8000/api/auth/oauth/callback"
+
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -123,11 +131,3 @@ class Settings(BaseSettings):
 
 # Global settings instance
 settings = Settings()
-
-    # OAuth2 Configuration
-    github_client_id: str = ""
-    github_client_secret: str = ""
-    google_client_id: str = ""
-    google_client_secret: str = ""
-    oauth_redirect_uri: str = "http://localhost:8000/api/auth/oauth/callback"
-

@@ -11,10 +11,14 @@ import Homelab from './pages/Homelab';
 import ServerHardware from './pages/ServerHardware';
 import Automations from './pages/Automations';
 import Plugins from './pages/Plugins';
+import PluginMetrics from './pages/PluginMetrics';
 import Thresholds from './pages/Thresholds';
 import Alerts from './pages/Alerts';
 import Users from './pages/Users';
 import LoginPage from './pages/LoginPage';
+import Deployments from './pages/Deployments';
+import PluginMarketplace from './pages/PluginMarketplace';
+import DashboardBuilder from './pages/DashboardBuilder';
 import { SidebarProvider } from '@/contexts/SidebarContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ConfirmDialogProvider } from '@/contexts/ConfirmDialogContext';
@@ -37,6 +41,9 @@ function App() {
                                 <Route path="profiles" element={<Profiles />} />
                                 <Route path="hardware" element={<ServerHardware />} />
                                 <Route path="plugins" element={<Plugins />} />
+                                <Route path="plugins/:pluginId/metrics" element={<PluginMetrics />} />
+                                <Route path="marketplace" element={<PluginMarketplace />} />
+                                <Route path="dashboards" element={<DashboardBuilder />} />
                                 <Route path="ai" element={<Intelligence />} />
                                 <Route path="reports" element={<Reports />} />
                                 <Route path="knowledge" element={<Knowledge />} />
@@ -44,6 +51,7 @@ function App() {
                                 <Route path="alerts" element={<Alerts />} />
                                 <Route path="automations" element={<Automations />} />
                                 <Route path="users" element={<Users />} />
+                                <Route path="deployments" element={<Deployments />} />
                                 <Route path="settings" element={<Settings />} />
                             </Route>
                         </Routes>

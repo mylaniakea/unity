@@ -19,4 +19,37 @@ export default defineConfig({
             },
         },
     },
+    build: {
+        // Code splitting configuration
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    // Vendor chunks
+                    'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+                    'chart-vendor': ['chart.js', 'react-chartjs-2'],
+                    'ui-vendor': ['framer-motion', 'lucide-react'],
+                    // Feature chunks
+                    'dashboard': ['./src/pages/Dashboard.tsx', './src/components/dashboard'],
+                    'plugins': ['./src/pages/Plugins.tsx', './src/pages/PluginMetrics.tsx'],
+                    'marketplace': ['./src/pages/PluginMarketplace.tsx'],
+                },
+            },
+        },
+        // Optimize chunk size
+        chunkSizeWarningLimit: 1000,
+        // Enable source maps for production debugging (optional)
+        sourcemap: false,
+    },
+    // Optimize dependencies
+    optimizeDeps: {
+        include: [
+            'react',
+            'react-dom',
+            'react-router-dom',
+            'chart.js',
+            'react-chartjs-2',
+            'framer-motion',
+            'lucide-react',
+        ],
+    },
 })

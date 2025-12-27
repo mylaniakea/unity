@@ -11,7 +11,7 @@ from authlib.integrations.starlette_client import OAuth, OAuthError
 from app.core.database import get_db
 from app.core.config import settings
 from app.services.auth.oauth_service import get_oauth_service
-from app.services.auth.jwt_handler import JWTHandler
+from app.services.auth import jwt_handler
 from app.services.auth.session_manager import SessionManager
 
 router = APIRouter(prefix="/api/auth/oauth", tags=["OAuth"])
@@ -120,7 +120,7 @@ async def oauth_callback(
         )
         
         # Create JWT token
-        jwt_handler = JWTHandler()
+        # jwt_handler module imported
         access_token = jwt_handler.create_access_token({"sub": user.username})
         
         # Create session

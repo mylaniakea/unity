@@ -11,7 +11,7 @@ from authlib.integrations.starlette_client import OAuth
 from sqlalchemy.orm import Session
 from app.models.users import User
 from app.models.oauth import UserOAuthLink
-from app.services.auth.user_service import UserService
+from app.services.auth import user_service
 
 logger = logging.getLogger(__name__)
 

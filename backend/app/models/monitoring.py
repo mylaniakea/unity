@@ -8,6 +8,7 @@ from app.core.database import Base
 
 
 class ThresholdRule(Base):
+    __table_args__ = {"extend_existing": True}
     __tablename__ = "threshold_rules"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -26,6 +27,7 @@ class ThresholdRule(Base):
 
 
 class Alert(Base):
+    __table_args__ = {"extend_existing": True}
     __tablename__ = "alerts"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -55,6 +57,7 @@ class Alert(Base):
 
 
 class AlertChannel(Base):
+    __table_args__ = {"extend_existing": True}
     __tablename__ = "alert_channels"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -79,6 +82,7 @@ class PushSubscription(Base):
 
 
 class NotificationLog(Base):
+    __table_args__ = {"extend_existing": True}
     __tablename__ = "notification_logs"
 
     id = Column(Integer, primary_key=True, index=True)

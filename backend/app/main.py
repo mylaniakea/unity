@@ -4,6 +4,7 @@ Unity - Homelab Monitoring Platform
 FastAPI application with integrated plugin scheduler and WebSocket streaming.
 """
 import logging
+from datetime import datetime
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import plugins, websocket
 from app.services.plugin_scheduler import PluginScheduler
 from app.services.cache import cache
+from app.middleware.cache_middleware import CacheMiddleware
 
 # Configure logging
 logging.basicConfig(
@@ -86,10 +88,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add response caching middleware
+app.add_middleware(
+    CacheMiddleware,
+    cache_ttl=60,  # Default 60 seconds
+    excluded_paths=["/docs", "/openapi.json", "/health", "/ws/"]
+)
+
 # Include routers
 app.include_router(plugins.router)
 # Authentication routers
-from app.routers import auth, api_keys, users, audit_logs, notifications, oauth
+from app.routers import auth, api_keys, users, audit_logs, notifications, oauth, deployments
+from app.routers.plugins import marketplace
+from app.routers import dashboard_builder
+from app.routers import ai_insights
 app.include_router(auth.router, prefix="/api/v1", tags=["Authentication"])
 app.include_router(api_keys.router, prefix="/api/v1", tags=["API Keys"])
 app.include_router(users.router, prefix="/api/v1", tags=["Users"])
@@ -97,6 +109,10 @@ app.include_router(audit_logs.router, prefix="/api/v1", tags=["Audit Logs"])
 app.include_router(notifications.router)
 app.include_router(oauth.router)
 app.include_router(websocket.router)
+app.include_router(deployments.router)
+app.include_router(marketplace.router)
+app.include_router(dashboard_builder.router)
+app.include_router(ai_insights.router)
 
 
 @app.get("/")
@@ -126,9 +142,7 @@ async def health_check():
         "status": "healthy",
         "scheduler": scheduler_status,
         "cache": cache_status,
-        "timestamp": logging.Formatter().formatTime(logging.LogRecord(
-            "", 0, "", 0, "", (), None
-        ))
+        "timestamp": datetime.now().isoformat()
     }
 
 

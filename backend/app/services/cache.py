@@ -181,4 +181,6 @@ class CacheService:
 
 
 # Global cache instance
-cache = CacheService()
+# Global cache instance
+import os
+cache = CacheService(redis_url=os.getenv('REDIS_URL', 'redis://localhost:6379/0'))

@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Server, Bot, Menu, X, Settings, FileText, Brain, Network, HardDrive, Clock, Plug, AlertTriangle, Bell, LogOut, User, Users } from 'lucide-react';
+import { LayoutDashboard, Server, Bot, Menu, X, Settings, FileText, Brain, Network, HardDrive, Clock, Plug, AlertTriangle, Bell, LogOut, User, Users, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useSidebar } from '@/contexts/SidebarContext';
@@ -80,6 +80,7 @@ export default function Layout() {
         { icon: Bell, label: 'Alerts', path: '/alerts', dynamicColor: getAlertColor() },
         { icon: Clock, label: 'Automations', path: '/automations' },
         { icon: Users, label: 'Users', path: '/users' },
+        { icon: Package, label: 'Deployments', path: '/deployments' },
         { icon: Settings, label: 'Settings', path: '/settings' },
     ];
 

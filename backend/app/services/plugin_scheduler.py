@@ -93,7 +93,7 @@ class PluginScheduler:
             
             # Instantiate each enabled plugin
             for plugin_record in enabled_plugins:
-                plugin_id = plugin_record.plugin_id
+                plugin_id = plugin_record.id
                 plugin_class = self.loader.get_plugin_class(plugin_id)
                 
                 if not plugin_class:
@@ -140,7 +140,7 @@ class PluginScheduler:
             db = self.db_session_factory()
             try:
                 result = db.execute(
-                    select(Plugin).where(Plugin.plugin_id == plugin_id)
+                    select(Plugin).where(Plugin.id == plugin_id)
                 )
                 plugin_record = result.scalar_one_or_none()
                 
