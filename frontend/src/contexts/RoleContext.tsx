@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 import api from '@/api/client';
 
 type Role = 'admin' | 'user' | 'viewer';
@@ -28,21 +28,38 @@ const RoleContext = createContext<RoleContextType | undefined>(undefined);
 export function RoleProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const fetchingRef = useRef(false);
 
-    const fetchUser = async () => {
+    const fetchUser = useCallback(async () => {
+        // Prevent multiple simultaneous fetches
+        if (fetchingRef.current) return;
+        
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            setUser(null);
+            setLoading(false);
+            return;
+        }
+        
+        fetchingRef.current = true;
+        setLoading(true);
         try {
             const res = await api.get('/auth/me');
             setUser(res.data);
         } catch (error) {
             console.error('Failed to fetch user', error);
             setUser(null);
+            localStorage.removeItem('access_token');
         } finally {
             setLoading(false);
+            fetchingRef.current = false;
         }
-    };
+    }, []);
 
     useEffect(() => {
+        // Only fetch once on mount
         fetchUser();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const value: RoleContextType = {

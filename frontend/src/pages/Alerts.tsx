@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import api from '@/api/client';
 import { useNotification } from '@/contexts/NotificationContext';
-import { useConfirm } from '@/contexts/ConfirmDialogContext'; // Import useConfirm
+import { useConfirm } from '@/contexts/ConfirmDialogContext';
+import { useUpdates } from '@/contexts/UpdatesContext'; // Import useConfirm
 import { Bell, CheckCircle, XCircle, AlertTriangle, Settings, Mail, MessageCircle, Smartphone, Hash, Server, Link } from 'lucide-react';
 
 interface Alert {
@@ -51,6 +52,7 @@ const iconMap: Record<string, any> = {
 const Alerts: React.FC = () => {
   const { showNotification } = useNotification();
   const { showConfirm } = useConfirm(); // Use the confirm dialog hook
+  const { updatesPaused } = useUpdates();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [channels, setChannels] = useState<AlertChannel[]>([]);
   const [availableChannels, setAvailableChannels] = useState<Record<string, ChannelDefinition>>({});
@@ -70,7 +72,10 @@ const Alerts: React.FC = () => {
     fetchChannels();
     fetchAvailableChannels();
 
-    const interval = setInterval(fetchAlerts, 10000); // Poll for new alerts every 10 seconds
+    let interval: NodeJS.Timeout | null = null;
+    if (!updatesPaused) {
+      interval = setInterval(fetchAlerts, 120000); // Poll every 2 minutes (reduced from 10s)
+    }
 
     const handleDocumentClick = () => {
       setShowSnoozeDropdownForAlert(null);
@@ -78,10 +83,10 @@ const Alerts: React.FC = () => {
     document.addEventListener('click', handleDocumentClick);
 
     return () => {
-      clearInterval(interval);
+      if (interval) clearInterval(interval);
       document.removeEventListener('click', handleDocumentClick);
     };
-  }, []);
+  }, [updatesPaused, fetchSettings, fetchAlerts, fetchChannels, fetchAvailableChannels]);
 
   useEffect(() => {
     if (alertSoundEnabled) {
@@ -96,16 +101,16 @@ const Alerts: React.FC = () => {
     setPreviousAlertIds(new Set(alerts.map(alert => alert.id)));
   }, [alerts, alertSoundEnabled]);
 
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     try {
       const res = await api.get('/settings/');
       setAlertSoundEnabled(res.data.alert_sound_enabled);
     } catch (error) {
       console.error('Failed to fetch settings', error);
     }
-  };
+  }, []);
 
-  const fetchAlerts = async () => {
+  const fetchAlerts = useCallback(async () => {
     try {
       const res = await api.get('/alerts/?limit=100');
       setAlerts(res.data);
@@ -118,25 +123,25 @@ const Alerts: React.FC = () => {
       showNotification('Failed to load alerts.', 'error');
       setLoading(false);
     }
-  };
+  }, [showNotification]);
 
-  const fetchChannels = async () => {
+  const fetchChannels = useCallback(async () => {
     try {
       const res = await api.get('/alerts/channels/');
       setChannels(res.data);
     } catch (error) {
       console.error('Failed to fetch channels', error);
     }
-  };
+  }, []);
 
-  const fetchAvailableChannels = async () => {
+  const fetchAvailableChannels = useCallback(async () => {
     try {
       const res = await api.get('/alerts/channels/available');
       setAvailableChannels(res.data);
     } catch (error) {
       console.error('Failed to fetch available channels', error);
     }
-  };
+  }, []);
 
   const handleAcknowledge = async (alertId: number) => {
     try {

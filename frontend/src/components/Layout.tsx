@@ -5,10 +5,12 @@ import { motion } from 'framer-motion';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { useRole } from '@/contexts/RoleContext';
 import ThemeToggle from '@/components/ThemeToggle';
-import { useState, useEffect, useRef } from 'react';
+import UpdatesToggle from '@/components/UpdatesToggle';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import api from '@/api/client';
 import { updateFaviconBadge, initializeFaviconManager } from '@/lib/favicon';
 import { useNotification } from '@/contexts/NotificationContext';
+import { useUpdates } from '@/contexts/UpdatesContext';
 
 export default function Layout() {
     const { isSidebarOpen, toggleSidebar } = useSidebar();
@@ -16,6 +18,7 @@ export default function Layout() {
     const location = useLocation();
     const navigate = useNavigate();
     const { showNotification } = useNotification();
+    const { updatesPaused } = useUpdates();
     const [alertStats, setAlertStats] = useState({ critical: 0, warning: 0, info: 0 });
     const faviconLinkRef = useRef<HTMLLinkElement | null>(null);
 
@@ -24,9 +27,11 @@ export default function Layout() {
         faviconLinkRef.current = initializeFaviconManager();
 
         fetchAlertStats();
-        const interval = setInterval(fetchAlertStats, 30000); // Refresh every 30 seconds
-        return () => clearInterval(interval);
-    }, []);
+        if (!updatesPaused) {
+            const interval = setInterval(fetchAlertStats, 180000); // Refresh every 3 minutes
+            return () => clearInterval(interval);
+        }
+    }, [updatesPaused, fetchAlertStats]);
 
     useEffect(() => {
         // Update favicon badge whenever alertStats changes
@@ -45,14 +50,14 @@ export default function Layout() {
         }
     }, [alertStats]);
 
-    const fetchAlertStats = async () => {
+    const fetchAlertStats = useCallback(async () => {
         try {
             const res = await api.get('/alerts/stats');
             setAlertStats(res.data);
         } catch (error) {
             console.error('Failed to fetch alert stats', error);
         }
-    };
+    }, []);
 
     const handleLogout = () => {
         localStorage.removeItem('access_token');
@@ -101,7 +106,12 @@ export default function Layout() {
                         <div>Intelligence</div>
                     </div>
                     <div className="flex items-center gap-2">
-                        {isSidebarOpen && <ThemeToggle />}
+                        {isSidebarOpen && (
+                            <>
+                                <UpdatesToggle />
+                                <ThemeToggle />
+                            </>
+                        )}
                         <button onClick={toggleSidebar} className="p-1 hover:bg-muted rounded" title={isSidebarOpen ? "Close Sidebar" : "Open Sidebar"}>
                             {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
                         </button>

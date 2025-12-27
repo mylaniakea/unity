@@ -19,7 +19,7 @@ export default function LoginPage() {
             form_data.append('username', username);
             form_data.append('password', password);
 
-            const response = await api.post('/auth/token', form_data, {
+            const response = await api.post('/auth/login/form', form_data, {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },

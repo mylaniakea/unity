@@ -28,10 +28,6 @@ export default defineConfig({
                     'react-vendor': ['react', 'react-dom', 'react-router-dom'],
                     'chart-vendor': ['chart.js', 'react-chartjs-2'],
                     'ui-vendor': ['framer-motion', 'lucide-react'],
-                    // Feature chunks
-                    'dashboard': ['./src/pages/Dashboard.tsx', './src/components/dashboard'],
-                    'plugins': ['./src/pages/Plugins.tsx', './src/pages/PluginMetrics.tsx'],
-                    'marketplace': ['./src/pages/PluginMarketplace.tsx'],
                 },
             },
         },

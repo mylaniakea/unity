@@ -24,6 +24,7 @@ import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ConfirmDialogProvider } from '@/contexts/ConfirmDialogContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { RoleProvider } from '@/contexts/RoleContext';
+import { UpdatesProvider } from '@/contexts/UpdatesContext';
 
 function App() {
     return (
@@ -31,7 +32,8 @@ function App() {
             <SidebarProvider>
                 <ConfirmDialogProvider>
                     <NotificationProvider>
-                        <RoleProvider>
+                        <UpdatesProvider>
+                            <RoleProvider>
                             <Router>
                         <Routes>
                             <Route path="/login" element={<LoginPage />} />
@@ -56,7 +58,8 @@ function App() {
                             </Route>
                         </Routes>
                         </Router>
-                        </RoleProvider>
+                            </RoleProvider>
+                        </UpdatesProvider>
                     </NotificationProvider>
                 </ConfirmDialogProvider>
             </SidebarProvider>

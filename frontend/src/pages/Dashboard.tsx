@@ -6,6 +6,7 @@ import PluginHealthGrid from '../components/dashboard/PluginHealthGrid';
 import InfrastructureOverview from '../components/dashboard/InfrastructureOverview';
 import MetricsDashboard from '../components/dashboard/MetricsDashboard';
 import { useWebSocket, WebSocketMessage } from '../hooks/useWebSocket';
+import { useUpdates } from '@/contexts/UpdatesContext';
 
 interface StatCardProps {
   title: string;
@@ -87,6 +88,8 @@ export default function Dashboard() {
     }
   }, []);
 
+  const { updatesPaused } = useUpdates();
+  
   const { connected: wsConnected, reconnect: wsReconnect } = useWebSocket({
     onMessage: handleWebSocketMessage,
     onConnect: () => {
@@ -98,9 +101,11 @@ export default function Dashboard() {
     onError: (err) => {
       console.error('WebSocket error:', err);
     },
+    // Disable WebSocket when updates are paused
+    enabled: !updatesPaused,
   });
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setError(null);
       const data = await dashboardApi.getOverview();
@@ -112,19 +117,19 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [fetchDashboardData]);
 
-  // Fallback polling when WebSocket is not connected (every 30 seconds)
+  // Fallback polling when WebSocket is not connected (every 60 seconds - less aggressive)
   useEffect(() => {
-    if (!wsConnected) {
-      const interval = setInterval(fetchDashboardData, 30000);
+    if (!wsConnected && !updatesPaused) {
+      const interval = setInterval(fetchDashboardData, 60000); // 60 seconds instead of 30
       return () => clearInterval(interval);
     }
-  }, [wsConnected]);
+  }, [wsConnected, updatesPaused, fetchDashboardData]);
 
   const formatValue = (val: number | null | undefined, unit = '', decimals = 1): string => {
     if (val === null || val === undefined) return 'N/A';
@@ -252,7 +257,7 @@ export default function Dashboard() {
       />
 
       {/* Historical Metrics Charts */}
-      <MetricsDashboard autoRefresh={true} refreshInterval={60000} />
+      <MetricsDashboard autoRefresh={true} refreshInterval={120000} />
 
       {/* Footer Info */}
       <div className="text-center text-xs text-gray-500 dark:text-gray-400 py-4">

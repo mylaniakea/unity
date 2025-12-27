@@ -5,7 +5,9 @@ This module provides a single source of truth for all configuration values,
 loaded from environment variables with sensible defaults.
 """
 import os
+import json
 from typing import Optional
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -59,7 +61,16 @@ class Settings(BaseSettings):
     
     # API Configuration
     api_v1_prefix: str = "/api/v1"
-    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:80"]
+    cors_origins: str = "http://localhost:3000,http://localhost:80"
+    
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Parse CORS origins from comma-separated string."""
+        if not self.cors_origins:
+            return ["http://localhost:3000", "http://localhost:80"]
+        if self.cors_origins.strip() == "*":
+            return ["*"]
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
     
     # Data Retention
     retention_days: int = 365

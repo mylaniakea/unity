@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useUpdates } from '@/contexts/UpdatesContext';
 import MetricChart from './MetricChart';
 import dashboardApi, { MetricsHistory } from '../../api/dashboard';
 
@@ -13,12 +14,13 @@ export default function MetricsDashboard({
   autoRefresh = true, 
   refreshInterval = 30000 
 }: MetricsDashboardProps) {
+  const { updatesPaused } = useUpdates();
   const [timeRange, setTimeRange] = useState<TimeRange>('1h');
   const [metricsData, setMetricsData] = useState<MetricsHistory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchMetrics = async () => {
+  const fetchMetrics = useCallback(async () => {
     try {
       setError(null);
       const data = await dashboardApi.getMetricsHistory(timeRange);
@@ -29,18 +31,18 @@ export default function MetricsDashboard({
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchMetrics();
   }, [timeRange]);
 
   useEffect(() => {
-    if (!autoRefresh) return;
+    fetchMetrics();
+  }, [fetchMetrics]);
+
+  useEffect(() => {
+    if (!autoRefresh || updatesPaused) return;
 
     const interval = setInterval(fetchMetrics, refreshInterval);
     return () => clearInterval(interval);
-  }, [autoRefresh, refreshInterval, timeRange]);
+  }, [autoRefresh, refreshInterval, updatesPaused, fetchMetrics]);
 
   const timeRangeOptions: TimeRange[] = ['1h', '6h', '24h', '7d'];
   const timeRangeLabels = {

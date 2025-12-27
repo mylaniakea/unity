@@ -8,27 +8,27 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-homelab_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-homelab_password}
     volumes:
-    - homelab_db_data:/var/lib/postgresql/data
+      - homelab_db_data:/var/lib/postgresql/data
     ports:
-    - 5432:5432
+      - 5432:5432
     networks:
-    - homelab-net
+      - homelab-net
   redis:
     image: redis:7-alpine
     container_name: homelab-redis
     restart: unless-stopped
     command: redis-server --appendonly yes
     volumes:
-    - homelab_redis_data:/data
+      - homelab_redis_data:/data
     ports:
-    - 6379:6379
+      - 6379:6379
     networks:
-    - homelab-net
+      - homelab-net
     healthcheck:
       test:
-      - CMD
-      - redis-cli
-      - ping
+        - CMD
+        - redis-cli
+        - ping
       interval: 5s
       timeout: 3s
       retries: 5
@@ -37,11 +37,11 @@ services:
     container_name: homelab-backend
     restart: unless-stopped
     ports:
-    - 8000:8000
+      - 8000:8000
     volumes:
-    - ./stacks:/app/stacks
-    - /var/run/docker.sock:/var/run/docker.sock
-    - ./backend/data:/app/data
+      - ./stacks:/app/stacks
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./backend/data:/app/data
     environment:
       ALLOW_ORIGINS: ${ALLOW_ORIGINS:-*}
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://${POSTGRES_USER:-homelab_user}:${POSTGRES_PASSWORD:-homelab_password}@db:5432/${POSTGRES_DB:-homelab_db}}
@@ -54,23 +54,22 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
     env_file:
       - .env
-    # Note: .env file is optional - defaults will be used if not present
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level debug
     depends_on:
-    - db
-    - redis
+      - db
+      - redis
     networks:
-    - homelab-net
+      - homelab-net
   frontend:
     build: ./frontend
     container_name: homelab-frontend
     restart: unless-stopped
     ports:
-    - 80:80
+      - 80:80
     depends_on:
-    - backend
+      - backend
     networks:
-    - homelab-net
+      - homelab-net
 volumes:
   homelab_redis_data: null
   homelab_db_data: null

@@ -162,28 +162,55 @@ async def login(
         )
     
     # Create JWT token
+    # Handle both UUID and integer IDs
+    try:
+        user_id = str(user.id)
+    except Exception:
+        # Fallback for integer IDs or schema mismatches
+        from sqlalchemy import text
+        result = db.execute(
+            text("SELECT id FROM users WHERE username = :username"),
+            {"username": user.username}
+        )
+        row = result.fetchone()
+        user_id = str(row[0]) if row else "unknown"
+    
     token_data = {
-        "sub": str(user.id),
+        "sub": user_id,
         "username": user.username,
-        "role": user.role
+        "role": user.role or "viewer"
     }
     access_token = jwt_handler.create_access_token(token_data)
     
-    # Log successful login
-    log_login_attempt(
-        db=db,
-        username=login_data.username,
-        ip_address=get_client_ip(request),
-        user_agent=get_user_agent(request),
-        success=True,
-        user_id=str(user.id)
-    )
+    # Log successful login (with error handling for schema mismatches)
+    try:
+        log_login_attempt(
+            db=db,
+            username=login_data.username,
+            ip_address=get_client_ip(request),
+            user_agent=get_user_agent(request),
+            success=True,
+            user_id=user_id
+        )
+    except Exception as e:
+        # Logging failed, but authentication succeeded
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Could not log login attempt: {e}")
     
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "expires_in": 1800,  # 30 minutes
-        "user": user
+        "user": {
+            "id": user_id,
+            "username": user.username,
+            "email": getattr(user, 'email', None),
+            "full_name": getattr(user, 'full_name', None),
+            "role": user.role or "viewer",
+            "is_active": getattr(user, 'is_active', True),
+            "is_superuser": getattr(user, 'is_superuser', False)
+        }
     }
 
 
@@ -218,28 +245,55 @@ async def login_form(
         )
     
     # Create JWT token
+    # Handle both UUID and integer IDs
+    try:
+        user_id = str(user.id)
+    except Exception:
+        # Fallback for integer IDs or schema mismatches
+        from sqlalchemy import text
+        result = db.execute(
+            text("SELECT id FROM users WHERE username = :username"),
+            {"username": user.username}
+        )
+        row = result.fetchone()
+        user_id = str(row[0]) if row else "unknown"
+    
     token_data = {
-        "sub": str(user.id),
+        "sub": user_id,
         "username": user.username,
-        "role": user.role
+        "role": user.role or "viewer"
     }
     access_token = jwt_handler.create_access_token(token_data)
     
-    # Log successful login
-    log_login_attempt(
-        db=db,
-        username=form_data.username,
-        ip_address=get_client_ip(request),
-        user_agent=get_user_agent(request),
-        success=True,
-        user_id=str(user.id)
-    )
+    # Log successful login (with error handling for schema mismatches)
+    try:
+        log_login_attempt(
+            db=db,
+            username=form_data.username,
+            ip_address=get_client_ip(request),
+            user_agent=get_user_agent(request),
+            success=True,
+            user_id=user_id
+        )
+    except Exception as e:
+        # Logging failed, but authentication succeeded
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Could not log login attempt: {e}")
     
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "expires_in": 1800,
-        "user": user
+        "expires_in": 1800,  # 30 minutes
+        "user": {
+            "id": user_id,
+            "username": user.username,
+            "email": getattr(user, 'email', None),
+            "full_name": getattr(user, 'full_name', None),
+            "role": user.role or "viewer",
+            "is_active": getattr(user, 'is_active', True),
+            "is_superuser": getattr(user, 'is_superuser', False)
+        }
     }
 
 
@@ -270,7 +324,16 @@ async def get_current_user_info(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get current authenticated user information."""
-    return current_user
+    # Convert user to response format (handle integer IDs)
+    return {
+        "id": str(current_user.id),
+        "username": current_user.username,
+        "email": getattr(current_user, 'email', None),
+        "full_name": getattr(current_user, 'full_name', None),
+        "role": current_user.role or "viewer",
+        "is_active": getattr(current_user, 'is_active', True),
+        "is_superuser": getattr(current_user, 'is_superuser', False)
+    }
 
 
 @router.put("/me", response_model=UserResponse)

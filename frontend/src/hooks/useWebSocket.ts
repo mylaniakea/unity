@@ -17,6 +17,7 @@ export interface UseWebSocketOptions {
     plugin_ids?: string[];
     metric_names?: string[];
   };
+  enabled?: boolean; // If false, WebSocket won't connect
 }
 
 export interface UseWebSocketReturn {
@@ -42,6 +43,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     reconnectInterval = 3000,
     maxReconnectAttempts = 10,
     subscribeTo,
+    enabled = true,
   } = options;
 
   const [connected, setConnected] = useState(false);
@@ -52,6 +54,20 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const shouldReconnectRef = useRef(true);
+  
+  // Use refs for callbacks to prevent dependency issues
+  const onMessageRef = useRef(onMessage);
+  const onErrorRef = useRef(onError);
+  const onConnectRef = useRef(onConnect);
+  const onDisconnectRef = useRef(onDisconnect);
+  
+  // Update refs when callbacks change
+  useEffect(() => {
+    onMessageRef.current = onMessage;
+    onErrorRef.current = onError;
+    onConnectRef.current = onConnect;
+    onDisconnectRef.current = onDisconnect;
+  }, [onMessage, onError, onConnect, onDisconnect]);
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -67,7 +83,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
         setConnected(true);
         setError(null);
         reconnectAttemptsRef.current = 0;
-        onConnect?.();
+        onConnectRef.current?.();
 
         // Subscribe if options provided
         if (subscribeTo) {
@@ -83,7 +99,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
         try {
           const message: WebSocketMessage = JSON.parse(event.data);
           setLastMessage(message);
-          onMessage?.(message);
+          onMessageRef.current?.(message);
         } catch (err) {
           console.error('Failed to parse WebSocket message:', err);
         }
@@ -92,13 +108,13 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       ws.onerror = (event) => {
         console.error('WebSocket error:', event);
         setError(event);
-        onError?.(event);
+        onErrorRef.current?.(event);
       };
 
       ws.onclose = () => {
         console.log('WebSocket disconnected');
         setConnected(false);
-        onDisconnect?.();
+        onDisconnectRef.current?.();
 
         // Attempt to reconnect if we should
         if (shouldReconnectRef.current && reconnectAttemptsRef.current < maxReconnectAttempts) {
@@ -116,7 +132,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       console.error('Failed to create WebSocket:', err);
       setError(err as Event);
     }
-  }, [url, onMessage, onError, onConnect, onDisconnect, reconnectInterval, maxReconnectAttempts, subscribeTo]);
+  }, [url, reconnectInterval, maxReconnectAttempts, subscribeTo]); // Stable dependencies only
 
   const send = useCallback((message: object) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -152,6 +168,15 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   }, [connect]);
 
   useEffect(() => {
+    if (!enabled) {
+      // Close connection if disabled
+      if (wsRef.current) {
+        wsRef.current.close();
+        setConnected(false);
+      }
+      return;
+    }
+
     connect();
     shouldReconnectRef.current = true;
 
@@ -164,7 +189,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
         wsRef.current.close();
       }
     };
-  }, [connect]);
+  }, [connect, enabled]);
 
   return {
     connected,
