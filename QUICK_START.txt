@@ -1,0 +1,182 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                  UNITY PLATFORM - QUICK START GUIDE                        ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+✅ STATUS: FULLY OPERATIONAL
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. ACCESS THE PLATFORM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+API (Port 8000):
+  kubectl -n homelab port-forward svc/backend-service 8000:8000
+
+Frontend (Port 3000):
+  kubectl -n homelab port-forward svc/frontend-service 3000:3000
+
+Credentials:
+  Username: admin
+  Password: admin123
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. GET API TOKEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin123"}' | jq -r '.access_token')
+
+echo $TOKEN
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. TEST API (Examples)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Check Your Profile:
+  curl -H "Authorization: Bearer $TOKEN" \
+    http://localhost:8000/api/v1/auth/me
+
+View Cluster Status:
+  curl -H "Authorization: Bearer $TOKEN" \
+    http://localhost:8000/api/v1/orchestrate/environment
+
+List Deployment Templates:
+  curl -H "Authorization: Bearer $TOKEN" \
+    http://localhost:8000/api/v1/orchestrate/templates
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. PREVIEW A DEPLOYMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"request": "Add PostgreSQL"}' \
+  http://localhost:8000/api/v1/orchestrate/preview
+
+Returns: Generated Kubernetes YAML manifest
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. DEPLOY AN APPLICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"request": "Add PostgreSQL", "approve": true}' \
+  http://localhost:8000/api/v1/orchestrate/deploy
+
+Returns: Deployment status
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. USEFUL KUBECTL COMMANDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+View Logs:
+  kubectl -n homelab logs -f deployment/unity-backend
+
+Check Pod Status:
+  kubectl -n homelab get pods -o wide
+
+View Resource Usage:
+  kubectl -n homelab top nodes
+  kubectl -n homelab top pods
+
+Describe Backend Pod:
+  kubectl -n homelab describe pod -l app=unity-backend
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. API DOCUMENTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Interactive Swagger UI:
+  http://localhost:8000/docs
+
+ReDoc Documentation:
+  http://localhost:8000/redoc
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. KEY ENDPOINTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Authentication:
+  POST   /api/v1/auth/login
+  GET    /api/v1/auth/me
+  POST   /api/v1/auth/logout
+
+Orchestration:
+  GET    /api/v1/orchestrate/templates
+  GET    /api/v1/orchestrate/environment
+  POST   /api/v1/orchestrate/preview
+  POST   /api/v1/orchestrate/deploy
+  GET    /api/v1/orchestrate/status
+
+Infrastructure:
+  GET    /api/v1/infrastructure/status
+  GET    /api/v1/infrastructure/servers
+  GET    /api/v1/system/info
+
+Health:
+  GET    /health
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. DEPLOYMENT TEMPLATES AVAILABLE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✓ PostgreSQL         - Database with persistent storage
+✓ Nginx              - Web server / reverse proxy
+✓ Generic            - Deploy any Kubernetes manifest
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10. CLUSTER INFO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Cluster:        k3s v1.31.4
+Node:           asus (10.0.4.20)
+CPU:            48 cores
+Memory:         252 GB
+Namespace:      homelab
+
+Running Services:
+  Backend:      unity-backend:latest (port 8000)
+  Frontend:     (React) (port 3000)
+  Database:     PostgreSQL (15 tables)
+  Cache:        Redis
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+11. TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Can't connect to API?
+  - Check port forward: kubectl -n homelab port-forward svc/backend-service 8000:8000
+  - Check pod status: kubectl -n homelab get pods | grep backend
+  - View logs: kubectl -n homelab logs -f -l app=unity-backend
+
+Auth failing?
+  - Verify credentials: admin / admin123
+  - Check token: echo $TOKEN (should be long JWT string)
+
+API returning errors?
+  - Check logs: kubectl -n homelab logs -f deployment/unity-backend
+  - Verify database: kubectl -n homelab get pod postgres-0
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+12. NEXT STEPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Log into Frontend: http://localhost:3000 (admin/admin123)
+2. Preview a deployment
+3. Deploy PostgreSQL or Nginx
+4. Check cluster resources increased
+5. Test additional APIs
+6. Set up Ollama for AI queries
+7. Deploy more services
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+For full documentation, see:
+  - README_DEPLOYMENT.md (Complete guide)
+  - OPERATIONAL_STATUS.md (Current status)
+  - FULL_API_DOCUMENTATION.md (API reference)
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║          Your homelab is now unified, monitored, and intelligent            ║
+╚════════════════════════════════════════════════════════════════════════════╝

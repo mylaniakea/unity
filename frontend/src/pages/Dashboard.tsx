@@ -24,9 +24,10 @@ export default function Dashboard() {
         api.get('/plugins'),
         api.get('../health')
       ]);
-      setPlugins(pluginsRes.data);
+      setPlugins(Array.isArray(pluginsRes.data) ? pluginsRes.data : []);
       setHealth(healthRes.data);
     } catch (err) {
+      setPlugins([]);
       console.error('Failed to fetch dashboard data:', err);
     } finally {
       setLoading(false);

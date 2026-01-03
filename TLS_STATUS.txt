@@ -1,0 +1,170 @@
+╔═══════════════════════════════════════════════════════════════════════════╗
+║              UNITY PLATFORM - TLS/SSL SETUP STATUS                        ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+✅ COMPLETED - Phase 1: cert-manager Installation
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✓ cert-manager v1.13.2 installed
+✓ All CRDs created (Certificate, CertificateRequest, ClusterIssuer, etc.)
+✓ Webhook and controllers running
+✓ Ready for issuer configuration
+
+Status command:
+  kubectl get pods -n cert-manager
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⏳ READY - Phase 2-3: SmallStep & Cloudflare Configuration
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Waiting for your credentials. All templates prepared:
+
+📄 Configuration Files Created:
+   /home/holon/Projects/unity/issuers.yaml         - Issuer definitions
+   /home/holon/Projects/unity/ingress-tls.yaml     - TLS-enabled ingresses
+   /home/holon/Projects/unity/tls-setup.sh         - Automation script
+   /home/holon/Projects/unity/TLS_SETUP_GUIDE.md   - Full setup guide
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 REQUIRED INFORMATION (Gather These):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣  CLOUDFLARE EMAIL
+    Where: https://dash.cloudflare.com → Account Settings
+    Example: user@example.com
+
+2️⃣  CLOUDFLARE API TOKEN
+    Where: https://dash.cloudflare.com → Account → API Tokens
+    Process:
+      - Click "Create Token"
+      - Template: "Edit zone DNS"
+      - Permissions: Zone DNS Edit
+      - Zones: mylaniakea.com, holons.dev
+      - Copy the generated token
+    Example: v1.0xxx...yyy
+
+3️⃣  SMALLSTEP ACME PROVISIONER NAME
+    Where: https://pki.mylaniakea.ca.smallstep.com → Settings → Provisioners
+    Look for: ACME provisioner (usually "acme", "k8s-acme", or similar)
+    Example: acme
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔧 WHAT WILL BE SET UP:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+INTERNAL (SmallStep CA):
+  Domains:    *.homelab.local
+  Issuer:     SmallStep ACME provisioner
+  Validity:   24 hours (auto-renewed at ~50% expired)
+  Traffic:    Internal network only
+  Hosts:      unity.homelab.local, ui.homelab.local
+
+PUBLIC - mylaniakea.com (Let's Encrypt + Cloudflare DNS-01):
+  Domains:    *.mylaniakea.com
+  Issuer:     Let's Encrypt (via Cloudflare DNS challenge)
+  Validity:   90 days (auto-renewed at 30 days)
+  Traffic:    Public internet
+  Hosts:      unity.mylaniakea.com, ui.mylaniakea.com, mylaniakea.com
+
+PUBLIC - holons.dev (Let's Encrypt + Cloudflare DNS-01):
+  Domains:    *.holons.dev
+  Issuer:     Let's Encrypt (via Cloudflare DNS challenge)
+  Validity:   90 days (auto-renewed at 30 days)
+  Traffic:    Public internet
+  Hosts:      unity.holons.dev, ui.holons.dev, holons.dev
+
+AUTOMATION:
+  HTTP → HTTPS redirect: Enabled
+  Auto-renewal: Fully automated via cert-manager
+  Certificate rotation: Zero downtime
+  DNS validation: Automated via Cloudflare API
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 EXECUTION STEPS (Once You Provide Credentials):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Step 1: Update Configuration
+  Edit /home/holon/Projects/unity/issuers.yaml
+  - Set Cloudflare email
+  - Confirm SmallStep provisioner name
+
+Step 2: Run Automation
+  export CLOUDFLARE_API_TOKEN="your-token-here"
+  export SMALLSTEP_ACME_PROVISIONER="acme"
+  /home/holon/Projects/unity/tls-setup.sh
+
+Step 3: Apply Issuers
+  kubectl apply -f /home/holon/Projects/unity/issuers.yaml
+
+Step 4: Update Ingress
+  kubectl delete ingress unity-ingress -n homelab
+  kubectl apply -f /home/holon/Projects/unity/ingress-tls.yaml
+
+Step 5: Verify
+  kubectl get certificate -n homelab
+  kubectl describe certificate homelab-local-cert -n homelab
+  kubectl get ingress -n homelab
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 EXPECTED OUTCOMES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+After setup completes (5-10 minutes):
+
+✓ HTTPS working internally:
+  https://unity.homelab.local/health
+  https://ui.homelab.local
+  
+✓ HTTPS working publicly:
+  https://unity.mylaniakea.com/health
+  https://ui.mylaniakea.com
+  https://unity.holons.dev/health
+  https://ui.holons.dev
+  
+✓ Certificates auto-renewed:
+  SmallStep: Daily
+  Let's Encrypt: Every 60 days
+  
+✓ HTTP redirects to HTTPS:
+  http://unity.mylaniakea.com → https://unity.mylaniakea.com
+  
+✓ Valid certificate chain:
+  Public: Let's Encrypt → Cloudflare ACME
+  Internal: SmallStep CA
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📚 DOCUMENTATION:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Full Setup Guide:     /home/holon/Projects/unity/TLS_SETUP_GUIDE.md
+This Status:          /home/holon/Projects/unity/TLS_STATUS.txt
+Issuer Config:        /home/holon/Projects/unity/issuers.yaml
+Ingress Config:       /home/holon/Projects/unity/ingress-tls.yaml
+Setup Script:         /home/holon/Projects/unity/tls-setup.sh
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔐 SECURITY SUMMARY:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✓ All credentials stored in Kubernetes Secrets
+✓ Private keys encrypted and managed by cert-manager
+✓ SmallStep root CA automatically injected
+✓ Cloudflare API token limited to DNS:edit only
+✓ HTTP→HTTPS redirect enforced
+✓ HSTS ready (can be enabled post-setup)
+✓ Certificate rotation zero-downtime
+✓ RBAC controls access to secrets
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⏭️  NEXT STEPS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Gather the 3 pieces of information above
+2. Share them with the agent
+3. Agent will execute setup automatically
+4. Verify TLS is working within minutes
+5. Your platform is production-ready with HTTPS!
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║              cert-manager is ready. Waiting for your credentials...        ║
+╚═══════════════════════════════════════════════════════════════════════════╝

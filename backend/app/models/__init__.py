@@ -27,7 +27,6 @@ from app.models.notifications import NotificationChannel, NotificationLog
 __all__ = [
     "Plugin",
     "PluginMetric", 
-    "PluginStatus",
     "PluginExecution",
     "PluginAlert",
     "AlertHistory",

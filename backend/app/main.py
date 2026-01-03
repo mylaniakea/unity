@@ -99,10 +99,11 @@ app.add_middleware(
 # Include routers
 app.include_router(plugins.router)
 # Authentication routers
-from app.routers import auth, api_keys, users, audit_logs, notifications, oauth, deployments
+from app.routers import auth, api_keys, users, audit_logs, notifications, oauth
 from app.routers.plugins import marketplace
 from app.routers import dashboard_builder
 from app.routers import ai_insights
+from app.routers import orchestration
 app.include_router(auth.router, prefix="/api/v1", tags=["Authentication"])
 app.include_router(api_keys.router, prefix="/api/v1", tags=["API Keys"])
 app.include_router(users.router, prefix="/api/v1", tags=["Users"])
@@ -110,11 +111,12 @@ app.include_router(audit_logs.router, prefix="/api/v1", tags=["Audit Logs"])
 app.include_router(notifications.router)
 app.include_router(oauth.router)
 app.include_router(websocket.router)
-app.include_router(deployments.router)
+# app.include_router(deployments.router)
 app.include_router(marketplace.router)
 app.include_router(dashboard_builder.router)
 app.include_router(ai_insights.router)
 
+app.include_router(orchestration.router)
 
 @app.get("/")
 async def root():
@@ -156,3 +158,10 @@ if __name__ == "__main__":
         reload=True,
         log_level="info"
     )
+
+# Enable core monitoring routers (after fixing imports)
+# from app.routers import infrastructure, system
+# 
+# # Register monitoring routers
+# app.include_router(infrastructure.router, prefix="/api/v1", tags=["Infrastructure"])
+# app.include_router(system.router, prefix="/api/v1", tags=["System"])

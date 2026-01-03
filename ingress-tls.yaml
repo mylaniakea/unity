@@ -1,0 +1,151 @@
+---
+# Internal Ingress (*.homelab.local with SmallStep TLS)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: unity-ingress-internal
+  namespace: homelab
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    # Redirect HTTP to HTTPS
+    traefik.ingress.kubernetes.io/router.middlewares: homelab-redirect-https@kubernetescrd
+spec:
+  tls:
+  - secretName: homelab-local-tls
+    hosts:
+    - unity.homelab.local
+    - ui.homelab.local
+  rules:
+  - host: unity.homelab.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: backend-service
+            port:
+              number: 8000
+  - host: ui.homelab.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-service
+            port:
+              number: 3000
+
+---
+# Public Ingress (mylaniakea.com with Let's Encrypt TLS)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: unity-ingress-public-mylaniakea
+  namespace: homelab
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+spec:
+  tls:
+  - secretName: mylaniakea-com-tls
+    hosts:
+    - unity.mylaniakea.com
+    - ui.mylaniakea.com
+    - mylaniakea.com
+  rules:
+  - host: mylaniakea.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-service
+            port:
+              number: 3000
+  - host: unity.mylaniakea.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: backend-service
+            port:
+              number: 8000
+  - host: ui.mylaniakea.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-service
+            port:
+              number: 3000
+
+---
+# Public Ingress (holons.dev with Let's Encrypt TLS)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: unity-ingress-public-holons
+  namespace: homelab
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+spec:
+  tls:
+  - secretName: holons-dev-tls
+    hosts:
+    - unity.holons.dev
+    - ui.holons.dev
+    - holons.dev
+  rules:
+  - host: holons.dev
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-service
+            port:
+              number: 3000
+  - host: unity.holons.dev
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: backend-service
+            port:
+              number: 8000
+  - host: ui.holons.dev
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-service
+            port:
+              number: 3000
+
+---
+# HTTP Redirect Middleware (redirect HTTP to HTTPS)
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-https
+  namespace: homelab
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true

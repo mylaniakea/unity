@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: biz
+  labels:
+    tenant: biz
+    environment: production
