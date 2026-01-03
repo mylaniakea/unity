@@ -28,6 +28,13 @@ CORS_ORIGINS=http://your-domain.com
 
 ### 2. Deploy from GHCR
 
+**Option A: Automated Deployment (Recommended)**
+```bash
+# Run the deployment script
+./deploy.sh
+```
+
+**Option B: Manual Deployment**
 ```bash
 # Pull and start services
 docker compose -f docker-compose.prod.yml up -d

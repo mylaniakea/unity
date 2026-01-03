@@ -13,6 +13,12 @@ services:
     - 5432:5432
     networks:
     - homelab-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-homelab_user} -d ${POSTGRES_DB:-homelab_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
   redis:
     image: redis:7-alpine
     container_name: homelab-redis
@@ -57,10 +63,18 @@ services:
     # Note: .env file is optional - defaults will be used if not present
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info
     depends_on:
-    - db
-    - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
     - homelab-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
   frontend:
     build: ./frontend
     container_name: homelab-frontend
@@ -68,9 +82,16 @@ services:
     ports:
     - 80:80
     depends_on:
-    - backend
+      backend:
+        condition: service_healthy
     networks:
     - homelab-net
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 volumes:
   homelab_redis_data: null
   homelab_db_data: null
