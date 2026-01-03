@@ -7,6 +7,11 @@ import logging
 from datetime import datetime
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from sqlalchemy import text, select, func, Integer
+from sqlalchemy.orm import Session
+from app.core.database import get_db
+from app.models import Plugin
+from fastapi import Depends
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import plugins, websocket
@@ -136,19 +141,56 @@ async def root():
 
 
 @app.get("/health")
-async def health_check():
+async def health_check(db: Session = Depends(get_db)):
     """Health check endpoint."""
-    scheduler_status = "running" if scheduler and scheduler._running else "stopped"
-    cache_status = "connected" if cache.is_available else "disconnected"
-    
-    return {
+    health_status = {
         "status": "healthy",
-        "scheduler": scheduler_status,
-        "cache": cache_status,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
+        "components": {}
     }
-
-
+    
+    # Check scheduler
+    scheduler_running = scheduler and scheduler._running
+    health_status["components"]["scheduler"] = {
+        "status": "running" if scheduler_running else "stopped"
+    }
+    
+    # Check cache
+    cache_available = cache.is_available
+    health_status["components"]["cache"] = {
+        "status": "connected" if cache_available else "disconnected"
+    }
+    if not cache_available:
+        health_status["status"] = "degraded"
+    
+    # Check database
+    try:
+        db.execute(text("SELECT 1"))
+        health_status["components"]["database"] = {"status": "healthy"}
+    except Exception as e:
+        health_status["components"]["database"] = {
+            "status": "unhealthy",
+            "error": str(e)
+        }
+        health_status["status"] = "unhealthy"
+    
+    # Get plugin stats
+    try:
+        result = db.execute(
+            select(
+                func.count().label("total"),
+                func.sum(func.cast(Plugin.enabled, Integer)).label("enabled")
+            ).select_from(Plugin)
+        )
+        row = result.one()
+        health_status["components"]["plugins"] = {
+            "total": row.total or 0,
+            "enabled": row.enabled or 0
+        }
+    except Exception:
+        pass
+    
+    return health_status
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
