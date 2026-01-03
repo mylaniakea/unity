@@ -1,0 +1,79 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: unity-frontend-https
+  namespace: unity
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`ui.homelab.local`)
+      kind: Rule
+      services:
+        - name: frontend-service
+          port: 80
+  tls:
+    secretName: unity-tls-cert
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: unity-backend-https
+  namespace: unity
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`unity.homelab.local`)
+      kind: Rule
+      services:
+        - name: backend-service
+          port: 8000
+  tls:
+    secretName: unity-tls-cert
+---
+# HTTP -> HTTPS redirect middleware
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: https-redirect
+  namespace: unity
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+---
+# Update HTTP routes to redirect
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: unity-frontend-http
+  namespace: unity
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`ui.homelab.local`)
+      kind: Rule
+      middlewares:
+        - name: https-redirect
+      services:
+        - name: frontend-service
+          port: 80
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: unity-backend-http
+  namespace: unity
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`unity.homelab.local`)
+      kind: Rule
+      middlewares:
+        - name: https-redirect
+      services:
+        - name: backend-service
+          port: 8000
