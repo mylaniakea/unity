@@ -109,7 +109,7 @@ async def list_plugins(
 async def get_plugin(plugin_id: str, db: Session = Depends(get_db)):
     """Get plugin details by ID."""
     result = db.execute(
-        select(Plugin).where(Plugin.plugin_id == plugin_id)
+        select(Plugin).where(Plugin.id == plugin_id)
     )
     plugin = result.scalar_one_or_none()
     
@@ -127,7 +127,7 @@ async def enable_plugin(
 ):
     """Enable or disable a plugin."""
     result = db.execute(
-        select(Plugin).where(Plugin.plugin_id == plugin_id)
+        select(Plugin).where(Plugin.id == plugin_id)
     )
     plugin = result.scalar_one_or_none()
     
