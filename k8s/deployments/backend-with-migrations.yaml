@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unity-backend
+  namespace: unity
+  labels:
+    app: unity-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: unity-backend
+  template:
+    metadata:
+      labels:
+        app: unity-backend
+    spec:
+      imagePullSecrets:
+      - name: ghcr-pull-secret
+      serviceAccountName: unity-backend
+      # Init container to run database migrations before starting the app
+      initContainers:
+      - name: migrate
+        image: docker.io/library/unity-backend:latest
+        imagePullPolicy: Never
+        command: ["alembic", "upgrade", "head"]
+        env:
+        - name: DATABASE_URL
+          value: "postgresql+psycopg2://homelab_user:$(POSTGRES_PASSWORD)@postgres-service.unity.svc.cluster.local:5432/homelab_db"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: unity-secrets
+              key: postgres-password
+        - name: PYTHONUNBUFFERED
+          value: "1"
+      containers:
+      - name: backend
+        image: docker.io/library/unity-backend:latest
+        imagePullPolicy: Never
+        ports:
+        - name: http
+          containerPort: 8000
+        env:
+        - name: DATABASE_URL
+          value: "postgresql+psycopg2://homelab_user:$(POSTGRES_PASSWORD)@postgres-service.unity.svc.cluster.local:5432/homelab_db"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: unity-secrets
+              key: postgres-password
+        - name: REDIS_URL
+          value: "redis://:$(REDIS_PASSWORD)@redis-service.unity.svc.cluster.local:6379/0"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: unity-secrets
+              key: redis-password
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: unity-secrets
+              key: jwt-secret-key
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: unity-secrets
+              key: encryption-key
+        - name: DEBUG
+          value: "false"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: unity-backend
+  namespace: unity
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: unity
+spec:
+  type: ClusterIP
+  selector:
+    app: unity-backend
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8000

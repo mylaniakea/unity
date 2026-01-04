@@ -1,0 +1,79 @@
+name: postgresql
+description: PostgreSQL database server
+category: database
+platform: both
+type: statefulset
+is_official: true
+
+defaults:
+  replicas: 1
+  image: postgres:16
+  port: 5432
+  storage_size: 10Gi
+  postgres_user: postgres
+  postgres_db: postgres
+
+dependencies: []
+
+ports:
+  - name: postgres
+    port: 5432
+    targetPort: 5432
+    protocol: TCP
+
+volumes:
+  - name: data
+    mount_path: /var/lib/postgresql/data
+    size: 10Gi
+
+environment:
+  POSTGRES_USER: ${postgres_user}
+  POSTGRES_DB: ${postgres_db}
+  POSTGRES_PASSWORD: ${postgres_password}
+
+template:
+  apiVersion: apps/v1
+  kind: StatefulSet
+  metadata:
+    name: postgresql
+    namespace: ${namespace}
+    labels:
+      app: postgresql
+  spec:
+    serviceName: postgresql
+    replicas: ${replicas}
+    selector:
+      matchLabels:
+        app: postgresql
+    template:
+      metadata:
+        labels:
+          app: postgresql
+      spec:
+        containers:
+          - name: postgresql
+            image: ${image}
+            ports:
+              - containerPort: ${port}
+                name: postgres
+            env:
+              - name: POSTGRES_USER
+                value: ${postgres_user}
+              - name: POSTGRES_DB
+                value: ${postgres_db}
+              - name: POSTGRES_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: postgresql-secret
+                    key: password
+            volumeMounts:
+              - name: data
+                mountPath: /var/lib/postgresql/data
+    volumeClaimTemplates:
+      - metadata:
+          name: data
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: ${storage_size}

@@ -1,0 +1,66 @@
+name: redis
+description: Redis in-memory data store
+category: cache
+platform: both
+type: deployment
+is_official: true
+
+defaults:
+  replicas: 1
+  image: redis:7-alpine
+  port: 6379
+  storage_size: 2Gi
+
+dependencies: []
+
+ports:
+  - name: redis
+    port: 6379
+    targetPort: 6379
+    protocol: TCP
+
+volumes:
+  - name: data
+    mount_path: /data
+    size: 2Gi
+
+environment: {}
+
+template:
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: redis
+    namespace: ${namespace}
+    labels:
+      app: redis
+  spec:
+    replicas: ${replicas}
+    selector:
+      matchLabels:
+        app: redis
+    template:
+      metadata:
+        labels:
+          app: redis
+      spec:
+        containers:
+          - name: redis
+            image: ${image}
+            ports:
+              - containerPort: ${port}
+                name: redis
+            volumeMounts:
+              - name: data
+                mountPath: /data
+            resources:
+              requests:
+                memory: "256Mi"
+                cpu: "100m"
+              limits:
+                memory: "512Mi"
+                cpu: "500m"
+        volumes:
+          - name: data
+            persistentVolumeClaim:
+              claimName: redis-data

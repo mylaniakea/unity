@@ -1,0 +1,127 @@
+metadata:
+  name: simple-service
+  display_name: "Simple Microservice"
+  description: "Lightweight microservice without dependencies"
+  version: "1.0.0"
+  category: "microservice"
+  tags:
+    - microservice
+    - stateless
+    - api
+  preferred_platform: docker
+
+requirements:
+  port: 8080
+
+  database: false
+  cache: false
+  storage: false
+
+  resources:
+    cpu:
+      request: "50m"
+      limit: "200m"
+    memory:
+      request: "64Mi"
+      limit: "256Mi"
+
+  ingress:
+    enabled: false
+
+  high_availability: false
+  scaling:
+    enabled: false
+
+defaults:
+  app_name: simple-service
+  namespace: default
+  replicas: 1
+  port: 8080
+  environment: production
+  log_level: info
+
+templates:
+  kubernetes:
+    deployment:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: "{{ app_name }}"
+        namespace: "{{ namespace }}"
+        labels:
+          app: "{{ app_name }}"
+          managed-by: unity
+      spec:
+        replicas: {{ replicas }}
+        selector:
+          matchLabels:
+            app: "{{ app_name }}"
+        template:
+          metadata:
+            labels:
+              app: "{{ app_name }}"
+          spec:
+            containers:
+              - name: "{{ app_name }}"
+                image: "{{ image }}"
+                ports:
+                  - containerPort: {{ port }}
+                    name: http
+                env:
+                  - name: PORT
+                    value: "{{ port }}"
+                  - name: ENVIRONMENT
+                    value: "{{ environment }}"
+                  - name: LOG_LEVEL
+                    value: "{{ log_level }}"
+                resources:
+                  requests:
+                    cpu: "{{ cpu_request }}"
+                    memory: "{{ memory_request }}"
+                  limits:
+                    cpu: "{{ cpu_limit }}"
+                    memory: "{{ memory_limit }}"
+                livenessProbe:
+                  httpGet:
+                    path: /health
+                    port: {{ port }}
+                  initialDelaySeconds: 10
+                  periodSeconds: 10
+                readinessProbe:
+                  httpGet:
+                    path: /health
+                    port: {{ port }}
+                  initialDelaySeconds: 5
+                  periodSeconds: 5
+
+    service:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: "{{ app_name }}"
+        namespace: "{{ namespace }}"
+        labels:
+          app: "{{ app_name }}"
+          managed-by: unity
+      spec:
+        selector:
+          app: "{{ app_name }}"
+        ports:
+          - port: {{ port }}
+            targetPort: {{ port }}
+            name: http
+        type: ClusterIP
+
+  docker:
+    version: "3.8"
+    services:
+      app:
+        image: "{{ image }}"
+        container_name: "{{ app_name }}"
+        ports:
+          - "{{ port }}:{{ port }}"
+        environment:
+          PORT: "{{ port }}"
+          ENVIRONMENT: "{{ environment }}"
+          LOG_LEVEL: "{{ log_level }}"
+        restart: unless-stopped

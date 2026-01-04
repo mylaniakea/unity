@@ -1,0 +1,135 @@
+# NGINX Web Server Blueprint
+# High-performance web server and reverse proxy
+
+name: nginx
+description: NGINX web server with configurable virtual hosts and SSL support
+category: web
+platform: kubernetes
+blueprint_type: deployment
+
+# Variables
+variables:
+  version:
+    type: string
+    description: NGINX version
+    required: false
+  replicas:
+    type: integer
+    description: Number of replicas
+    required: false
+  server_name:
+    type: string
+    description: Server name (domain)
+    required: true
+  root_path:
+    type: string
+    description: Document root path
+    required: false
+  enable_ssl:
+    type: boolean
+    description: Enable SSL/TLS
+    required: false
+  proxy_pass:
+    type: string
+    description: Backend proxy URL (for reverse proxy mode)
+    required: false
+
+# Defaults
+default_values:
+  version: "1.25-alpine"
+  replicas: 2
+  root_path: "/usr/share/nginx/html"
+  enable_ssl: false
+
+dependencies: []
+
+ports:
+  - port: 80
+    protocol: TCP
+    name: http
+  - port: 443
+    protocol: TCP
+    name: https
+
+volumes:
+  - name: html
+    mount_path: /usr/share/nginx/html
+    size: "1Gi"
+  - name: config
+    mount_path: /etc/nginx/conf.d
+
+environment_vars: {}
+
+metadata:
+  tags:
+    - web
+    - nginx
+    - http
+    - reverse-proxy
+  version: "1.0.0"
+  author: "Unity Team"
+  documentation_url: "https://nginx.org/en/docs/"
+  icon_url: "https://nginx.org/nginx.png"
+
+# Kubernetes manifest
+manifest_template:
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: "nginx-{{ instance_name | default('default') }}"
+    labels:
+      app: nginx
+      instance: "{{ instance_name | default('default') }}"
+      managed-by: unity
+  spec:
+    replicas: {{ replicas }}
+    selector:
+      matchLabels:
+        app: nginx
+        instance: "{{ instance_name | default('default') }}"
+    template:
+      metadata:
+        labels:
+          app: nginx
+          instance: "{{ instance_name | default('default') }}"
+      spec:
+        containers:
+          - name: nginx
+            image: "nginx:{{ version }}"
+            ports:
+              - containerPort: 80
+                name: http
+              - containerPort: 443
+                name: https
+            volumeMounts:
+              - name: html
+                mountPath: /usr/share/nginx/html
+              - name: config
+                mountPath: /etc/nginx/conf.d
+                readOnly: true
+            resources:
+              requests:
+                memory: "64Mi"
+                cpu: "100m"
+              limits:
+                memory: "{{ memory_limit | default('256Mi') }}"
+                cpu: "{{ cpu_limit | default('500m') }}"
+            livenessProbe:
+              httpGet:
+                path: /
+                port: 80
+              initialDelaySeconds: 10
+              periodSeconds: 10
+            readinessProbe:
+              httpGet:
+                path: /
+                port: 80
+              initialDelaySeconds: 5
+              periodSeconds: 5
+        volumes:
+          - name: html
+            persistentVolumeClaim:
+              claimName: "nginx-{{ instance_name | default('default') }}-html-pvc"
+          - name: config
+            configMap:
+              name: "nginx-{{ instance_name | default('default') }}-config"

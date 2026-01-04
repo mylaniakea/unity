@@ -5,6 +5,7 @@ pydantic>=2.0.0
 httpx>=0.24.0
 sqlalchemy>=2.0.0
 psycopg2-binary>=2.9.0
+alembic>=1.12.0 # For database migrations
 asyncssh>=2.14.0
 APScheduler>=3.10.4
 cryptography>=41.0.0 # For SSH Key Encryption at Rest
@@ -14,3 +15,6 @@ passlib>=1.7.4 # For password hashing
 bcrypt==4.1.3 # Pin to 4.x for passlib compatibility
 python-multipart>=0.0.6 # For OAuth2 form data handling
 importlib-metadata>=6.0.0 # For plugin entry points (Python <3.10 compat)
+kubernetes>=28.0.0 # For Kubernetes control plane integration
+pyyaml>=6.0 # For Kubernetes manifest parsing
+jinja2>=3.1.0 # For template rendering in orchestration

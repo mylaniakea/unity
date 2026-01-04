@@ -2,11 +2,15 @@ from fastapi import FastAPI
 import app.models as models
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import (
-    profiles, ai, settings, reports, knowledge, system, 
+    profiles, ai, settings, reports, knowledge, system,
     terminal, plugins, thresholds, alerts, push, auth, users, credentials
 )
 # Import new plugin routers
 from app.routers import plugins_v2_secure, plugin_keys
+# Import Kubernetes control plane routers
+from app.routers import k8s_clusters, k8s_resources
+# Import orchestration routers
+from app.routers.orchestration import deploy
 
 from app.database import engine, Base, get_db
 from app.services import report_generation
@@ -14,6 +18,7 @@ from app.services.snapshot_service import SnapshotService
 from app.services.ssh import SSHService
 from app.services.threshold_monitor import ThresholdMonitor
 from app.services.plugin_manager import PluginManager
+from app.services.k8s_reconciler import KubernetesReconciler
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy.orm import Session
 import logging
@@ -110,39 +115,71 @@ async def check_thresholds():
 async def execute_enabled_plugins():
     """Execute all enabled plugins and store metrics"""
     global plugin_manager
-    
+
     if not plugin_manager:
         logger.warning("Plugin manager not initialized, skipping plugin execution")
         return
-    
+
     db_gen = get_db()
     db: Session = next(db_gen)
     try:
         # Recreate plugin manager with current db session
         pm = PluginManager(db)
-        
+
         logger.info("Running plugin execution job...")
-        
+
         # Get all enabled plugins
         plugins = db.query(models.Plugin).filter(models.Plugin.enabled == True).all()
-        
+
         for plugin in plugins:
             try:
                 logger.info(f"Executing plugin: {plugin.id}")
                 result = await pm.execute_plugin(plugin.id)
-                
+
                 if result.get("success"):
                     logger.info(f"Plugin {plugin.id} executed successfully")
                 else:
                     logger.warning(f"Plugin {plugin.id} execution failed: {result.get('error')}")
-                    
+
             except Exception as e:
                 logger.error(f"Error executing plugin {plugin.id}: {e}")
-        
+
         logger.info("Plugin execution job completed")
-        
+
     except Exception as e:
         logger.error(f"Error during plugin execution: {e}")
+    finally:
+        db.close()
+
+
+async def reconcile_kubernetes_resources():
+    """Reconcile all Kubernetes resources in enabled clusters"""
+    db_gen = get_db()
+    db: Session = next(db_gen)
+    try:
+        logger.info("Running Kubernetes reconciliation job...")
+
+        # Create reconciler instance
+        reconciler = KubernetesReconciler(db)
+
+        # Reconcile all resources
+        result = await reconciler.reconcile_all()
+
+        if result.get("error"):
+            logger.error(f"Kubernetes reconciliation failed: {result.get('error')}")
+        else:
+            logger.info(
+                f"Kubernetes reconciliation completed: "
+                f"{result['success']}/{result['total']} succeeded, "
+                f"{result['failed']} failed, "
+                f"{result['drift_detected']} drift detected, "
+                f"{result['changes_applied']} changes applied"
+            )
+
+    except Exception as e:
+        logger.error(f"Error during Kubernetes reconciliation: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
     finally:
         db.close()
 
@@ -164,6 +201,11 @@ app.include_router(credentials.router)  # Credential management
 app.include_router(thresholds.router)
 app.include_router(alerts.router)
 app.include_router(push.router)
+# Kubernetes control plane routers
+app.include_router(k8s_clusters.router)  # Cluster management
+app.include_router(k8s_resources.router)  # Resource management
+# Orchestration routers
+app.include_router(deploy.router)  # Semantic AI orchestration
 
 
 @app.on_event("startup")
@@ -274,6 +316,15 @@ async def startup_event():
             id='plugin_execution'
         )
         print(f"   - Plugin execution: every 5 minutes", flush=True)
+
+        # Schedule Kubernetes reconciliation (every 30 seconds)
+        scheduler.add_job(
+            reconcile_kubernetes_resources,
+            'interval',
+            seconds=30,
+            id='k8s_reconciliation'
+        )
+        print(f"   - Kubernetes reconciliation: every 30 seconds", flush=True)
 
         scheduler.start()
         print("\n✅ Scheduler started successfully", flush=True)

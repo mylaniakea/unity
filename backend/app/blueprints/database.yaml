@@ -1,0 +1,161 @@
+metadata:
+  name: database
+  display_name: "PostgreSQL Database"
+  description: "PostgreSQL database with persistent storage"
+  version: "1.0.0"
+  category: "database"
+  tags:
+    - database
+    - postgresql
+    - stateful
+  preferred_platform: kubernetes
+
+requirements:
+  port: 5432
+
+  storage:
+    volumes:
+      - name: data
+        size: 20Gi
+        mount_path: /var/lib/postgresql/data
+
+  resources:
+    cpu:
+      request: "250m"
+      limit: "1000m"
+    memory:
+      request: "512Mi"
+      limit: "2Gi"
+
+  high_availability: false
+  scaling:
+    enabled: false
+
+defaults:
+  app_name: postgres
+  namespace: default
+  replicas: 1
+  port: 5432
+  postgres_version: "16"
+  database_name: appdb
+  database_user: appuser
+
+templates:
+  kubernetes:
+    statefulset:
+      apiVersion: apps/v1
+      kind: StatefulSet
+      metadata:
+        name: "{{ app_name }}"
+        namespace: "{{ namespace }}"
+        labels:
+          app: "{{ app_name }}"
+          managed-by: unity
+      spec:
+        serviceName: "{{ app_name }}"
+        replicas: {{ replicas }}
+        selector:
+          matchLabels:
+            app: "{{ app_name }}"
+        template:
+          metadata:
+            labels:
+              app: "{{ app_name }}"
+          spec:
+            containers:
+              - name: postgres
+                image: "postgres:{{ postgres_version }}-alpine"
+                ports:
+                  - containerPort: {{ port }}
+                    name: postgres
+                env:
+                  - name: POSTGRES_DB
+                    value: "{{ database_name }}"
+                  - name: POSTGRES_USER
+                    value: "{{ database_user }}"
+                  - name: POSTGRES_PASSWORD
+                    valueFrom:
+                      secretKeyRef:
+                        name: "{{ app_name }}-secrets"
+                        key: DATABASE_PASSWORD
+                  - name: PGDATA
+                    value: /var/lib/postgresql/data/pgdata
+                resources:
+                  requests:
+                    cpu: "{{ cpu_request }}"
+                    memory: "{{ memory_request }}"
+                  limits:
+                    cpu: "{{ cpu_limit }}"
+                    memory: "{{ memory_limit }}"
+                volumeMounts:
+                  - name: data
+                    mountPath: /var/lib/postgresql/data
+                livenessProbe:
+                  exec:
+                    command:
+                      - pg_isready
+                      - -U
+                      - "{{ database_user }}"
+                  initialDelaySeconds: 30
+                  periodSeconds: 10
+                readinessProbe:
+                  exec:
+                    command:
+                      - pg_isready
+                      - -U
+                      - "{{ database_user }}"
+                  initialDelaySeconds: 5
+                  periodSeconds: 5
+        volumeClaimTemplates:
+          - metadata:
+              name: data
+            spec:
+              accessModes: ["ReadWriteOnce"]
+              storageClassName: "{{ storage_class }}"
+              resources:
+                requests:
+                  storage: "{{ storage_size }}"
+
+    service:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: "{{ app_name }}"
+        namespace: "{{ namespace }}"
+        labels:
+          app: "{{ app_name }}"
+          managed-by: unity
+      spec:
+        selector:
+          app: "{{ app_name }}"
+        ports:
+          - port: {{ port }}
+            targetPort: {{ port }}
+            name: postgres
+        type: ClusterIP
+        clusterIP: None
+
+  docker:
+    version: "3.8"
+    services:
+      postgres:
+        image: "postgres:{{ postgres_version }}-alpine"
+        container_name: "{{ app_name }}"
+        ports:
+          - "{{ port }}:{{ port }}"
+        environment:
+          POSTGRES_DB: "{{ database_name }}"
+          POSTGRES_USER: "{{ database_user }}"
+          POSTGRES_PASSWORD: "${DATABASE_PASSWORD}"
+          PGDATA: /var/lib/postgresql/data/pgdata
+        volumes:
+          - postgres-data:/var/lib/postgresql/data
+        restart: unless-stopped
+        healthcheck:
+          test: ["CMD-SHELL", "pg_isready -U {{ database_user }}"]
+          interval: 10s
+          timeout: 5s
+          retries: 5
+
+    volumes:
+      postgres-data:

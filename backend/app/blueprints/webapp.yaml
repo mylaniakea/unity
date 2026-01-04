@@ -1,0 +1,303 @@
+metadata:
+  name: webapp
+  display_name: "Generic Web Application"
+  description: "Generic web application with database and cache support"
+  version: "1.0.0"
+  category: "web"
+  tags:
+    - web
+    - app
+    - fullstack
+  preferred_platform: kubernetes
+
+requirements:
+  port: 8080
+
+  database:
+    type: postgresql
+    version: "16"
+    required: true
+
+  cache:
+    type: redis
+    version: "7"
+    required: true
+
+  authentication: true
+  encryption: true
+
+  storage:
+    volumes:
+      - name: data
+        size: 10Gi
+        mount_path: /app/data
+
+  resources:
+    cpu:
+      request: "100m"
+      limit: "500m"
+    memory:
+      request: "128Mi"
+      limit: "512Mi"
+
+  ingress:
+    enabled: true
+    path: /
+    tls: true
+
+  high_availability: false
+  scaling:
+    enabled: false
+
+defaults:
+  app_name: webapp
+  namespace: default
+  replicas: 1
+  port: 8080
+  environment: production
+  log_level: info
+
+templates:
+  kubernetes:
+    deployment:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: "{{ app_name }}"
+        namespace: "{{ namespace }}"
+        labels:
+          app: "{{ app_name }}"
+          managed-by: unity
+      spec:
+        replicas: {{ replicas }}
+        selector:
+          matchLabels:
+            app: "{{ app_name }}"
+        template:
+          metadata:
+            labels:
+              app: "{{ app_name }}"
+          spec:
+            containers:
+              - name: "{{ app_name }}"
+                image: "{{ image }}"
+                ports:
+                  - containerPort: {{ port }}
+                    name: http
+                env:
+                  - name: PORT
+                    value: "{{ port }}"
+                  - name: ENVIRONMENT
+                    value: "{{ environment }}"
+                  - name: DATABASE_HOST
+                    value: "{{ database_host }}"
+                  - name: DATABASE_PORT
+                    value: "{{ database_port }}"
+                  - name: DATABASE_NAME
+                    value: "{{ database_name }}"
+                  - name: DATABASE_USER
+                    value: "{{ database_user }}"
+                  - name: DATABASE_PASSWORD
+                    valueFrom:
+                      secretKeyRef:
+                        name: "{{ app_name }}-secrets"
+                        key: DATABASE_PASSWORD
+                  - name: REDIS_HOST
+                    value: "{{ redis_host }}"
+                  - name: REDIS_PORT
+                    value: "{{ redis_port }}"
+                  - name: REDIS_PASSWORD
+                    valueFrom:
+                      secretKeyRef:
+                        name: "{{ app_name }}-secrets"
+                        key: REDIS_PASSWORD
+                  - name: JWT_SECRET_KEY
+                    valueFrom:
+                      secretKeyRef:
+                        name: "{{ app_name }}-secrets"
+                        key: JWT_SECRET_KEY
+                  - name: ENCRYPTION_KEY
+                    valueFrom:
+                      secretKeyRef:
+                        name: "{{ app_name }}-secrets"
+                        key: ENCRYPTION_KEY
+                resources:
+                  requests:
+                    cpu: "{{ cpu_request }}"
+                    memory: "{{ memory_request }}"
+                  limits:
+                    cpu: "{{ cpu_limit }}"
+                    memory: "{{ memory_limit }}"
+                volumeMounts:
+                  - name: data
+                    mountPath: /app/data
+                livenessProbe:
+                  httpGet:
+                    path: /health
+                    port: {{ port }}
+                  initialDelaySeconds: 30
+                  periodSeconds: 10
+                readinessProbe:
+                  httpGet:
+                    path: /health
+                    port: {{ port }}
+                  initialDelaySeconds: 5
+                  periodSeconds: 5
+            volumes:
+              - name: data
+                persistentVolumeClaim:
+                  claimName: "{{ app_name }}-data"
+
+    postgres_deployment:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: "{{ app_name }}-postgres"
+        namespace: "{{ namespace }}"
+        labels:
+          app: "{{ app_name }}-postgres"
+          managed-by: unity
+      spec:
+        replicas: 1
+        selector:
+          matchLabels:
+            app: "{{ app_name }}-postgres"
+        template:
+          metadata:
+            labels:
+              app: "{{ app_name }}-postgres"
+          spec:
+            containers:
+              - name: postgres
+                image: postgres:16-alpine
+                ports:
+                  - containerPort: 5432
+                env:
+                  - name: POSTGRES_DB
+                    value: "{{ database_name }}"
+                  - name: POSTGRES_USER
+                    value: "{{ database_user }}"
+                  - name: POSTGRES_PASSWORD
+                    valueFrom:
+                      secretKeyRef:
+                        name: "{{ app_name }}-secrets"
+                        key: DATABASE_PASSWORD
+                volumeMounts:
+                  - name: postgres-data
+                    mountPath: /var/lib/postgresql/data
+            volumes:
+              - name: postgres-data
+                persistentVolumeClaim:
+                  claimName: "{{ app_name }}-postgres-data"
+
+    postgres_service:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: "{{ app_name }}-postgres"
+        namespace: "{{ namespace }}"
+      spec:
+        selector:
+          app: "{{ app_name }}-postgres"
+        ports:
+          - port: 5432
+            targetPort: 5432
+        type: ClusterIP
+
+    redis_deployment:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: "{{ app_name }}-redis"
+        namespace: "{{ namespace }}"
+        labels:
+          app: "{{ app_name }}-redis"
+          managed-by: unity
+      spec:
+        replicas: 1
+        selector:
+          matchLabels:
+            app: "{{ app_name }}-redis"
+        template:
+          metadata:
+            labels:
+              app: "{{ app_name }}-redis"
+          spec:
+            containers:
+              - name: redis
+                image: redis:7-alpine
+                ports:
+                  - containerPort: 6379
+                command:
+                  - redis-server
+                  - --requirepass
+                  - $(REDIS_PASSWORD)
+                env:
+                  - name: REDIS_PASSWORD
+                    valueFrom:
+                      secretKeyRef:
+                        name: "{{ app_name }}-secrets"
+                        key: REDIS_PASSWORD
+
+    redis_service:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: "{{ app_name }}-redis"
+        namespace: "{{ namespace }}"
+      spec:
+        selector:
+          app: "{{ app_name }}-redis"
+        ports:
+          - port: 6379
+            targetPort: 6379
+        type: ClusterIP
+
+  docker:
+    version: "3.8"
+    services:
+      app:
+        image: "{{ image }}"
+        container_name: "{{ app_name }}"
+        ports:
+          - "{{ port }}:{{ port }}"
+        environment:
+          PORT: "{{ port }}"
+          ENVIRONMENT: "{{ environment }}"
+          DATABASE_HOST: postgres
+          DATABASE_PORT: "5432"
+          DATABASE_NAME: "{{ database_name }}"
+          DATABASE_USER: "{{ database_user }}"
+          DATABASE_PASSWORD: "${DATABASE_PASSWORD}"
+          REDIS_HOST: redis
+          REDIS_PORT: "6379"
+          REDIS_PASSWORD: "${REDIS_PASSWORD}"
+          JWT_SECRET_KEY: "${JWT_SECRET_KEY}"
+          ENCRYPTION_KEY: "${ENCRYPTION_KEY}"
+        volumes:
+          - app-data:/app/data
+        depends_on:
+          - postgres
+          - redis
+        restart: unless-stopped
+
+      postgres:
+        image: postgres:16-alpine
+        container_name: "{{ app_name }}-postgres"
+        environment:
+          POSTGRES_DB: "{{ database_name }}"
+          POSTGRES_USER: "{{ database_user }}"
+          POSTGRES_PASSWORD: "${DATABASE_PASSWORD}"
+        volumes:
+          - postgres-data:/var/lib/postgresql/data
+        restart: unless-stopped
+
+      redis:
+        image: redis:7-alpine
+        container_name: "{{ app_name }}-redis"
+        command: redis-server --requirepass ${REDIS_PASSWORD}
+        restart: unless-stopped
+
+    volumes:
+      app-data:
+      postgres-data:

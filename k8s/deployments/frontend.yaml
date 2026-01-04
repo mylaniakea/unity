@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unity-frontend
+  namespace: unity
+  labels:
+    app: unity-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: unity-frontend
+  template:
+    metadata:
+      labels:
+        app: unity-frontend
+    spec:
+      imagePullSecrets:
+      - name: ghcr-pull-secret
+      containers:
+      - name: frontend
+        image: docker.io/library/unity-frontend:latest
+        imagePullPolicy: Never
+        ports:
+        - name: http
+          containerPort: 80
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: unity
+spec:
+  type: ClusterIP
+  selector:
+    app: unity-frontend
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80

@@ -415,25 +415,281 @@ class CredentialAuditLog(Base):
     __tablename__ = "credential_audit_logs"
 
     id = Column(Integer, primary_key=True, index=True)
-    
+
     # Who
     user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
     username = Column(String(255), nullable=True)  # Denormalized for history
-    
+
     # What
     action = Column(String(100), nullable=False, index=True)  # create, read, update, delete, rotate, etc.
     resource_type = Column(String(50), nullable=False, index=True)  # ssh_key, certificate, credential
     resource_id = Column(Integer, nullable=True)
     resource_name = Column(String(255), nullable=True)
-    
+
     # When
     timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True)
-    
+
     # How
     ip_address = Column(String(45), nullable=True)  # IPv4 or IPv6
     user_agent = Column(String(500), nullable=True)
-    
+
     # Details
     details = Column(JSON().with_variant(JSONB, "postgresql"), default={})  # Additional context
     success = Column(Boolean, default=True)
     error_message = Column(Text, nullable=True)
+
+
+# ==================
+# KUBERNETES CONTROL PLANE MODELS
+# ==================
+
+class KubernetesCluster(Base):
+    """Kubernetes cluster connection information"""
+    __tablename__ = "kubernetes_clusters"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), unique=True, index=True, nullable=False)
+    description = Column(Text, nullable=True)
+
+    # Connection details
+    kubeconfig_path = Column(String(500), nullable=True)  # Path to kubeconfig file
+    api_server_url = Column(String(500), nullable=True)  # API server URL
+    context_name = Column(String(255), nullable=True)  # Kubeconfig context name
+
+    # Cluster metadata
+    cluster_version = Column(String(50), nullable=True)  # e.g., "v1.28.0"
+    provider = Column(String(100), nullable=True)  # k3s, eks, gke, aks, minikube, etc.
+
+    # Status
+    is_default = Column(Boolean, default=False, index=True)  # Default cluster for operations
+    is_active = Column(Boolean, default=True, index=True)  # Whether cluster is actively monitored
+    last_health_check = Column(DateTime(timezone=True), nullable=True)
+    health_status = Column(String(50), default='unknown')  # healthy, unhealthy, unknown, unreachable
+    health_message = Column(Text, nullable=True)
+
+    # Configuration
+    config = Column(JSON().with_variant(JSONB, "postgresql"), default={})  # Additional cluster-specific config
+    labels = Column(JSON().with_variant(JSONB, "postgresql"), default={})  # User-defined labels
+
+    # Ownership
+    created_by = Column(Integer, ForeignKey('users.id'), nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    last_accessed = Column(DateTime(timezone=True), nullable=True)
+
+    # Relationships
+    resources = relationship("KubernetesResource", back_populates="cluster", cascade="all, delete-orphan")
+
+
+class KubernetesResource(Base):
+    """Kubernetes resource desired state tracking"""
+    __tablename__ = "kubernetes_resources"
+
+    id = Column(Integer, primary_key=True, index=True)
+    cluster_id = Column(Integer, ForeignKey('kubernetes_clusters.id'), nullable=False, index=True)
+
+    # Resource identification
+    kind = Column(String(100), nullable=False, index=True)  # Deployment, Service, Pod, etc.
+    name = Column(String(255), nullable=False, index=True)
+    namespace = Column(String(255), nullable=False, default='default', index=True)
+    api_version = Column(String(100), default='v1')  # e.g., "v1", "apps/v1", "batch/v1"
+
+    # Resource state
+    desired_state = Column(JSON().with_variant(JSONB, "postgresql"), nullable=False)  # Full K8s resource manifest
+    current_state = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)  # Last observed state
+
+    # Reconciliation tracking
+    last_reconciled = Column(DateTime(timezone=True), nullable=True, index=True)
+    reconciliation_status = Column(String(50), default='pending', index=True)  # pending, in_progress, success, failed, drift_detected
+    reconciliation_message = Column(Text, nullable=True)
+    drift_detected = Column(Boolean, default=False, index=True)  # Whether current state differs from desired
+
+    # Resource metadata
+    labels = Column(JSON().with_variant(JSONB, "postgresql"), default={})  # K8s labels
+    annotations = Column(JSON().with_variant(JSONB, "postgresql"), default={})  # K8s annotations
+
+    # Management
+    managed_by = Column(String(100), default='unity')  # unity, helm, terraform, etc.
+    auto_reconcile = Column(Boolean, default=True)  # Whether to automatically reconcile drift
+    deletion_policy = Column(String(50), default='delete')  # delete, retain, orphan
+
+    # Status
+    is_active = Column(Boolean, default=True, index=True)
+    last_error = Column(Text, nullable=True)
+
+    # Ownership
+    created_by = Column(Integer, ForeignKey('users.id'), nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    cluster = relationship("KubernetesCluster", back_populates="resources")
+    reconciliations = relationship("ResourceReconciliation", back_populates="resource", cascade="all, delete-orphan")
+
+
+class ResourceReconciliation(Base):
+    """Kubernetes resource reconciliation history"""
+    __tablename__ = "resource_reconciliations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    resource_id = Column(Integer, ForeignKey('kubernetes_resources.id'), nullable=False, index=True)
+
+    # Reconciliation details
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    duration_ms = Column(Integer, nullable=True)  # Duration in milliseconds
+
+    # Status
+    status = Column(String(50), nullable=False, index=True)  # pending, in_progress, success, failed, skipped
+    result = Column(String(50), nullable=True)  # no_change, updated, created, deleted, error
+
+    # Changes
+    changes_applied = Column(JSON().with_variant(JSONB, "postgresql"), default={})  # Diff of changes applied
+    previous_state = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)  # State before reconciliation
+    new_state = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)  # State after reconciliation
+
+    # Error handling
+    error_message = Column(Text, nullable=True)
+    error_code = Column(String(50), nullable=True)  # API error code if applicable
+    retry_count = Column(Integer, default=0)
+
+    # Metadata
+    triggered_by = Column(String(50), default='scheduler')  # scheduler, manual, webhook, drift_detection
+    triggered_by_user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    reconciliation_version = Column(Integer, default=1)  # Increments with each reconciliation
+
+    # Additional context
+    notes = Column(Text, nullable=True)
+
+    # Relationships
+    resource = relationship("KubernetesResource", back_populates="reconciliations")
+
+
+# ==================
+# APPLICATION BLUEPRINT SYSTEM
+# ==================
+
+class ApplicationBlueprint(Base):
+    """Application templates for semantic AI orchestration"""
+    __tablename__ = "application_blueprints"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), unique=True, index=True, nullable=False)  # e.g., "authentik", "postgresql"
+    description = Column(Text, nullable=True)
+    category = Column(String(100), nullable=True, index=True)  # auth, database, cache, web, proxy, etc.
+
+    # Platform support
+    platform = Column(String(50), default='both', index=True)  # kubernetes, docker, both
+    blueprint_type = Column(String(50), nullable=False)  # deployment, statefulset, daemonset, compose
+
+    # Template configuration
+    manifest_template = Column(JSON().with_variant(JSONB, "postgresql"), nullable=False)  # K8s/Docker manifest with variables
+    variables = Column(JSON().with_variant(JSONB, "postgresql"), default={})  # Variable definitions: {name: {type, description, required}}
+    default_values = Column(JSON().with_variant(JSONB, "postgresql"), default={})  # Default values for variables
+
+    # Dependencies
+    dependencies = Column(JSON().with_variant(JSONB, "postgresql"), default=[])  # List of required services ["postgresql", "redis"]
+
+    # Networking
+    ports = Column(JSON().with_variant(JSONB, "postgresql"), default=[])  # Port definitions: [{port, protocol, name}]
+
+    # Storage
+    volumes = Column(JSON().with_variant(JSONB, "postgresql"), default=[])  # Volume definitions: [{name, mount_path, size}]
+
+    # Environment
+    environment_vars = Column(JSON().with_variant(JSONB, "postgresql"), default={})  # Environment variable templates
+
+    # Blueprint metadata (using blueprint_metadata to avoid SQLAlchemy reserved name)
+    blueprint_metadata = Column(JSON().with_variant(JSONB, "postgresql"), default={})  # tags, version, author, documentation_url, icon_url
+
+    # Status
+    is_active = Column(Boolean, default=True, index=True)
+    is_official = Column(Boolean, default=False)  # Official Unity blueprints
+
+    # Usage tracking
+    deployment_count = Column(Integer, default=0)  # Number of times deployed
+    last_deployed = Column(DateTime(timezone=True), nullable=True)
+
+    # Source
+    source = Column(String(50), default='builtin')  # builtin, marketplace, custom, imported
+    source_url = Column(String(500), nullable=True)  # Git repo or marketplace URL
+
+    # Ownership
+    created_by = Column(Integer, ForeignKey('users.id'), nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    deployments = relationship("DeploymentIntent", back_populates="blueprint")
+
+
+class DeploymentIntent(Base):
+    """Track AI orchestration requests and their execution"""
+    __tablename__ = "deployment_intents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+
+    # Intent tracking
+    command_text = Column(Text, nullable=False)  # Original user command: "Deploy authentik with PostgreSQL"
+    parsed_intent = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)  # AI-parsed intent structure
+
+    # Status tracking
+    status = Column(String(50), default='pending', index=True, nullable=False)
+    # Status values: pending, analyzing, generating, deploying, completed, failed, rolled_back
+
+    # Target configuration
+    target_platform = Column(String(50), nullable=True)  # kubernetes, docker
+    target_namespace = Column(String(255), nullable=True)  # K8s namespace or Docker network
+    target_cluster_id = Column(Integer, ForeignKey('kubernetes_clusters.id'), nullable=True, index=True)
+
+    # Blueprint association
+    blueprint_id = Column(Integer, ForeignKey('application_blueprints.id'), nullable=True, index=True)
+
+    # Generated plan
+    generated_plan = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
+    # Structure: {
+    #   "applications": [{"blueprint": "postgresql", "config": {...}}, ...],
+    #   "dependencies": [...],
+    #   "resources": [...],
+    #   "steps": [...]
+    # }
+
+    # Execution tracking
+    execution_log = Column(JSON().with_variant(JSONB, "postgresql"), default=[])
+    # Array of log entries: [{timestamp, level, message, step}]
+
+    # Timing
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    duration_ms = Column(Integer, nullable=True)  # Total execution time
+
+    # Error handling
+    error_message = Column(Text, nullable=True)
+    error_code = Column(String(50), nullable=True)
+    retry_count = Column(Integer, default=0)
+
+    # Rollback support
+    rollback_available = Column(Boolean, default=False)
+    rollback_data = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)  # State snapshot for rollback
+
+    # Result tracking
+    deployed_resources = Column(JSON().with_variant(JSONB, "postgresql"), default=[])
+    # Array of deployed resource references: [{kind, name, namespace, status}]
+
+    # Metadata
+    tags = Column(JSON().with_variant(JSONB, "postgresql"), default=[])  # User tags for organization
+    notes = Column(Text, nullable=True)  # User notes
+
+    # Relationships
+    user = relationship("User", backref="deployment_intents")
+    blueprint = relationship("ApplicationBlueprint", back_populates="deployments")
+    cluster = relationship("KubernetesCluster", backref="deployment_intents")
