@@ -255,7 +255,7 @@ class PluginScheduler:
                 continue
             
             metric = PluginMetric(
-                time=timestamp,
+                timestamp=timestamp,
                 plugin_id=plugin_id,
                 metric_name=metric_name,
                 value=metric_value,
