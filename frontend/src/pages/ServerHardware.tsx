@@ -63,6 +63,9 @@ export default function ServerHardware() {
         setLoading(true);
         try {
             await api.post(`/profiles/${selectedId}/scan-hardware`);
+            // Give backend time to finish writing to DB
+            await new Promise(resolve => setTimeout(resolve, 500));
+            // Refetch all profiles to update UI
             const res = await api.get('/profiles/');
             setProfiles(res.data);
             showNotification("Hardware scan completed!", "success");
