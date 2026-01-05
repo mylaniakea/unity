@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
+from app.core.dependencies import get_tenant_id
 from app import models, schemas_settings
 
 router = APIRouter(
@@ -10,21 +11,23 @@ router = APIRouter(
 )
 
 @router.get("/", response_model=schemas_settings.Settings)
-def get_settings(db: Session = Depends(get_db)):
-    settings = db.query(models.Settings).first()
+def get_settings(db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
+    settings = db.query(models.Settings).filter(models.Settings.tenant_id == tenant_id).first()
     if not settings:
         # Initialize default settings if none exist
-        settings = models.Settings()
+        settings = models.Settings(tenant_id=tenant_id, )
         db.add(settings)
         db.commit()
         db.refresh(settings)
     return settings
 
 @router.put("/", response_model=schemas_settings.Settings)
-def update_settings(settings_in: schemas_settings.SettingsUpdate, db: Session = Depends(get_db)):
-    settings = db.query(models.Settings).first()
+def update_settings(settings_in: schemas_settings.SettingsUpdate, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
+    settings = db.query(models.Settings).filter(models.Settings.tenant_id == tenant_id).first()
     if not settings:
-        settings = models.Settings()
+        settings = models.Settings(tenant_id=tenant_id, )
         db.add(settings)
     
     # Update fields
