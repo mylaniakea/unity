@@ -1,4 +1,18 @@
 import { useEffect, useState } from 'react';
+
+// Helper function to format bytes
+const formatBytes = (bytes: string | number): string => {
+    const num = typeof bytes === "string" ? parseInt(bytes) : bytes;
+    if (isNaN(num)) return bytes.toString();
+    const units = ["B", "KB", "MB", "GB", "TB", "PB"];
+    let i = 0;
+    let value = num;
+    while (value >= 1024 && i < units.length - 1) {
+        value /= 1024;
+        i++;
+    }
+    return `${value.toFixed(2)} ${units[i]}`;
+};
 import { HardDrive, Cpu, Server as ServerIcon, RefreshCw, Network, Zap, BookPlus, Clock, Database, Layers } from 'lucide-react';
 import api from '@/api/client';
 import { motion } from 'framer-motion';
