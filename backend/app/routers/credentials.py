@@ -13,6 +13,7 @@ from typing import List, Optional
 import os
 
 from app.database import get_db
+from app.core.dependencies import get_tenant_id
 from app.models import User, SSHKey, Certificate, ServerCredential
 from app.services.auth import get_current_active_user as get_current_user
 from app.schemas_credentials import (
