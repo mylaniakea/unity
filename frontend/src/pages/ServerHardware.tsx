@@ -122,11 +122,11 @@ export default function ServerHardware() {
     const nonRaidDisks = allDisks.filter(d => !isRaidMember(d));
 
     const diskGroups = {
-        nvme: nonRaidDisks.filter(d => d.name.startsWith('nvme')),
-        ssd: nonRaidDisks.filter(d => !d.name.startsWith('nvme') && isSSD(d) && d.tran !== 'usb'),
+        nvme: nonRaidDisks.filter(d => d.name?.startsWith('nvme')),
+        ssd: nonRaidDisks.filter(d => !d.name?.startsWith('nvme') && isSSD(d) && d.tran !== 'usb'),
         hdd: nonRaidDisks.filter(d => isHDD(d) && d.tran !== 'usb'),
         usb: nonRaidDisks.filter(d => d.tran === 'usb'),
-        other: nonRaidDisks.filter(d => !d.name.startsWith('nvme') && !isSSD(d) && !isHDD(d) && d.tran !== 'usb')
+        other: nonRaidDisks.filter(d => !d.name?.startsWith('nvme') && !isSSD(d) && !isHDD(d) && d.tran !== 'usb')
     };
 
     // Grouping Logic for PCI
