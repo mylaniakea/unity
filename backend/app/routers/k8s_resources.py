@@ -58,6 +58,7 @@ async def reconcile_resource(
     """
     reconciliation_start = datetime.utcnow()
     reconciliation = ResourceReconciliation(
+        tenant_id=tenant_id,
         resource_id=resource.id,
         started_at=reconciliation_start,
         status="in_progress",
@@ -143,7 +144,8 @@ async def reconcile_resource(
 async def create_resource(
     resource_data: KubernetesResourceCreate,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
 ):
     """
     Create a new Kubernetes resource.
@@ -160,7 +162,7 @@ async def create_resource(
 
     # Verify cluster exists
     cluster = db.execute(
-        select(KubernetesCluster).where(KubernetesCluster.id == resource_data.cluster_id)
+        select(KubernetesCluster).where(KubernetesCluster.id == resource_data.cluster_id, KubernetesCluster.tenant_id == tenant_id)
     ).scalar_one_or_none()
 
     if not cluster:
@@ -189,6 +191,7 @@ async def create_resource(
 
     # Create new resource
     resource = KubernetesResource(
+        tenant_id=tenant_id,
         cluster_id=resource_data.cluster_id,
         kind=resource_data.kind,
         name=resource_data.name,
@@ -238,7 +241,7 @@ async def list_resources(
     **Authentication:** JWT token required
     **Authorization:** All authenticated users
     """
-    query = select(KubernetesResource).join(
+    query = select(KubernetesResource).where(KubernetesResource.tenant_id == tenant_id).join(
         KubernetesCluster,
         KubernetesResource.cluster_id == KubernetesCluster.id
     )
@@ -290,7 +293,8 @@ async def list_resources(
 async def get_resource(
     resource_id: int,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
 ):
     """
     Get detailed information about a specific resource including current state.
@@ -299,7 +303,7 @@ async def get_resource(
     **Authorization:** All authenticated users
     """
     resource = db.execute(
-        select(KubernetesResource).where(KubernetesResource.id == resource_id)
+        select(KubernetesResource).where(KubernetesResource.id == resource_id, KubernetesResource.tenant_id == tenant_id)
     ).scalar_one_or_none()
 
     if not resource:
@@ -316,7 +320,8 @@ async def update_resource(
     resource_id: int,
     resource_data: KubernetesResourceUpdate,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
 ):
     """
     Update the desired state of a resource.
@@ -332,7 +337,7 @@ async def update_resource(
         )
 
     resource = db.execute(
-        select(KubernetesResource).where(KubernetesResource.id == resource_id)
+        select(KubernetesResource).where(KubernetesResource.id == resource_id, KubernetesResource.tenant_id == tenant_id)
     ).scalar_one_or_none()
 
     if not resource:
@@ -397,7 +402,7 @@ async def delete_resource(
         )
 
     resource = db.execute(
-        select(KubernetesResource).where(KubernetesResource.id == resource_id)
+        select(KubernetesResource).where(KubernetesResource.id == resource_id, KubernetesResource.tenant_id == tenant_id)
     ).scalar_one_or_none()
 
     if not resource:
@@ -454,7 +459,7 @@ async def reconcile_resource_endpoint(
         )
 
     resource = db.execute(
-        select(KubernetesResource).where(KubernetesResource.id == resource_id)
+        select(KubernetesResource).where(KubernetesResource.id == resource_id, KubernetesResource.tenant_id == tenant_id)
     ).scalar_one_or_none()
 
     if not resource:
@@ -507,7 +512,7 @@ async def list_resource_reconciliations(
     """
     # Verify resource exists
     resource = db.execute(
-        select(KubernetesResource).where(KubernetesResource.id == resource_id)
+        select(KubernetesResource).where(KubernetesResource.id == resource_id, KubernetesResource.tenant_id == tenant_id)
     ).scalar_one_or_none()
 
     if not resource:
