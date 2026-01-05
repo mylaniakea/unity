@@ -22,19 +22,21 @@ spec:
       - name: backend
         image: docker.io/library/unity-backend:latest
         imagePullPolicy: Never
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            export DATABASE_URL="postgresql+psycopg2://homelab_user:${POSTGRES_PASSWORD}@postgres-service.unity.svc.cluster.local:5432/homelab_db"
+            export REDIS_URL="redis://:${REDIS_PASSWORD}@redis-service.unity.svc.cluster.local:6379/0"
+            exec uvicorn app.main:app --host 0.0.0.0 --port 8000
         ports:
         - name: http
           containerPort: 8000
         env:
-        - name: DATABASE_URL
-          value: "postgresql+psycopg2://homelab_user:$(POSTGRES_PASSWORD)@postgres-service.unity.svc.cluster.local:5432/homelab_db"
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
               name: unity-secrets
               key: postgres-password
-        - name: REDIS_URL
-          value: "redis://:$(REDIS_PASSWORD)@redis-service.unity.svc.cluster.local:6379/0"
         - name: REDIS_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -77,6 +79,22 @@ spec:
           limits:
             memory: "1Gi"
             cpu: "1000m"
+        volumeMounts:
+        - name: host-proc
+          mountPath: /host/proc
+          readOnly: true
+        - name: host-sys
+          mountPath: /host/sys
+          readOnly: true
+      volumes:
+      - name: host-proc
+        hostPath:
+          path: /proc
+          type: Directory
+      - name: host-sys
+        hostPath:
+          path: /sys
+          type: Directory
 ---
 apiVersion: v1
 kind: ServiceAccount

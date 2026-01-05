@@ -2,7 +2,16 @@ import platform
 import psutil
 import socket
 import shutil
+import os
 from datetime import datetime
+
+# Use host directories if available (for K8s deployments with hostPath mounts)
+PROC_DIR = '/host/proc' if os.path.exists('/host/proc') else '/proc'
+SYS_DIR = '/host/sys' if os.path.exists('/host/sys') else '/sys'
+
+# Configure psutil to use host proc if available
+if PROC_DIR != '/proc':
+    psutil.PROCFS_PATH = PROC_DIR
 
 class SystemInfoService:
     @staticmethod
@@ -34,14 +43,23 @@ class SystemInfoService:
 
     @staticmethod
     def get_os_info():
+        # Try to read hostname from host if available
+        hostname = socket.gethostname()
+        try:
+            if os.path.exists(f'{PROC_DIR}/sys/kernel/hostname'):
+                with open(f'{PROC_DIR}/sys/kernel/hostname', 'r') as f:
+                    hostname = f.read().strip()
+        except:
+            pass
+
         return {
             "system": platform.system(),
-            "node": platform.node(),
+            "node": hostname,
             "release": platform.release(),
             "version": platform.version(),
             "machine": platform.machine(),
             "processor": platform.processor(),
-            "hostname": socket.gethostname()
+            "hostname": hostname
         }
 
     @staticmethod

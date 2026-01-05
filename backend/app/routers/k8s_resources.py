@@ -11,6 +11,7 @@ from sqlalchemy import select, and_, or_
 from typing import List, Optional
 from datetime import datetime
 
+from app.core.dependencies import get_tenant_id
 from app.database import get_db
 from app.models import (
     KubernetesResource,

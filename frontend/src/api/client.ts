@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: '/api', // Use Nginx proxy
+    baseURL: '/api', // Nginx proxies /api/ to backend
 });
 
 // Request interceptor to add auth token

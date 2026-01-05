@@ -5,49 +5,11 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship # Import relationship for ORM
 from app.database import Base
 
-
-# ==================
-# MULTI-TENANCY MODELS
-# ==================
-
-class Tenant(Base):
-    """Tenant model for multi-tenancy support"""
-    __tablename__ = "tenants"
-    
-    id = Column(String(50), primary_key=True)  # tenant identifier (e.g., 'default', 'acme-corp')
-    name = Column(String(255), nullable=False)  # display name
-    plan = Column(String(50), default='free')  # free, pro, enterprise
-    status = Column(String(20), default='active')  # active, suspended, deleted
-    resource_quota = Column(JSON().with_variant(JSONB, "postgresql"), default={})  # resource limits
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    tenant_metadata = Column(JSON().with_variant(JSONB, "postgresql"), default={})  # flexible metadata
-    
-    # Relationships
-    user_memberships = relationship("UserTenantMembership", back_populates="tenant", cascade="all, delete-orphan")
-
-
-class UserTenantMembership(Base):
-    """Junction table for user-tenant many-to-many relationship with roles"""
-    __tablename__ = "user_tenant_memberships"
-    
-    id = Column(Integer, autoincrement=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False)
-    role = Column(String(50), nullable=False)  # owner, admin, member, viewer
-    
-    # Relationships
-    tenant = relationship("Tenant", back_populates="user_memberships")
-    user = relationship("User", backref="tenant_memberships")
-    
-    __table_args__ = (
-        PrimaryKeyConstraint('user_id', 'tenant_id'),
-    )
 class ServerProfile(Base):
     __tablename__ = "server_profiles"
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
+    tenant_id = Column(Integer, nullable=False, default=1, index=True)
     name = Column(String, index=True, default="Unknown Server")
     description = Column(Text, nullable=True)
     ip_address = Column(String, nullable=True)
@@ -78,7 +40,6 @@ class Settings(Base):
     __tablename__ = "settings"
 
     id = Column(Integer, primary_key=True, index=True) # Singleton, always ID 1
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     
     # Store provider keys/configs securely (encrypted in future, plain for now)
     providers = Column(JSON().with_variant(JSONB, "postgresql"), default={
@@ -110,7 +71,6 @@ class Report(Base):
     __tablename__ = "reports"
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     server_id = Column(Integer, ForeignKey('server_profiles.id'), index=True) # Link to ServerProfile
     report_type = Column(String, index=True) # e.g., "24-hour", "7-day", "monthly"
     start_time = Column(DateTime(timezone=True), index=True)
@@ -125,7 +85,6 @@ class KnowledgeItem(Base):
     __tablename__ = "knowledge"
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     title = Column(String, index=True)
     content = Column(Text)
     category = Column(String, index=True) # network, hardware, manual
@@ -137,7 +96,6 @@ class ServerSnapshot(Base):
     __tablename__ = "server_snapshots"
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     server_id = Column(Integer, ForeignKey('server_profiles.id'), index=True)
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
     data = Column(JSON().with_variant(JSONB, "postgresql"), default={}) # Comprehensive snapshot data
@@ -148,7 +106,6 @@ class ThresholdRule(Base):
     __tablename__ = "threshold_rules"
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     server_id = Column(Integer, ForeignKey('server_profiles.id'), index=True, nullable=True) # null = all servers
     name = Column(String, index=True) # e.g., "High CPU Usage"
     metric = Column(String, index=True) # e.g., "cpu_percent", "memory_percent", "disk_percent"
@@ -166,7 +123,6 @@ class Alert(Base):
     __tablename__ = "alerts"
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     rule_id = Column(Integer, ForeignKey('threshold_rules.id'), index=True)
     server_id = Column(Integer, ForeignKey('server_profiles.id'), index=True)
     severity = Column(String, index=True) # "info", "warning", "critical"
@@ -186,7 +142,6 @@ class AlertChannel(Base):
     __tablename__ = "alert_channels"
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     name = Column(String, index=True) # e.g., "SMTP", "Telegram", "ntfy"
     channel_type = Column(String, index=True) # "smtp", "telegram", "ntfy", "discord", "slack", "pushover"
     enabled = Column(Boolean, default=False)
@@ -199,7 +154,6 @@ class PushSubscription(Base):
     __tablename__ = "push_subscriptions"
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     user_id = Column(Integer, nullable=True) # Optional: Link to a user if authentication is implemented
     endpoint = Column(String, unique=True, index=True)
     p256dh = Column(String)
@@ -210,7 +164,6 @@ class NotificationLog(Base):
     __tablename__ = "notification_logs"
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     alert_id = Column(Integer, ForeignKey('alerts.id'), index=True, nullable=True)
     channel_id = Column(Integer, ForeignKey('alert_channels.id'), index=True, nullable=True)
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
@@ -224,7 +177,6 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     username = Column(String, unique=True, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=True)
     hashed_password = Column(String, nullable=False)
@@ -243,7 +195,6 @@ class Plugin(Base):
     __tablename__ = "plugins"
 
     id = Column(String(100), primary_key=True)  # Plugin ID (e.g., "lm-sensors")
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     name = Column(String(255), nullable=False)
     version = Column(String(50), nullable=True)
     category = Column(String(50), nullable=True)  # thermal, system, network, etc.
@@ -253,7 +204,7 @@ class Plugin(Base):
     external = Column(Boolean, default=False)  # True for external plugins, False for built-in
     
     # Plugin metadata and config
-    plugin_tenant_metadata = Column(JSON().with_variant(JSONB, "postgresql"), default={})  # Full plugin metadata
+    plugin_metadata = Column(JSON().with_variant(JSONB, "postgresql"), default={})  # Full plugin metadata
     config = Column(JSON().with_variant(JSONB, "postgresql"), default={})  # Plugin-specific configuration
     
     # Health and status tracking
@@ -276,7 +227,6 @@ class PluginMetric(Base):
     __tablename__ = "plugin_metrics"
 
     id = Column(Integer, autoincrement=True, index=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     plugin_id = Column(String(100), ForeignKey('plugins.id'), nullable=False, index=True)
     timestamp = Column(DateTime(timezone=True), nullable=False, index=True, server_default=func.now(), primary_key=True)
     data = Column(JSON().with_variant(JSONB, "postgresql"), nullable=False)  # The actual metrics data
@@ -297,7 +247,6 @@ class PluginExecution(Base):
     __tablename__ = "plugin_executions"
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     plugin_id = Column(String(100), ForeignKey('plugins.id'), nullable=False, index=True)
     
     started_at = Column(DateTime(timezone=True), nullable=False, index=True, server_default=func.now())
@@ -316,7 +265,6 @@ class PluginAPIKey(Base):
     __tablename__ = "plugin_api_keys"
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     plugin_id = Column(String(100), ForeignKey('plugins.id'), nullable=False, index=True)
     key_hash = Column(String(64), nullable=False, unique=True)  # SHA-256 hash
     name = Column(String(255), nullable=True)  # Descriptive name for the key
@@ -348,7 +296,6 @@ class SSHKey(Base):
     __tablename__ = "ssh_keys"
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     name = Column(String(255), unique=True, index=True, nullable=False)
     description = Column(Text, nullable=True)
     
@@ -375,7 +322,6 @@ class Certificate(Base):
     __tablename__ = "certificates"
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     name = Column(String(255), index=True, nullable=False)
     description = Column(Text, nullable=True)
     
@@ -417,7 +363,6 @@ class ServerCredential(Base):
     __tablename__ = "server_credentials"
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     
     # Link to Unity's ServerProfile
     server_profile_id = Column(Integer, ForeignKey('server_profiles.id'), nullable=False, unique=True)
@@ -450,7 +395,6 @@ class StepCAConfig(Base):
     __tablename__ = "step_ca_config"
 
     id = Column(Integer, primary_key=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     
     # Step-CA connection details
     ca_url = Column(String(255), nullable=False)
@@ -472,7 +416,6 @@ class CredentialAuditLog(Base):
     __tablename__ = "credential_audit_logs"
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
 
     # Who
     user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
@@ -506,7 +449,6 @@ class KubernetesCluster(Base):
     __tablename__ = "kubernetes_clusters"
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     name = Column(String(255), unique=True, index=True, nullable=False)
     description = Column(Text, nullable=True)
 
@@ -547,7 +489,6 @@ class KubernetesResource(Base):
     __tablename__ = "kubernetes_resources"
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     cluster_id = Column(Integer, ForeignKey('kubernetes_clusters.id'), nullable=False, index=True)
 
     # Resource identification
@@ -596,7 +537,6 @@ class ResourceReconciliation(Base):
     __tablename__ = "resource_reconciliations"
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     resource_id = Column(Integer, ForeignKey('kubernetes_resources.id'), nullable=False, index=True)
 
     # Reconciliation details
@@ -640,7 +580,6 @@ class ApplicationBlueprint(Base):
     __tablename__ = "application_blueprints"
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     name = Column(String(255), unique=True, index=True, nullable=False)  # e.g., "authentik", "postgresql"
     description = Column(Text, nullable=True)
     category = Column(String(100), nullable=True, index=True)  # auth, database, cache, web, proxy, etc.
@@ -667,7 +606,7 @@ class ApplicationBlueprint(Base):
     environment_vars = Column(JSON().with_variant(JSONB, "postgresql"), default={})  # Environment variable templates
 
     # Blueprint metadata (using blueprint_metadata to avoid SQLAlchemy reserved name)
-    blueprint_tenant_metadata = Column(JSON().with_variant(JSONB, "postgresql"), default={})  # tags, version, author, documentation_url, icon_url
+    blueprint_metadata = Column(JSON().with_variant(JSONB, "postgresql"), default={})  # tags, version, author, documentation_url, icon_url
 
     # Status
     is_active = Column(Boolean, default=True, index=True)
@@ -697,7 +636,6 @@ class DeploymentIntent(Base):
     __tablename__ = "deployment_intents"
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
 
     # Intent tracking

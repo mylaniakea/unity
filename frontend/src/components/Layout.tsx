@@ -1,13 +1,12 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Server, Bot, Menu, X, Settings, FileText, Brain, Network, HardDrive, Clock, Plug, AlertTriangle, Bell, LogOut, User, Users } from 'lucide-react';
+import { LayoutDashboard, Server, Bot, Menu, X, Settings, FileText, Brain, Network, HardDrive, Clock, Plug, AlertTriangle, Bell, LogOut, User, Users, Boxes, Rocket } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { useRole } from '@/contexts/RoleContext';
 import ThemeToggle from '@/components/ThemeToggle';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import api from '@/api/client';
-import { updateFaviconBadge, initializeFaviconManager } from '@/lib/favicon';
 import { useNotification } from '@/contexts/NotificationContext';
 
 export default function Layout() {
@@ -17,33 +16,12 @@ export default function Layout() {
     const navigate = useNavigate();
     const { showNotification } = useNotification();
     const [alertStats, setAlertStats] = useState({ critical: 0, warning: 0, info: 0 });
-    const faviconLinkRef = useRef<HTMLLinkElement | null>(null);
 
     useEffect(() => {
-        // Initialize favicon link element if it doesn't exist
-        faviconLinkRef.current = initializeFaviconManager();
-
         fetchAlertStats();
         const interval = setInterval(fetchAlertStats, 30000); // Refresh every 30 seconds
         return () => clearInterval(interval);
     }, []);
-
-    useEffect(() => {
-        // Update favicon badge whenever alertStats changes
-        if (faviconLinkRef.current) {
-            updateFaviconBadge({
-                criticalCount: alertStats.critical,
-                warningCount: alertStats.warning,
-                originalFaviconUrl: '/vite.svg' // Specify the path to your original favicon
-            }).then(dataUrl => {
-                if (faviconLinkRef.current) {
-                    faviconLinkRef.current.href = dataUrl;
-                }
-            }).catch(error => {
-                console.error("Failed to update favicon badge:", error);
-            });
-        }
-    }, [alertStats]);
 
     const fetchAlertStats = async () => {
         try {
@@ -69,6 +47,8 @@ export default function Layout() {
 
     const allNavItems = [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+        { icon: Boxes, label: 'Clusters', path: '/clusters' },
+        { icon: Rocket, label: 'Orchestration', path: '/orchestration' },
         { icon: Network, label: 'Environment', path: '/homelab' },
         { icon: Server, label: 'Servers', path: '/profiles' },
         { icon: HardDrive, label: 'Hardware', path: '/hardware' },

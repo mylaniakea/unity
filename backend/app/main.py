@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 import app.models as models
 from fastapi.middleware.cors import CORSMiddleware
+from app.middleware.tenant_context import TenantContextMiddleware
 from app.routers import (
     profiles, ai, settings, reports, knowledge, system,
     terminal, plugins, thresholds, alerts, push, auth, users, credentials
@@ -43,6 +44,12 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+# Configure multi-tenancy middleware (disabled by default for backward compatibility)
+app.add_middleware(
+    TenantContextMiddleware,
+    multi_tenancy_enabled=False  # Set to True when ready for multi-tenant mode
 )
 
 # Initialize APScheduler
@@ -184,7 +191,7 @@ async def reconcile_kubernetes_resources():
         db.close()
 
 
-# Include Routers
+# Include Routers (frontend adds /api prefix, nginx strips it)
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(profiles.router)

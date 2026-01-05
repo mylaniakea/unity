@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 import logging
 
 from app.database import get_db
-from app.routers.auth import get_current_user
+from app.services.auth import get_current_active_user as get_current_user
 from app.models import User, DeploymentIntent
 from app.services.orchestration.deployment_orchestrator import DeploymentOrchestrator
 

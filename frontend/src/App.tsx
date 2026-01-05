@@ -15,6 +15,8 @@ import Thresholds from './pages/Thresholds';
 import Alerts from './pages/Alerts';
 import Users from './pages/Users';
 import LoginPage from './pages/LoginPage';
+import Clusters from './pages/Clusters';
+import Orchestration from './pages/Orchestration';
 import { SidebarProvider } from '@/contexts/SidebarContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ConfirmDialogProvider } from '@/contexts/ConfirmDialogContext';
@@ -33,6 +35,8 @@ function App() {
                             <Route path="/login" element={<LoginPage />} />
                             <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                                 <Route index element={<Dashboard />} />
+                                <Route path="clusters" element={<Clusters />} />
+                                <Route path="orchestration" element={<Orchestration />} />
                                 <Route path="homelab" element={<Homelab />} />
                                 <Route path="profiles" element={<Profiles />} />
                                 <Route path="hardware" element={<ServerHardware />} />

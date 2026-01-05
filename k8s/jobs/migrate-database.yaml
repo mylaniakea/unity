@@ -1,0 +1,100 @@
+---
+# Kubernetes Job to run database migrations on demand
+# Usage: kubectl apply -f k8s/jobs/migrate-database.yaml
+# Check status: kubectl get jobs -n unity
+# View logs: kubectl logs -n unity job/unity-db-migrate
+#
+# This job can use either:
+# 1. Alembic CLI directly (current method)
+# 2. Python migration script (alternative: python run_migrations.py)
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: unity-db-migrate
+  namespace: unity
+  labels:
+    app: unity-backend
+    job: database-migration
+spec:
+  ttlSecondsAfterFinished: 3600  # Clean up after 1 hour
+  backoffLimit: 3  # Retry up to 3 times on failure
+  template:
+    metadata:
+      labels:
+        app: unity-backend
+        job: database-migration
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: migrate
+        image: docker.io/library/unity-backend:latest
+        imagePullPolicy: Never
+        command: ["sh", "-c"]
+        args:
+          - |
+            echo "=============================================="
+            echo "Unity Database Migration Job"
+            echo "=============================================="
+            echo ""
+            echo "Step 1: Checking current migration version..."
+            alembic current
+            echo ""
+            echo "Step 2: Checking latest available version..."
+            alembic heads
+            echo ""
+            echo "Step 3: Running migrations..."
+            alembic upgrade head
+            echo ""
+            echo "Step 4: Verifying final version..."
+            alembic current
+            echo ""
+            echo "=============================================="
+            echo "Migration completed successfully!"
+            echo "=============================================="
+        env:
+        - name: DATABASE_URL
+          value: "postgresql+psycopg2://homelab_user:$(POSTGRES_PASSWORD)@postgres-service.unity.svc.cluster.local:5432/homelab_db"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: unity-secrets
+              key: postgres-password
+        - name: PYTHONUNBUFFERED
+          value: "1"
+---
+# Alternative: Use Python migration script
+# Uncomment this Job definition and comment out the one above to use the Python script
+#
+# apiVersion: batch/v1
+# kind: Job
+# metadata:
+#   name: unity-db-migrate
+#   namespace: unity
+#   labels:
+#     app: unity-backend
+#     job: database-migration
+# spec:
+#   ttlSecondsAfterFinished: 3600
+#   backoffLimit: 3
+#   template:
+#     metadata:
+#       labels:
+#         app: unity-backend
+#         job: database-migration
+#     spec:
+#       restartPolicy: OnFailure
+#       containers:
+#       - name: migrate
+#         image: docker.io/library/unity-backend:latest
+#         imagePullPolicy: Never
+#         command: ["python", "run_migrations.py"]
+#         env:
+#         - name: DATABASE_URL
+#           value: "postgresql+psycopg2://homelab_user:$(POSTGRES_PASSWORD)@postgres-service.unity.svc.cluster.local:5432/homelab_db"
+#         - name: POSTGRES_PASSWORD
+#           valueFrom:
+#             secretKeyRef:
+#               name: unity-secrets
+#               key: postgres-password
+#         - name: PYTHONUNBUFFERED
+#           value: "1"

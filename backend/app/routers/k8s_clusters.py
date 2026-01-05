@@ -11,6 +11,7 @@ from sqlalchemy import select, func
 from typing import List, Optional
 from datetime import datetime
 
+from app.core.dependencies import get_tenant_id
 from app.database import get_db
 from app.models import KubernetesCluster, KubernetesResource, User
 from app.services.auth import get_current_active_user
@@ -71,7 +72,8 @@ async def check_cluster_health(cluster: KubernetesCluster) -> dict:
 async def create_cluster(
     cluster_data: KubernetesClusterCreate,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
 ):
     """
     Register a new Kubernetes cluster.
@@ -88,7 +90,7 @@ async def create_cluster(
 
     # Check if cluster with same name already exists
     existing = db.execute(
-        select(KubernetesCluster).where(KubernetesCluster.name == cluster_data.name)
+        select(KubernetesCluster).where(KubernetesCluster.tenant_id == tenant_id, KubernetesCluster.name == cluster_data.name)
     ).scalar_one_or_none()
 
     if existing:
@@ -107,6 +109,7 @@ async def create_cluster(
 
     # Create new cluster
     cluster = KubernetesCluster(
+        tenant_id=tenant_id,
         name=cluster_data.name,
         description=cluster_data.description,
         kubeconfig_path=cluster_data.kubeconfig_path,
@@ -134,7 +137,8 @@ async def list_clusters(
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
     provider: Optional[str] = Query(None, description="Filter by provider"),
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id),
 ):
     """
     List all registered Kubernetes clusters.
@@ -142,7 +146,7 @@ async def list_clusters(
     **Authentication:** JWT token required
     **Authorization:** All authenticated users
     """
-    query = select(KubernetesCluster)
+    query = select(KubernetesCluster).where(KubernetesCluster.tenant_id == tenant_id)
 
     # Apply filters
     if is_active is not None:
@@ -178,7 +182,8 @@ async def list_clusters(
 async def get_cluster(
     cluster_id: int,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
 ):
     """
     Get detailed information about a specific cluster.
@@ -187,7 +192,7 @@ async def get_cluster(
     **Authorization:** All authenticated users
     """
     cluster = db.execute(
-        select(KubernetesCluster).where(KubernetesCluster.id == cluster_id)
+        select(KubernetesCluster).where(KubernetesCluster.id == cluster_id, KubernetesCluster.tenant_id == tenant_id)
     ).scalar_one_or_none()
 
     if not cluster:
@@ -208,7 +213,8 @@ async def update_cluster(
     cluster_id: int,
     cluster_data: KubernetesClusterUpdate,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
 ):
     """
     Update a Kubernetes cluster.
@@ -224,7 +230,7 @@ async def update_cluster(
         )
 
     cluster = db.execute(
-        select(KubernetesCluster).where(KubernetesCluster.id == cluster_id)
+        select(KubernetesCluster).where(KubernetesCluster.id == cluster_id, KubernetesCluster.tenant_id == tenant_id)
     ).scalar_one_or_none()
 
     if not cluster:
@@ -236,7 +242,7 @@ async def update_cluster(
     # Check if name is being changed and conflicts with another cluster
     if cluster_data.name and cluster_data.name != cluster.name:
         existing = db.execute(
-            select(KubernetesCluster).where(KubernetesCluster.name == cluster_data.name)
+            select(KubernetesCluster).where(KubernetesCluster.tenant_id == tenant_id, KubernetesCluster.name == cluster_data.name)
         ).scalar_one_or_none()
 
         if existing:
@@ -286,7 +292,7 @@ async def delete_cluster(
         )
 
     cluster = db.execute(
-        select(KubernetesCluster).where(KubernetesCluster.id == cluster_id)
+        select(KubernetesCluster).where(KubernetesCluster.id == cluster_id, KubernetesCluster.tenant_id == tenant_id)
     ).scalar_one_or_none()
 
     if not cluster:
@@ -335,7 +341,7 @@ async def check_cluster_health_endpoint(
     **Authorization:** All authenticated users
     """
     cluster = db.execute(
-        select(KubernetesCluster).where(KubernetesCluster.id == cluster_id)
+        select(KubernetesCluster).where(KubernetesCluster.id == cluster_id, KubernetesCluster.tenant_id == tenant_id)
     ).scalar_one_or_none()
 
     if not cluster:
