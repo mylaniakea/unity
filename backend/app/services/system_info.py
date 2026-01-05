@@ -42,15 +42,19 @@ class SystemInfoService:
         }
 
     @staticmethod
+    @staticmethod
     def get_os_info():
-        # Try to read hostname from host if available
-        hostname = socket.gethostname()
-        try:
-            if os.path.exists(f'{PROC_DIR}/sys/kernel/hostname'):
-                with open(f'{PROC_DIR}/sys/kernel/hostname', 'r') as f:
-                    hostname = f.read().strip()
-        except:
-            pass
+        # Try to read hostname from NODE_NAME env var (k8s downward API), otherwise use container hostname
+        hostname = os.getenv('NODE_NAME', socket.gethostname())
+        
+        # Try to read from host proc if NODE_NAME not available
+        if not os.getenv('NODE_NAME'):
+            try:
+                if os.path.exists(f'{PROC_DIR}/sys/kernel/hostname'):
+                    with open(f'{PROC_DIR}/sys/kernel/hostname', 'r') as f:
+                        hostname = f.read().strip()
+            except:
+                pass
 
         return {
             "system": platform.system(),
