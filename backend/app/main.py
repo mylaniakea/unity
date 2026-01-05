@@ -17,6 +17,7 @@ from app.database import engine, Base, get_db
 from app.services import report_generation
 from app.services.snapshot_service import SnapshotService
 from app.services.ssh import SSHService
+from app.core.k8s_autodiscovery import autodiscover_k8s_cluster
 from app.services.threshold_monitor import ThresholdMonitor
 from app.services.plugin_manager import PluginManager
 from app.services.k8s_reconciler import KubernetesReconciler
@@ -253,6 +254,26 @@ async def startup_event():
         except Exception as e:
             print(f"❌ Error initializing plugin system: {e}", flush=True)
             logger.exception("Plugin system initialization failed")
+
+        
+        # ============================================
+        # Auto-discover Kubernetes Cluster
+        # ============================================
+        print("\n🔍 Auto-discovering Kubernetes cluster...", flush=True)
+        try:
+            from app.database import SessionLocal
+            db = SessionLocal()
+            try:
+                cluster = await autodiscover_k8s_cluster(db, tenant_id="default")
+                if cluster:
+                    print(f"   ✅ Registered cluster: {cluster.name}", flush=True)
+                else:
+                    print("   ℹ️  Not running in Kubernetes environment", flush=True)
+            finally:
+                db.close()
+        except Exception as e:
+            print(f"   ❌ Error during cluster autodiscovery: {e}", flush=True)
+            logger.exception("Cluster autodiscovery failed")
 
         # ============================================
         # Schedule Jobs
