@@ -1,3 +1,8 @@
+# Backups
+backups/
+*.sql
+*.sql.gz
+
 # Python
 __pycache__/
 *.py[cod]
@@ -19,21 +24,22 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 .venv/
 venv/
 ENV/
-env/
 
 # Node
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
 dist/
-dist-ssr/
-*.local
+.cache/
+
+# Environment
+.env
+.env.local
+.env.*.local
 
 # IDEs
 .vscode/
@@ -42,11 +48,6 @@ dist-ssr/
 *.swo
 *~
 .DS_Store
-
-# Environment
-.env
-.env.local
-.env.*.local
 
 # Database
 *.db
@@ -57,24 +58,12 @@ dist-ssr/
 *.log
 logs/
 
-# Testing
-.coverage
-htmlcov/
-.pytest_cache/
-.tox/
-
-# Build
-*.pyc
-*.pyo
-
-# OS
-Thumbs.db
-.DS_Store
-
 # Docker
-docker-compose.override.yml
+.dockerignore
 
-# Misc
-*.bak
-*.tmp
-.cache/
+# Kubernetes
+*.kubeconfig
+
+# Secrets (keep examples)
+*-secret.yaml
+!*-secret-placeholder.yaml

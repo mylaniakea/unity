@@ -1,0 +1,48 @@
+🎉 Unity has been deployed!
+
+Your release is named {{ .Release.Name }}.
+
+To access Unity:
+
+{{- if .Values.ingress.enabled }}
+1. Via Ingress:
+{{- range .Values.ingress.hosts }}
+   http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+{{- else }}
+1. Port-forward the frontend service:
+   kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "unity.fullname" . }}-frontend 8080:80
+
+   Then access: http://localhost:8080
+
+2. Port-forward the backend API:
+   kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "unity.fullname" . }}-backend 8000:8000
+
+   API docs: http://localhost:8000/docs
+{{- end }}
+
+Default credentials (CHANGE THESE):
+   Username: admin
+   Password: admin123
+
+🔐 Security Reminders:
+   - Update secrets in values.yaml or use external secret management
+   - Change default admin password immediately
+   - Enable TLS/HTTPS for production
+   - Review RBAC permissions
+
+📊 Monitoring:
+   kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+
+📝 Logs:
+   Backend:  kubectl logs -n {{ .Release.Namespace }} -l app=unity-backend -f
+   Frontend: kubectl logs -n {{ .Release.Namespace }} -l app=unity-frontend -f
+
+{{- if .Values.global.multiTenancy.enabled }}
+🏢 Multi-Tenancy: ENABLED
+   Default tenant: {{ .Values.global.multiTenancy.defaultTenant }}
+{{- else }}
+🏢 Multi-Tenancy: DISABLED (Single-tenant mode)
+{{- end }}
+
+For more information, visit: https://github.com/mylaniakea/unity

@@ -1,0 +1,20 @@
+apiVersion: v2
+name: unity
+description: Unity - Multi-Tenant Homelab Intelligence Control Plane
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - kubernetes
+  - control-plane
+  - multi-tenancy
+  - homelab
+  - orchestration
+home: https://github.com/mylaniakea/unity
+sources:
+  - https://github.com/mylaniakea/unity
+maintainers:
+  - name: Unity Team
+    email: team@holon.dev
+icon: https://raw.githubusercontent.com/mylaniakea/unity/main/docs/logo.png
+dependencies: []
