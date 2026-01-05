@@ -28,7 +28,7 @@ async def list_users(
     current_user: models.User = Depends(get_current_admin)
 ):
     """List all users (admin only)"""
-    users = db.query(models.User).all()
+    users = db.query(models.User).filter(models.User.tenant_id == tenant_id).all()
     return users
 
 
@@ -49,7 +49,7 @@ async def create_user(
 
     # Check if email already exists (if provided)
     if user.email:
-        db_user_by_email = db.query(models.User).filter(models.User.email == user.email).first()
+        db_user_by_email = db.query(models.User).filter(models.User.tenant_id == tenant_id).filter(models.User.email == user.email).first()
         if db_user_by_email:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -128,7 +128,7 @@ async def update_user(
     if user_update.email is not None:
         # Check if email already exists
         if user_update.email:
-            existing = db.query(models.User).filter(
+            existing = db.query(models.User).filter(models.User.tenant_id == tenant_id).filter(
                 models.User.email == user_update.email,
                 models.User.id != user_id
             ).first()
