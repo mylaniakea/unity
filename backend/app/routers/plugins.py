@@ -51,9 +51,10 @@ def get_plugin_details(plugin_id: str):
 
 # --- CHECK PLUGIN AVAILABILITY ON SERVER ---
 @router.get("/check/{server_id}")
-async def check_plugins_on_server(server_id: int, db: Session = Depends(get_db)):
+async def check_plugins_on_server(server_id: int, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Check which plugins are available (tools installed) on a server."""
-    profile = db.query(models.ServerProfile).filter(models.ServerProfile.id == server_id).first()
+    profile = db.query(models.ServerProfile).filter(models.ServerProfile.tenant_id == tenant_id).filter(models.ServerProfile.id == server_id).first()
     if not profile:
         raise HTTPException(status_code=404, detail="Server profile not found")
     
@@ -86,9 +87,10 @@ async def check_plugins_on_server(server_id: int, db: Session = Depends(get_db))
 
 # --- TOGGLE PLUGIN FOR SERVER ---
 @router.post("/toggle/{server_id}")
-def toggle_plugin(server_id: int, request: PluginToggleRequest, db: Session = Depends(get_db)):
+def toggle_plugin(server_id: int, request: PluginToggleRequest, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Enable or disable a plugin for a specific server."""
-    profile = db.query(models.ServerProfile).filter(models.ServerProfile.id == server_id).first()
+    profile = db.query(models.ServerProfile).filter(models.ServerProfile.tenant_id == tenant_id).filter(models.ServerProfile.id == server_id).first()
     if not profile:
         raise HTTPException(status_code=404, detail="Server profile not found")
     
@@ -118,9 +120,10 @@ def toggle_plugin(server_id: int, request: PluginToggleRequest, db: Session = De
 
 # --- GET SERVER PLUGIN STATUS ---
 @router.get("/status/{server_id}")
-def get_server_plugin_status(server_id: int, db: Session = Depends(get_db)):
+def get_server_plugin_status(server_id: int, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Get enabled and detected plugins for a server."""
-    profile = db.query(models.ServerProfile).filter(models.ServerProfile.id == server_id).first()
+    profile = db.query(models.ServerProfile).filter(models.ServerProfile.tenant_id == tenant_id).filter(models.ServerProfile.id == server_id).first()
     if not profile:
         raise HTTPException(status_code=404, detail="Server profile not found")
     
@@ -134,9 +137,10 @@ def get_server_plugin_status(server_id: int, db: Session = Depends(get_db)):
 
 # --- INSTALL PLUGIN ON SERVER ---
 @router.post("/install/{server_id}")
-async def install_plugin(server_id: int, request: InstallPluginRequest, db: Session = Depends(get_db)):
+async def install_plugin(server_id: int, request: InstallPluginRequest, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Execute install script for a plugin on a server."""
-    profile = db.query(models.ServerProfile).filter(models.ServerProfile.id == server_id).first()
+    profile = db.query(models.ServerProfile).filter(models.ServerProfile.tenant_id == tenant_id).filter(models.ServerProfile.id == server_id).first()
     if not profile:
         raise HTTPException(status_code=404, detail="Server profile not found")
     
