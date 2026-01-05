@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.services.system_info import SystemInfoService
 from app.database import get_db
+from app.core.dependencies import get_tenant_id
 from app import models
 
 router = APIRouter(
@@ -11,13 +12,14 @@ router = APIRouter(
 )
 
 @router.get("/dashboard-stats")
-def get_dashboard_stats(db: Session = Depends(get_db)):
-    profile_count = db.query(models.ServerProfile).count()
-    report_count = db.query(models.Report).count()
-    knowledge_count = db.query(models.KnowledgeItem).count()
+def get_dashboard_stats(db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
+    profile_count = db.query(models.ServerProfile).filter(models.ServerProfile.tenant_id == tenant_id).count()
+    report_count = db.query(models.Report).filter(models.Report.tenant_id == tenant_id).count()
+    knowledge_count = db.query(models.KnowledgeItem).filter(models.KnowledgeItem.tenant_id == tenant_id).count()
     
     # Get last 5 reports
-    recent_reports = db.query(models.Report).order_by(models.Report.generated_at.desc()).limit(5).all()
+    recent_reports = db.query(models.Report).filter(models.Report.tenant_id == tenant_id).order_by(models.Report.generated_at.desc()).limit(5).all()
     
     return {
         "counts": {

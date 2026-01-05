@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app import schemas, models
 from app.database import get_db
+from app.core.dependencies import get_tenant_id
 from app.services.auth import AuthService, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_active_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -19,12 +20,12 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
     # Check if email already registered (if provided)
     if user.email:
-        db_user_by_email = db.query(models.User).filter(models.User.email == user.email).first()
+        db_user_by_email = db.query(models.User).filter(models.User.tenant_id == "default").filter(models.User.email == user.email).first()
         if db_user_by_email:
             raise HTTPException(status_code=400, detail="Email already registered")
 
     hashed_password = AuthService.get_password_hash(user.password)
-    db_user = models.User(
+    db_user = models.User(tenant_id="default", 
         username=user.username,
         email=user.email,
         hashed_password=hashed_password,
