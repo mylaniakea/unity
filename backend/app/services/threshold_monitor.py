@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class ThresholdMonitor:
     """Service for monitoring thresholds and triggering alerts"""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, tenant_id: str = "default"):
         self.db = db
         self.notification_service = NotificationService()
 
@@ -31,7 +31,7 @@ class ThresholdMonitor:
             return
 
         # Get all enabled threshold rules
-        rules = self.db.query(models.ThresholdRule).filter(
+        rules = self.db.query(models.ThresholdRule).filter(models.ThresholdRule.tenant_id == tenant_id).filter(
             models.ThresholdRule.enabled == True
         ).all()
 
@@ -52,14 +52,14 @@ class ThresholdMonitor:
             return
         # Get servers to check (specific server or all servers)
         if rule.server_id:
-            servers = [self.db.query(models.ServerProfile).filter(
+            servers = [self.db.query(models.ServerProfile).filter(models.ServerProfile.tenant_id == tenant_id).filter(
                 models.ServerProfile.id == rule.server_id
             ).first()]
             if not servers[0]:
                 logger.warning(f"Server {rule.server_id} not found for rule {rule.id}")
                 return
         else:
-            servers = self.db.query(models.ServerProfile).all()
+            servers = self.db.query(models.ServerProfile).filter(models.ServerProfile.tenant_id == tenant_id).all()
 
         for server in servers:
             try:
@@ -70,7 +70,7 @@ class ThresholdMonitor:
     async def _check_server_metric(self, rule: models.ThresholdRule, server: models.ServerProfile):
         """Check if a server's metric exceeds the threshold"""
         # Get latest snapshot for the server
-        latest_snapshot = self.db.query(models.ServerSnapshot).filter(
+        latest_snapshot = self.db.query(models.ServerSnapshot).filter(models.ServerSnapshot.tenant_id == tenant_id).filter(
             models.ServerSnapshot.server_id == server.id
         ).order_by(models.ServerSnapshot.timestamp.desc()).first()
 
@@ -95,7 +95,7 @@ class ThresholdMonitor:
         if threshold_exceeded:
             # Check if we already have a recent unresolved alert for this rule+server
             # (avoid alert spam - don't create duplicate alerts within 5 minutes)
-            recent_alert = self.db.query(models.Alert).filter(
+            recent_alert = self.db.query(models.Alert).filter(models.Alert.tenant_id == tenant_id).filter(
                 and_(
                     models.Alert.rule_id == rule.id,
                     models.Alert.server_id == server.id,

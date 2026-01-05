@@ -33,7 +33,7 @@ class KubernetesReconciler:
     and applies changes to maintain consistency.
     """
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, tenant_id: str = "default"):
         self.db = db
         self._api_clients = {}  # Cache of API clients per cluster
 

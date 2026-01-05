@@ -57,7 +57,7 @@ def _aggregate_system_info(profiles_data: list[models.ServerProfile]):
         "total_servers": active_servers
     }
 
-async def generate_24_hour_report(db: Session, server_id: int):
+async def generate_24_hour_report(db: Session, server_id: int, tenant_id: str = "default"):
     try:
         end_time = datetime.utcnow()
         start_time = end_time - timedelta(days=1)
@@ -73,7 +73,7 @@ async def generate_24_hour_report(db: Session, server_id: int):
             # If no snapshots, no report can be generated from historical data
             return None
 
-        server_profile = db.query(models.ServerProfile).filter(models.ServerProfile.id == server_id).first()
+        server_profile = db.query(models.ServerProfile).filter(models.ServerProfile.tenant_id == tenant_id).filter(models.ServerProfile.id == server_id).first()
         if not server_profile:
             # This case should ideally not happen if snapshots exist for the server_id
             raise HTTPException(status_code=404, detail="Server profile not found for snapshot data")
@@ -286,7 +286,7 @@ async def generate_24_hour_report(db: Session, server_id: int):
         logging.exception(f"Error generating 24-hour report for server {server_id}")
         raise HTTPException(status_code=500, detail="Failed to generate report")
 
-async def generate_7_day_report(db: Session, server_id: int):
+async def generate_7_day_report(db: Session, server_id: int, tenant_id: str = "default"):
     end_time = datetime.utcnow()
     start_time = end_time - timedelta(days=7)
 
@@ -295,7 +295,7 @@ async def generate_7_day_report(db: Session, server_id: int):
     # for "24-hour" reports within the last 7 days and aggregate their `aggregated_data`.
     # For now, we'll fetch the latest server profile for simplification,
     # but the structure is here for future expansion.
-    server_profile = db.query(models.ServerProfile).filter(models.ServerProfile.id == server_id).first()
+    server_profile = db.query(models.ServerProfile).filter(models.ServerProfile.tenant_id == tenant_id).filter(models.ServerProfile.id == server_id).first()
     if not server_profile:
         return None
 
@@ -314,13 +314,13 @@ async def generate_7_day_report(db: Session, server_id: int):
     db.refresh(report)
     return report
 
-async def generate_monthly_report(db: Session, server_id: int):
+async def generate_monthly_report(db: Session, server_id: int, tenant_id: str = "default"):
     end_time = datetime.utcnow()
     # Calculate start of the current month
     start_time = datetime(end_time.year, end_time.month, 1)
 
     # Aggregate from 7-day reports (or directly from profiles for now)
-    server_profile = db.query(models.ServerProfile).filter(models.ServerProfile.id == server_id).first()
+    server_profile = db.query(models.ServerProfile).filter(models.ServerProfile.tenant_id == tenant_id).filter(models.ServerProfile.id == server_id).first()
     if not server_profile:
         return None
 
