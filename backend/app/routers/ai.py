@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from sqlalchemy.orm import Session
 from app.database import get_db
+from app.core.dependencies import get_tenant_id
 from app import models
 from app.services.ai import AIService
 from app.services.system_info import SystemInfoService
@@ -35,7 +36,8 @@ class KnowledgeIngestRequest(BaseModel):
     hardware_data: Dict[str, Any]
 
 @router.post("/chat")
-async def chat_with_ai(request: ChatRequest, db: Session = Depends(get_db)):
+async def chat_with_ai(request: ChatRequest, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     service = AIService(db)
     
     # Context injection for specific profile if selected
@@ -61,7 +63,8 @@ async def chat_with_ai(request: ChatRequest, db: Session = Depends(get_db)):
     return {"response": response}
 
 @router.get("/models")
-async def get_ai_models(db: Session = Depends(get_db)):
+async def get_ai_models(db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     settings_obj = get_settings(db) # Get settings from the database (SQLAlchemy model)
     # Convert to Pydantic model to ensure we have a clean dict structure
     settings_schema = schemas_settings.Settings.model_validate(settings_obj)
@@ -70,7 +73,8 @@ async def get_ai_models(db: Session = Depends(get_db)):
     return {"models": all_models}
 
 @router.post("/ingest-hardware-knowledge")
-async def ingest_hardware_knowledge(request: KnowledgeIngestRequest, db: Session = Depends(get_db)):
+async def ingest_hardware_knowledge(request: KnowledgeIngestRequest, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     profile = db.query(models.ServerProfile).filter(models.ServerProfile.id == request.profile_id).first()
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
@@ -102,7 +106,7 @@ async def ingest_hardware_knowledge(request: KnowledgeIngestRequest, db: Session
     date_str = datetime.now().strftime("%Y%m%d")
     title = f"{profile.name} Hardware Spec {date_str}"
     
-    knowledge_item = models.KnowledgeItem(
+    knowledge_item = models.KnowledgeItem(tenant_id=tenant_id, 
         title=title,
         content=formatted_content,
         category="hardware",
@@ -115,7 +119,8 @@ async def ingest_hardware_knowledge(request: KnowledgeIngestRequest, db: Session
     return {"status": "success", "title": title}
 
 @router.post("/generate-summary")
-async def generate_system_summary(request: SummaryRequest, db: Session = Depends(get_db)):
+async def generate_system_summary(request: SummaryRequest, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     # Determine source of truth
     system_info = {}
     
