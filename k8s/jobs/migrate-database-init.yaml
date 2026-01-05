@@ -1,0 +1,77 @@
+---
+# Initialize alembic and run tenant migration
+# This handles databases that were created before alembic
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: unity-db-migrate-init
+  namespace: unity
+  labels:
+    app: unity-backend
+    job: database-migration
+spec:
+  ttlSecondsAfterFinished: 3600
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: unity-backend
+        job: database-migration
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: migrate
+        image: docker.io/library/unity-backend:latest
+        imagePullPolicy: Never
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            export DATABASE_URL="postgresql+psycopg2://homelab_user:${POSTGRES_PASSWORD}@postgres-service.unity.svc.cluster.local:5432/homelab_db"
+            echo "=============================================="
+            echo "Unity Database Migration - Initial Setup"
+            echo "=============================================="
+            echo ""
+            echo "Step 1: Check if alembic_version table exists..."
+            ALEMBIC_EXISTS=$(psql "${DATABASE_URL}" -tAc "SELECT to_regclass('public.alembic_version');")
+            
+            if [ "$ALEMBIC_EXISTS" = "alembic_version" ]; then
+              echo "Alembic already initialized, checking version..."
+              alembic current
+            else
+              echo "Alembic not initialized. Need to stamp database..."
+              echo "Checking for existing tenant tables..."
+              TENANT_EXISTS=$(psql "${DATABASE_URL}" -tAc "SELECT to_regclass('public.tenants');")
+              
+              if [ "$TENANT_EXISTS" = "tenants" ]; then
+                echo "Tenant tables exist - stamping as tenant_support_001 (current version)"
+                alembic stamp tenant_support_001
+              else
+                echo "No tenant tables - stamping as base and upgrading"
+                alembic stamp base
+              fi
+            fi
+            
+            echo ""
+            echo "Step 2: Running migrations to latest..."
+            alembic upgrade head
+            
+            echo ""
+            echo "Step 3: Verifying final version..."
+            alembic current
+            
+            echo ""
+            echo "Step 4: Ensuring 'default' tenant exists..."
+            psql "${DATABASE_URL}" -c "INSERT INTO tenants (id, name, status) VALUES ('default', 'Default Tenant', 'active') ON CONFLICT (id) DO NOTHING;"
+            
+            echo ""
+            echo "=============================================="
+            echo "Migration completed successfully!"
+            echo "=============================================="
+        env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: unity-secrets
+              key: postgres-password
+        - name: PYTHONUNBUFFERED
+          value: "1"
