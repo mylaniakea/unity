@@ -154,7 +154,7 @@ class ServerCredentialService:
         return credential
     
     @staticmethod
-    def update_last_used(db: Session, credential_id: int):
+    def update_last_used(db: Session, credential_id: int, tenant_id: str = "default"):
         """Update last_used timestamp"""
         
         stmt = select(ServerCredential).where(ServerCredential.id == credential_id)

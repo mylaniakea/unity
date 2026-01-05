@@ -165,7 +165,7 @@ class PluginManager:
         
         logger.info(f"Loaded plugin: {plugin_id}")
     
-    async def enable_plugin(self, plugin_id: str) -> bool:
+    async def enable_plugin(self, plugin_id: str, tenant_id: str = "default") -> bool:
         """
         Enable a plugin.
         
@@ -199,7 +199,7 @@ class PluginManager:
             self.db.rollback()
             return False
     
-    async def disable_plugin(self, plugin_id: str) -> bool:
+    async def disable_plugin(self, plugin_id: str, tenant_id: str = "default") -> bool:
         """
         Disable a plugin.
         
@@ -341,7 +341,7 @@ class PluginManager:
                 "message": f"Health check error: {str(e)}"
             }
     
-    def list_plugins(self) -> List[Dict[str, Any]]:
+    def list_plugins(self, tenant_id: str = "default") -> List[Dict[str, Any]]:
         """
         List all registered plugins.
         
@@ -367,7 +367,7 @@ class PluginManager:
             for p in plugins
         ]
     
-    def get_plugin_info(self, plugin_id: str) -> Optional[Dict[str, Any]]:
+    def get_plugin_info(self, plugin_id: str, tenant_id: str = "default") -> Optional[Dict[str, Any]]:
         """
         Get detailed plugin information.
         
