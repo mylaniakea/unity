@@ -18,3 +18,9 @@ importlib-metadata>=6.0.0 # For plugin entry points (Python <3.10 compat)
 kubernetes>=28.0.0 # For Kubernetes control plane integration
 pyyaml>=6.0 # For Kubernetes manifest parsing
 jinja2>=3.1.0 # For template rendering in orchestration
+# Plugin-specific dependencies
+pymysql>=1.1.0 # For MySQL/MariaDB monitoring
+pymongo>=4.6.0 # For MongoDB monitoring
+redis>=5.0.0 # For Redis monitoring
+influxdb-client>=1.38.0 # For InfluxDB monitoring
+docker>=7.0.0 # For Docker monitoring (note: already in main deps)
