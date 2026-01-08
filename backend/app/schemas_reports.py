@@ -23,9 +23,9 @@ class ReportAggregatedData(BaseModel):
     disk_current: float = 0
     snapshot_count: int = 1
     # Averages over period
-    cpu_usage_percent_avg: float
-    memory_percent_avg: float
-    disk_percent_avg: float
+    cpu_usage_percent_avg: float = 0.0
+    memory_percent_avg: float = 0.0
+    disk_percent_avg: float = 0.0
     storage_changes: List[StorageChange] = []
     package_updates_available: List[PackageUpdate] = []
     package_updates_recent: List[PackageUpdate] = []

@@ -337,43 +337,43 @@ const Settings: React.FC = () => {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
-        <p className="text-gray-400">Manage system configuration, security, and automation settings.</p>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Settings</h1>
+        <p className="text-muted-foreground">Manage system configuration, security, and automation settings.</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-1 mb-6 bg-gray-800 p-1 rounded-lg">
+      <div className="flex space-x-1 mb-6 bg-card/50 p-1 rounded-xl backdrop-blur-sm">
         <button
           onClick={() => setActiveTab('ai')}
           className={`flex-1 px-4 py-2 rounded-md transition-colors ${
             activeTab === 'ai'
-              ? 'bg-blue-600 text-white'
-              : 'text-gray-400 hover:text-white hover:bg-gray-700'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground hover:bg-accent'
           }`}
         >
-          <SettingsIcon className="inline-block w-4 h-4 mr-2" />
+          <SettingsIcon className="inline-block w-4 h-4 mr-2 text-blue-500" />
           AI & System
         </button>
         <button
           onClick={() => setActiveTab('password')}
           className={`flex-1 px-4 py-2 rounded-md transition-colors ${
             activeTab === 'password'
-              ? 'bg-blue-600 text-white'
-              : 'text-gray-400 hover:text-white hover:bg-gray-700'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground hover:bg-accent'
           }`}
         >
-          <Lock className="inline-block w-4 h-4 mr-2" />
+          <Lock className="inline-block w-4 h-4 mr-2 text-green-500" />
           Security
         </button>
         <button
           onClick={() => setActiveTab('automations')}
           className={`flex-1 px-4 py-2 rounded-md transition-colors ${
             activeTab === 'automations'
-              ? 'bg-blue-600 text-white'
-              : 'text-gray-400 hover:text-white hover:bg-gray-700'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground hover:bg-accent'
           }`}
         >
-          <Cog className="inline-block w-4 h-4 mr-2" />
+          <Cog className="inline-block w-4 h-4 mr-2 text-purple-500" />
           Automations
         </button>
       </div>
@@ -382,15 +382,15 @@ const Settings: React.FC = () => {
       {activeTab === 'ai' && (
         <div className="space-y-6">
           {/* Orchestration */}
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-xl font-semibold text-white mb-4">AI Orchestration</h2>
+          <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
+            <h2 className="text-xl font-semibold text-foreground mb-4">AI Orchestration</h2>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Primary Provider</label>
+                <label className="block text-sm text-muted-foreground mb-2">Primary Provider</label>
                 <select
                   value={settings.primary_provider}
                   onChange={(e) => updateSetting('primary_provider', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-md"
+                  className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md"
                 >
                   <option value="ollama">Ollama</option>
                   <option value="google">Google</option>
@@ -399,11 +399,11 @@ const Settings: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Fallback Provider</label>
+                <label className="block text-sm text-muted-foreground mb-2">Fallback Provider</label>
                 <select
                   value={settings.fallback_provider}
                   onChange={(e) => updateSetting('fallback_provider', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-md"
+                  className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md"
                 >
                   <option value="ollama">Ollama</option>
                   <option value="google">Google</option>
@@ -412,12 +412,12 @@ const Settings: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Active Model</label>
+                <label className="block text-sm text-muted-foreground mb-2">Active Model</label>
                 <input
                   type="text"
                   value={settings.active_model}
                   onChange={(e) => updateSetting('active_model', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-md"
+                  className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md"
                   placeholder="e.g., llama2"
                 />
               </div>
@@ -425,25 +425,25 @@ const Settings: React.FC = () => {
           </div>
 
           {/* System Prompt */}
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-xl font-semibold text-white mb-4">System Prompt</h2>
+          <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
+            <h2 className="text-xl font-semibold text-foreground mb-4">System Prompt</h2>
             <textarea
               value={settings.system_prompt}
               onChange={(e) => updateSetting('system_prompt', e.target.value)}
-              className="w-full px-3 py-2 bg-gray-700 text-white rounded-md"
+              className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md"
               rows={4}
               placeholder="Enter system prompt for AI agent..."
             />
           </div>
 
           {/* Notification Settings */}
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-xl font-semibold text-white mb-4">Alert Notifications</h2>
+          <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
+            <h2 className="text-xl font-semibold text-foreground mb-4">Alert Notifications</h2>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-white">Enable Alert Sounds</p>
-                  <p className="text-sm text-gray-400">Play audio notification when alerts trigger</p>
+                  <p className="text-foreground">Enable Alert Sounds</p>
+                  <p className="text-sm text-muted-foreground">Play audio notification when alerts trigger</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
@@ -457,8 +457,8 @@ const Settings: React.FC = () => {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-white">Enable Push Notifications</p>
-                  <p className="text-sm text-gray-400">
+                  <p className="text-foreground">Enable Push Notifications</p>
+                  <p className="text-sm text-muted-foreground">
                     Receive browser notifications (Status: {pushNotificationStatus})
                   </p>
                 </div>
@@ -476,12 +476,12 @@ const Settings: React.FC = () => {
           </div>
 
           {/* Maintenance Mode */}
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-xl font-semibold text-white mb-4">Maintenance Mode</h2>
+          <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
+            <h2 className="text-xl font-semibold text-foreground mb-4">Maintenance Mode</h2>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-white">Enable Maintenance Mode</p>
-                <p className="text-sm text-gray-400">
+                <p className="text-foreground">Enable Maintenance Mode</p>
+                <p className="text-sm text-muted-foreground">
                   {settings.maintenance_mode_until
                     ? `Active until: ${new Date(settings.maintenance_mode_until).toLocaleString()}`
                     : 'System will be accessible to admins only'}
@@ -502,8 +502,8 @@ const Settings: React.FC = () => {
           {/* Provider Configurations */}
           <div className="grid grid-cols-2 gap-4">
             {/* Ollama */}
-            <div className="bg-gray-800 p-6 rounded-lg">
-              <h3 className="text-lg font-semibold text-white mb-4">Ollama</h3>
+            <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
+              <h3 className="text-lg font-semibold text-foreground mb-4">Ollama</h3>
               <div className="space-y-4">
                 <div className="flex items-center">
                   <input
@@ -512,25 +512,25 @@ const Settings: React.FC = () => {
                     onChange={(e) => updateProvider('ollama', 'enabled', e.target.checked)}
                     className="mr-2"
                   />
-                  <label className="text-sm text-gray-400">Enabled</label>
+                  <label className="text-sm text-muted-foreground">Enabled</label>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Base URL</label>
+                  <label className="block text-sm text-muted-foreground mb-1">Base URL</label>
                   <input
                     type="text"
                     value={settings.providers.ollama.url}
                     onChange={(e) => updateProvider('ollama', 'url', e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-md text-sm"
+                    className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md text-sm"
                     placeholder="http://localhost:11434"
                   />
                 </div>
                 {settings.providers.ollama.models.length > 0 && (
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Active Model</label>
+                    <label className="block text-sm text-muted-foreground mb-1">Active Model</label>
                     <select
                       value={settings.providers.ollama.active_model || ''}
                       onChange={(e) => updateProvider('ollama', 'active_model', e.target.value)}
-                      className="w-full px-3 py-2 bg-gray-700 text-white rounded-md text-sm"
+                      className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md text-sm"
                     >
                       <option value="">Select model</option>
                       {settings.providers.ollama.models.map((model) => (
@@ -545,8 +545,8 @@ const Settings: React.FC = () => {
             </div>
 
             {/* OpenAI */}
-            <div className="bg-gray-800 p-6 rounded-lg">
-              <h3 className="text-lg font-semibold text-white mb-4">OpenAI</h3>
+            <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
+              <h3 className="text-lg font-semibold text-foreground mb-4">OpenAI</h3>
               <div className="space-y-4">
                 <div className="flex items-center">
                   <input
@@ -555,15 +555,15 @@ const Settings: React.FC = () => {
                     onChange={(e) => updateProvider('openai', 'enabled', e.target.checked)}
                     className="mr-2"
                   />
-                  <label className="text-sm text-gray-400">Enabled</label>
+                  <label className="text-sm text-muted-foreground">Enabled</label>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">API Key</label>
+                  <label className="block text-sm text-muted-foreground mb-1">API Key</label>
                   <input
                     type="password"
                     value={settings.providers.openai.api_key}
                     onChange={(e) => updateProvider('openai', 'api_key', e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-md text-sm"
+                    className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md text-sm"
                     placeholder="sk-..."
                   />
                 </div>
@@ -571,8 +571,8 @@ const Settings: React.FC = () => {
             </div>
 
             {/* Google */}
-            <div className="bg-gray-800 p-6 rounded-lg">
-              <h3 className="text-lg font-semibold text-white mb-4">Google AI</h3>
+            <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
+              <h3 className="text-lg font-semibold text-foreground mb-4">Google AI</h3>
               <div className="space-y-4">
                 <div className="flex items-center">
                   <input
@@ -581,15 +581,15 @@ const Settings: React.FC = () => {
                     onChange={(e) => updateProvider('google', 'enabled', e.target.checked)}
                     className="mr-2"
                   />
-                  <label className="text-sm text-gray-400">Enabled</label>
+                  <label className="text-sm text-muted-foreground">Enabled</label>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">API Key</label>
+                  <label className="block text-sm text-muted-foreground mb-1">API Key</label>
                   <input
                     type="password"
                     value={settings.providers.google.api_key}
                     onChange={(e) => updateProvider('google', 'api_key', e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-md text-sm"
+                    className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md text-sm"
                     placeholder="AI..."
                   />
                 </div>
@@ -597,8 +597,8 @@ const Settings: React.FC = () => {
             </div>
 
             {/* Anthropic */}
-            <div className="bg-gray-800 p-6 rounded-lg">
-              <h3 className="text-lg font-semibold text-white mb-4">Anthropic</h3>
+            <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
+              <h3 className="text-lg font-semibold text-foreground mb-4">Anthropic</h3>
               <div className="space-y-4">
                 <div className="flex items-center">
                   <input
@@ -607,15 +607,15 @@ const Settings: React.FC = () => {
                     onChange={(e) => updateProvider('anthropic', 'enabled', e.target.checked)}
                     className="mr-2"
                   />
-                  <label className="text-sm text-gray-400">Enabled</label>
+                  <label className="text-sm text-muted-foreground">Enabled</label>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">API Key</label>
+                  <label className="block text-sm text-muted-foreground mb-1">API Key</label>
                   <input
                     type="password"
                     value={settings.providers.anthropic.api_key}
                     onChange={(e) => updateProvider('anthropic', 'api_key', e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-md text-sm"
+                    className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md text-sm"
                     placeholder="sk-ant-..."
                   />
                 </div>
@@ -625,7 +625,7 @@ const Settings: React.FC = () => {
 
           <button
             onClick={handleSave}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="w-full px-4 py-2 bg-primary text-primary-foreground shadow-sm rounded-md hover:bg-blue-700"
           >
             <Save className="inline-block w-4 h-4 mr-2" />
             Save AI Settings
@@ -636,40 +636,40 @@ const Settings: React.FC = () => {
       {/* Security Tab */}
       {activeTab === 'password' && (
         <div className="space-y-6">
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-xl font-semibold text-white mb-4">Change Password</h2>
+          <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
+            <h2 className="text-xl font-semibold text-foreground mb-4">Change Password</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Current Password</label>
+                <label className="block text-sm text-muted-foreground mb-2">Current Password</label>
                 <div className="relative">
                   <input
                     type={showCurrentPassword ? 'text' : 'password'}
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-md pr-10"
+                    className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md pr-10"
                   />
                   <button
                     type="button"
                     onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    className="absolute right-2 top-2 text-gray-400 hover:text-white"
+                    className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
                   >
                     {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">New Password</label>
+                <label className="block text-sm text-muted-foreground mb-2">New Password</label>
                 <div className="relative">
                   <input
                     type={showNewPassword ? 'text' : 'password'}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-md pr-10"
+                    className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md pr-10"
                   />
                   <button
                     type="button"
                     onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-2 top-2 text-gray-400 hover:text-white"
+                    className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
                   >
                     {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -683,24 +683,24 @@ const Settings: React.FC = () => {
                           style={{ width: `${(passwordStrength.strength / 3) * 100}%` }}
                         />
                       </div>
-                      <span className="text-sm text-gray-400">{passwordStrength.label}</span>
+                      <span className="text-sm text-muted-foreground">{passwordStrength.label}</span>
                     </div>
                   </div>
                 )}
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Confirm New Password</label>
+                <label className="block text-sm text-muted-foreground mb-2">Confirm New Password</label>
                 <div className="relative">
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-md pr-10"
+                    className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md pr-10"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-2 top-2 text-gray-400 hover:text-white"
+                    className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
                   >
                     {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -708,7 +708,7 @@ const Settings: React.FC = () => {
               </div>
               <button
                 onClick={handlePasswordChange}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="w-full px-4 py-2 bg-primary text-primary-foreground shadow-sm rounded-md hover:bg-blue-700"
               >
                 <Key className="inline-block w-4 h-4 mr-2" />
                 Change Password
@@ -721,15 +721,15 @@ const Settings: React.FC = () => {
       {/* Automations Tab */}
       {activeTab === 'automations' && (
         <div className="space-y-6">
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-xl font-semibold text-white mb-4">Report Automation</h2>
+          <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
+            <h2 className="text-xl font-semibold text-foreground mb-4">Report Automation</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">24-Hour Report</label>
+                <label className="block text-sm text-muted-foreground mb-2">24-Hour Report</label>
                 <select
                   value={parseCronTime(settings.cron_24hr_report || '0 2 * * *')}
                   onChange={(e) => updateCronTime('cron_24hr_report', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-md"
+                  className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md"
                 >
                   {generateTimeOptions().map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -740,13 +740,13 @@ const Settings: React.FC = () => {
                 <p className="text-xs text-gray-500 mt-1">Daily report generation time</p>
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">7-Day Report</label>
+                <label className="block text-sm text-muted-foreground mb-2">7-Day Report</label>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <select
                       value={parseCronTime(settings.cron_7day_report || '0 3 * * 1')}
                       onChange={(e) => updateCronTime('cron_7day_report', e.target.value)}
-                      className="w-full px-3 py-2 bg-gray-700 text-white rounded-md"
+                      className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md"
                     >
                       {generateTimeOptions().map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -759,7 +759,7 @@ const Settings: React.FC = () => {
                     <select
                       value={settings.cron_7day_report?.split(' ')[4] || '1'}
                       onChange={(e) => updateCronDayOfWeek('cron_7day_report', e.target.value)}
-                      className="w-full px-3 py-2 bg-gray-700 text-white rounded-md"
+                      className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md"
                     >
                       <option value="1">Monday</option>
                       <option value="2">Tuesday</option>
@@ -774,13 +774,13 @@ const Settings: React.FC = () => {
                 <p className="text-xs text-gray-500 mt-1">Weekly report generation schedule</p>
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Monthly Report</label>
+                <label className="block text-sm text-muted-foreground mb-2">Monthly Report</label>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <select
                       value={parseCronTime(settings.cron_monthly_report || '0 4 1 * *')}
                       onChange={(e) => updateCronTime('cron_monthly_report', e.target.value)}
-                      className="w-full px-3 py-2 bg-gray-700 text-white rounded-md"
+                      className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md"
                     >
                       {generateTimeOptions().map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -793,7 +793,7 @@ const Settings: React.FC = () => {
                     <select
                       value={settings.cron_monthly_report?.split(' ')[2] || '1'}
                       onChange={(e) => updateCronDayOfMonth('cron_monthly_report', e.target.value)}
-                      className="w-full px-3 py-2 bg-gray-700 text-white rounded-md"
+                      className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md"
                     >
                       {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
                         <option key={day} value={day}>
@@ -808,14 +808,14 @@ const Settings: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-xl font-semibold text-white mb-4">Data Polling</h2>
+          <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
+            <h2 className="text-xl font-semibold text-foreground mb-4">Data Polling</h2>
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Polling Interval</label>
+              <label className="block text-sm text-muted-foreground mb-2">Polling Interval</label>
               <select
                 value={settings.polling_interval || 30}
                 onChange={(e) => updateSetting('polling_interval', parseInt(e.target.value))}
-                className="w-full px-3 py-2 bg-gray-700 text-white rounded-md"
+                className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md"
               >
                 <option value="15">15 seconds</option>
                 <option value="30">30 seconds</option>
@@ -832,7 +832,7 @@ const Settings: React.FC = () => {
 
           <button
             onClick={handleSave}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="w-full px-4 py-2 bg-primary text-primary-foreground shadow-sm rounded-md hover:bg-blue-700"
           >
             <Save className="inline-block w-4 h-4 mr-2" />
             Save Automation Settings

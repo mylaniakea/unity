@@ -371,43 +371,43 @@ const AlertsAndThresholds: React.FC = () => {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-white mb-2">Alerts & Thresholds</h1>
-        <p className="text-gray-400">Configure monitoring thresholds, view alerts, and manage notification channels.</p>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Alerts & Thresholds</h1>
+        <p className="text-muted-foreground">Configure monitoring thresholds, view alerts, and manage notification channels.</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-1 mb-6 bg-gray-800 p-1 rounded-lg">
+      <div className="flex space-x-1 mb-6 bg-card/50 p-1 rounded-xl backdrop-blur-sm">
         <button
           onClick={() => setActiveTab('thresholds')}
           className={`flex-1 px-4 py-2 rounded-md transition-colors ${
             activeTab === 'thresholds'
-              ? 'bg-blue-600 text-white'
-              : 'text-gray-400 hover:text-white hover:bg-gray-700'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground hover:bg-accent'
           }`}
         >
-          <AlertTriangle className="inline-block w-4 h-4 mr-2" />
+          <AlertTriangle className="inline-block w-4 h-4 mr-2 text-yellow-500" />
           Threshold Rules ({rules.length})
         </button>
         <button
           onClick={() => setActiveTab('alerts')}
           className={`flex-1 px-4 py-2 rounded-md transition-colors ${
             activeTab === 'alerts'
-              ? 'bg-blue-600 text-white'
-              : 'text-gray-400 hover:text-white hover:bg-gray-700'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground hover:bg-accent'
           }`}
         >
-          <Bell className="inline-block w-4 h-4 mr-2" />
+          <Bell className="inline-block w-4 h-4 mr-2 text-red-500" />
           Active Alerts ({unresolvedAlerts.length})
         </button>
         <button
           onClick={() => setActiveTab('channels')}
           className={`flex-1 px-4 py-2 rounded-md transition-colors ${
             activeTab === 'channels'
-              ? 'bg-blue-600 text-white'
-              : 'text-gray-400 hover:text-white hover:bg-gray-700'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground hover:bg-accent'
           }`}
         >
-          <Volume2 className="inline-block w-4 h-4 mr-2" />
+          <Volume2 className="inline-block w-4 h-4 mr-2 text-blue-500" />
           Notification Channels ({channels.length})
         </button>
       </div>
@@ -416,12 +416,12 @@ const AlertsAndThresholds: React.FC = () => {
       {activeTab === 'thresholds' && (
         <div>
           <div className="mb-4 flex justify-between items-center">
-            <div className="text-sm text-gray-400">
+            <div className="text-sm text-muted-foreground">
               {rules.filter(r => r.enabled).length} active rules
             </div>
             <button
               onClick={handleCreateRule}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              className="flex items-center px-4 py-2 bg-primary text-primary-foreground shadow-sm rounded-md hover:bg-blue-700 transition-colors"
             >
               <Plus className="w-4 h-4 mr-2" />
               Create Rule
@@ -430,27 +430,27 @@ const AlertsAndThresholds: React.FC = () => {
 
           {/* Create/Edit Form */}
           {(editingRule || isCreatingRule) && (
-            <div className="mb-6 bg-gray-800 p-4 rounded-lg border border-gray-700">
-              <h3 className="text-lg font-semibold text-white mb-4">
+            <div className="mb-6 bg-card border border-border p-6 rounded-xl hover:border-primary/50 transition-all shadow-sm">
+              <h3 className="text-lg font-semibold text-foreground mb-4">
                 {isCreatingRule ? 'Create New Rule' : 'Edit Rule'}
               </h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Rule Name</label>
+                  <label className="block text-sm text-muted-foreground mb-1">Rule Name</label>
                   <input
                     type="text"
                     value={editingRule?.name || ''}
                     onChange={(e) => setEditingRule({ ...editingRule!, name: e.target.value })}
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-md"
+                    className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md"
                     placeholder="High CPU Usage Alert"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Server (Optional)</label>
+                  <label className="block text-sm text-muted-foreground mb-1">Server (Optional)</label>
                   <select
                     value={editingRule?.server_id || ''}
                     onChange={(e) => setEditingRule({ ...editingRule!, server_id: e.target.value ? Number(e.target.value) : null })}
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-md"
+                    className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md"
                   >
                     <option value="">All Servers</option>
                     {servers.map((s) => (
@@ -461,11 +461,11 @@ const AlertsAndThresholds: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Metric</label>
+                  <label className="block text-sm text-muted-foreground mb-1">Metric</label>
                   <select
                     value={editingRule?.metric || 'cpu_percent'}
                     onChange={(e) => setEditingRule({ ...editingRule!, metric: e.target.value })}
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-md"
+                    className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md"
                   >
                     {metricOptions.map((m) => (
                       <option key={m.value} value={m.value}>
@@ -475,11 +475,11 @@ const AlertsAndThresholds: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Condition</label>
+                  <label className="block text-sm text-muted-foreground mb-1">Condition</label>
                   <select
                     value={editingRule?.condition || 'greater_than'}
                     onChange={(e) => setEditingRule({ ...editingRule!, condition: e.target.value })}
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-md"
+                    className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md"
                   >
                     {conditionOptions.map((c) => (
                       <option key={c.value} value={c.value}>
@@ -489,20 +489,20 @@ const AlertsAndThresholds: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Threshold Value</label>
+                  <label className="block text-sm text-muted-foreground mb-1">Threshold Value</label>
                   <input
                     type="number"
                     value={editingRule?.threshold_value || 0}
                     onChange={(e) => setEditingRule({ ...editingRule!, threshold_value: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-md"
+                    className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Severity</label>
+                  <label className="block text-sm text-muted-foreground mb-1">Severity</label>
                   <select
                     value={editingRule?.severity || 'warning'}
                     onChange={(e) => setEditingRule({ ...editingRule!, severity: e.target.value })}
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-md"
+                    className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md"
                   >
                     {severityOptions.map((s) => (
                       <option key={s.value} value={s.value}>
@@ -519,12 +519,12 @@ const AlertsAndThresholds: React.FC = () => {
                   onChange={(e) => setEditingRule({ ...editingRule!, enabled: e.target.checked })}
                   className="mr-2"
                 />
-                <label className="text-sm text-gray-400">Enabled</label>
+                <label className="text-sm text-muted-foreground">Enabled</label>
               </div>
               <div className="flex space-x-2 mt-4">
                 <button
                   onClick={handleSaveRule}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  className="px-4 py-2 bg-green-600 text-foreground rounded-md hover:bg-green-700"
                 >
                   <Save className="inline-block w-4 h-4 mr-2" />
                   Save
@@ -534,7 +534,7 @@ const AlertsAndThresholds: React.FC = () => {
                     setEditingRule(null);
                     setIsCreatingRule(false);
                   }}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                  className="px-4 py-2 bg-gray-600 text-foreground rounded-md hover:bg-gray-700"
                 >
                   <X className="inline-block w-4 h-4 mr-2" />
                   Cancel
@@ -545,17 +545,17 @@ const AlertsAndThresholds: React.FC = () => {
 
           {/* Rules List */}
           {rules.length === 0 ? (
-            <div className="bg-gray-800 p-8 rounded-lg text-center text-gray-400">
+            <div className="bg-card border border-border p-8 rounded-xl shadow-sm text-center text-muted-foreground">
               No threshold rules defined yet. Create your first rule to start monitoring.
             </div>
           ) : (
             <div className="space-y-2">
               {rules.map((rule) => (
-                <div key={rule.id} className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                <div key={rule.id} className="bg-card border border-border p-6 rounded-xl hover:border-primary/50 transition-all shadow-sm">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-2">
-                        <h3 className="text-lg font-semibold text-white">{rule.name}</h3>
+                        <h3 className="text-lg font-semibold text-foreground">{rule.name}</h3>
                         <span
                           className={`px-2 py-1 rounded text-xs font-semibold ${
                             severityOptions.find((s) => s.value === rule.severity)?.color
@@ -565,18 +565,18 @@ const AlertsAndThresholds: React.FC = () => {
                         </span>
                         <span
                           className={`px-2 py-1 rounded text-xs ${
-                            rule.enabled ? 'bg-green-600 text-white' : 'bg-gray-600 text-gray-300'
+                            rule.enabled ? 'bg-green-600 text-foreground' : 'bg-gray-600 text-gray-300'
                           }`}
                         >
                           {rule.enabled ? 'Enabled' : 'Disabled'}
                         </span>
                         {rule.muted_until && (
-                          <span className="px-2 py-1 rounded text-xs bg-yellow-600 text-white">
+                          <span className="px-2 py-1 rounded text-xs bg-yellow-600 text-foreground">
                             Muted until {new Date(rule.muted_until).toLocaleString()}
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-400">
+                      <p className="text-sm text-muted-foreground">
                         {metricOptions.find((m) => m.value === rule.metric)?.label}{' '}
                         {conditionOptions.find((c) => c.value === rule.condition)?.label}{' '}
                         {rule.threshold_value}
@@ -588,7 +588,7 @@ const AlertsAndThresholds: React.FC = () => {
                     <div className="flex space-x-2">
                       <button
                         onClick={() => handleToggleEnabled(rule)}
-                        className="p-2 text-gray-400 hover:text-white transition-colors"
+                        className="p-2 text-muted-foreground hover:text-foreground transition-colors"
                         title={rule.enabled ? 'Disable' : 'Enable'}
                       >
                         {rule.enabled ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -596,7 +596,7 @@ const AlertsAndThresholds: React.FC = () => {
                       {rule.enabled && (
                         <button
                           onClick={() => handleMuteRule(rule.id!, 60)}
-                          className="p-2 text-gray-400 hover:text-white transition-colors"
+                          className="p-2 text-muted-foreground hover:text-foreground transition-colors"
                           title="Mute for 1 hour"
                         >
                           <Clock className="w-4 h-4" />
@@ -607,13 +607,13 @@ const AlertsAndThresholds: React.FC = () => {
                           setEditingRule(rule);
                           setIsCreatingRule(false);
                         }}
-                        className="p-2 text-gray-400 hover:text-white transition-colors"
+                        className="p-2 text-muted-foreground hover:text-foreground transition-colors"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteRule(rule.id!)}
-                        className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                        className="p-2 text-muted-foreground hover:text-red-500 transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -633,19 +633,19 @@ const AlertsAndThresholds: React.FC = () => {
             <div className="flex space-x-4 text-sm">
               <span className="text-red-500 font-semibold">Critical: {criticalCount}</span>
               <span className="text-yellow-500 font-semibold">Warning: {warningCount}</span>
-              <span className="text-gray-400">Total Unresolved: {unresolvedAlerts.length}</span>
+              <span className="text-muted-foreground">Total Unresolved: {unresolvedAlerts.length}</span>
             </div>
             {unresolvedAlerts.length > 0 && (
               <div className="flex space-x-2">
                 <button
                   onClick={handleAcknowledgeAll}
-                  className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
+                  className="px-4 py-2 bg-yellow-600 text-foreground rounded-md hover:bg-yellow-700"
                 >
                   Acknowledge All
                 </button>
                 <button
                   onClick={handleResolveAll}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  className="px-4 py-2 bg-green-600 text-foreground rounded-md hover:bg-green-700"
                 >
                   Resolve All
                 </button>
@@ -654,7 +654,7 @@ const AlertsAndThresholds: React.FC = () => {
           </div>
 
           {unresolvedAlerts.length === 0 ? (
-            <div className="bg-gray-800 p-8 rounded-lg text-center text-gray-400">
+            <div className="bg-card border border-border p-8 rounded-xl shadow-sm text-center text-muted-foreground">
               <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-500" />
               <p className="text-lg">All clear! No active alerts.</p>
             </div>
@@ -677,30 +677,30 @@ const AlertsAndThresholds: React.FC = () => {
                         <span
                           className={`px-2 py-1 rounded text-xs font-semibold ${
                             alert.severity === 'critical'
-                              ? 'bg-red-600 text-white'
+                              ? 'bg-red-600 text-foreground'
                               : alert.severity === 'warning'
-                              ? 'bg-yellow-600 text-white'
-                              : 'bg-blue-600 text-white'
+                              ? 'bg-yellow-600 text-foreground'
+                              : 'bg-primary text-primary-foreground shadow-sm'
                           }`}
                         >
                           {alert.severity.toUpperCase()}
                         </span>
                         {alert.server_name && (
-                          <span className="text-sm text-gray-400">{alert.server_name}</span>
+                          <span className="text-sm text-muted-foreground">{alert.server_name}</span>
                         )}
                         {alert.acknowledged_at && (
-                          <span className="px-2 py-1 rounded text-xs bg-gray-600 text-white">
+                          <span className="px-2 py-1 rounded text-xs bg-gray-600 text-foreground">
                             Acknowledged
                           </span>
                         )}
                         {alert.snoozed_until && (
-                          <span className="px-2 py-1 rounded text-xs bg-purple-600 text-white">
+                          <span className="px-2 py-1 rounded text-xs bg-purple-600 text-foreground">
                             Snoozed until {new Date(alert.snoozed_until).toLocaleString()}
                           </span>
                         )}
                       </div>
-                      <p className="text-white mb-1">{alert.message}</p>
-                      <p className="text-sm text-gray-400">
+                      <p className="text-foreground mb-1">{alert.message}</p>
+                      <p className="text-sm text-muted-foreground">
                         Triggered: {new Date(alert.triggered_at).toLocaleString()}
                       </p>
                     </div>
@@ -708,7 +708,7 @@ const AlertsAndThresholds: React.FC = () => {
                       {!alert.acknowledged_at && (
                         <button
                           onClick={() => handleAcknowledge(alert.id)}
-                          className="px-3 py-1 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 text-sm"
+                          className="px-3 py-1 bg-yellow-600 text-foreground rounded-md hover:bg-yellow-700 text-sm"
                         >
                           Acknowledge
                         </button>
@@ -721,7 +721,7 @@ const AlertsAndThresholds: React.FC = () => {
                                 showSnoozeDropdownForAlert === alert.id ? null : alert.id
                               )
                             }
-                            className="px-3 py-1 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm"
+                            className="px-3 py-1 bg-purple-600 text-foreground rounded-md hover:bg-purple-700 text-sm"
                           >
                             Snooze
                           </button>
@@ -729,25 +729,25 @@ const AlertsAndThresholds: React.FC = () => {
                             <div className="absolute right-0 mt-1 w-40 bg-gray-700 rounded-md shadow-lg z-10">
                               <button
                                 onClick={() => handleSnooze(alert.id, 5)}
-                                className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-600"
+                                className="block w-full text-left px-4 py-2 text-sm text-foreground hover:bg-gray-600"
                               >
                                 5 Minutes
                               </button>
                               <button
                                 onClick={() => handleSnooze(alert.id, 30)}
-                                className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-600"
+                                className="block w-full text-left px-4 py-2 text-sm text-foreground hover:bg-gray-600"
                               >
                                 30 Minutes
                               </button>
                               <button
                                 onClick={() => handleSnooze(alert.id, 60)}
-                                className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-600"
+                                className="block w-full text-left px-4 py-2 text-sm text-foreground hover:bg-gray-600"
                               >
                                 1 Hour
                               </button>
                               <button
                                 onClick={() => handleSnooze(alert.id, 1440)}
-                                className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-600"
+                                className="block w-full text-left px-4 py-2 text-sm text-foreground hover:bg-gray-600"
                               >
                                 24 Hours
                               </button>
@@ -757,14 +757,14 @@ const AlertsAndThresholds: React.FC = () => {
                       ) : (
                         <button
                           onClick={() => handleSnooze(alert.id, 0)}
-                          className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-sm"
+                          className="px-3 py-1 bg-gray-600 text-foreground rounded-md hover:bg-gray-700 text-sm"
                         >
                           Unsnooze
                         </button>
                       )}
                       <button
                         onClick={() => handleResolve(alert.id)}
-                        className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
+                        className="px-3 py-1 bg-green-600 text-foreground rounded-md hover:bg-green-700 text-sm"
                       >
                         Resolve
                       </button>
@@ -781,21 +781,21 @@ const AlertsAndThresholds: React.FC = () => {
       {activeTab === 'channels' && (
         <div>
           <div className="mb-4">
-            <h2 className="text-xl font-semibold text-white mb-2">Configure Notification Channels</h2>
-            <p className="text-sm text-gray-400">
+            <h2 className="text-xl font-semibold text-foreground mb-2">Configure Notification Channels</h2>
+            <p className="text-sm text-muted-foreground">
               Set up how you want to be notified when alerts are triggered.
             </p>
           </div>
 
           {/* Channel Configuration Form */}
           {(editingChannel || isConfiguringChannel) && (
-            <div className="mb-6 bg-gray-800 p-4 rounded-lg border border-gray-700">
-              <h3 className="text-lg font-semibold text-white mb-4">
+            <div className="mb-6 bg-card border border-border p-6 rounded-xl hover:border-primary/50 transition-all shadow-sm">
+              <h3 className="text-lg font-semibold text-foreground mb-4">
                 {editingChannel?.id ? 'Edit Channel' : 'Create Channel'}
               </h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Channel Type</label>
+                  <label className="block text-sm text-muted-foreground mb-1">Channel Type</label>
                   <select
                     value={editingChannel?.channel_type || ''}
                     onChange={(e) => {
@@ -808,7 +808,7 @@ const AlertsAndThresholds: React.FC = () => {
                         template: channelDef ? '{server_name} - {message} (Severity: {severity})' : '',
                       });
                     }}
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-md"
+                    className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md"
                     disabled={!!editingChannel?.id}
                   >
                     <option value="">Select a channel type</option>
@@ -822,12 +822,12 @@ const AlertsAndThresholds: React.FC = () => {
                 {editingChannel?.channel_type && (
                   <>
                     <div>
-                      <label className="block text-sm text-gray-400 mb-1">Channel Name</label>
+                      <label className="block text-sm text-muted-foreground mb-1">Channel Name</label>
                       <input
                         type="text"
                         value={editingChannel?.name || ''}
                         onChange={(e) => setEditingChannel({ ...editingChannel!, name: e.target.value })}
-                        className="w-full px-3 py-2 bg-gray-700 text-white rounded-md"
+                        className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md"
                       />
                     </div>
                     {availableChannels
@@ -838,7 +838,7 @@ const AlertsAndThresholds: React.FC = () => {
                           .config_schema
                       ).map(([key, schema]: [string, any]) => (
                         <div key={key}>
-                          <label className="block text-sm text-gray-400 mb-1">
+                          <label className="block text-sm text-muted-foreground mb-1">
                             {schema.title || key}
                           </label>
                           {schema.type === 'string' && schema.enum ? (
@@ -850,7 +850,7 @@ const AlertsAndThresholds: React.FC = () => {
                                   config: { ...editingChannel.config, [key]: e.target.value },
                                 })
                               }
-                              className="w-full px-3 py-2 bg-gray-700 text-white rounded-md"
+                              className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md"
                             >
                               {schema.enum.map((opt: string) => (
                                 <option key={opt} value={opt}>
@@ -868,7 +868,7 @@ const AlertsAndThresholds: React.FC = () => {
                                   config: { ...editingChannel.config, [key]: e.target.value },
                                 })
                               }
-                              className="w-full px-3 py-2 bg-gray-700 text-white rounded-md"
+                              className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md"
                               placeholder={schema.description}
                             />
                           ) : schema.type === 'boolean' ? (
@@ -890,7 +890,7 @@ const AlertsAndThresholds: React.FC = () => {
                         </div>
                       ))}
                     <div>
-                      <label className="block text-sm text-gray-400 mb-1">
+                      <label className="block text-sm text-muted-foreground mb-1">
                         Message Template
                       </label>
                       <textarea
@@ -898,7 +898,7 @@ const AlertsAndThresholds: React.FC = () => {
                         onChange={(e) =>
                           setEditingChannel({ ...editingChannel!, template: e.target.value })
                         }
-                        className="w-full px-3 py-2 bg-gray-700 text-white rounded-md"
+                        className="w-full px-3 py-2 bg-input text-foreground border border-border rounded-md"
                         rows={3}
                       />
                       <p className="text-xs text-gray-500 mt-1">
@@ -920,7 +920,7 @@ const AlertsAndThresholds: React.FC = () => {
                         }
                         className="mr-2"
                       />
-                      <label className="text-sm text-gray-400">Enabled</label>
+                      <label className="text-sm text-muted-foreground">Enabled</label>
                     </div>
                   </>
                 )}
@@ -928,7 +928,7 @@ const AlertsAndThresholds: React.FC = () => {
               <div className="flex space-x-2 mt-4">
                 <button
                   onClick={handleSaveChannel}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  className="px-4 py-2 bg-green-600 text-foreground rounded-md hover:bg-green-700"
                   disabled={!editingChannel?.channel_type}
                 >
                   <Save className="inline-block w-4 h-4 mr-2" />
@@ -939,7 +939,7 @@ const AlertsAndThresholds: React.FC = () => {
                     setEditingChannel(null);
                     setIsConfiguringChannel(false);
                   }}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                  className="px-4 py-2 bg-gray-600 text-foreground rounded-md hover:bg-gray-700"
                 >
                   <X className="inline-block w-4 h-4 mr-2" />
                   Cancel
@@ -956,29 +956,29 @@ const AlertsAndThresholds: React.FC = () => {
                 return (
                   <div
                     key={channelDef.type}
-                    className="bg-gray-800 p-4 rounded-lg border border-gray-700"
+                    className="bg-card border border-border p-6 rounded-xl hover:border-primary/50 transition-all shadow-sm"
                   >
-                    <h3 className="text-lg font-semibold text-white mb-2">{channelDef.name}</h3>
-                    <p className="text-sm text-gray-400 mb-4">{channelDef.description}</p>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">{channelDef.name}</h3>
+                    <p className="text-sm text-muted-foreground mb-4">{channelDef.description}</p>
                     {configured ? (
                       <div className="flex space-x-2">
                         <button
                           onClick={() => setEditingChannel(configured)}
-                          className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                          className="flex-1 px-3 py-2 bg-primary text-primary-foreground shadow-sm rounded-md hover:bg-blue-700 text-sm"
                         >
                           <Edit2 className="inline-block w-4 h-4 mr-1" />
                           Edit
                         </button>
                         <button
                           onClick={() => handleTestChannel(configured.id)}
-                          className="flex-1 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
+                          className="flex-1 px-3 py-2 bg-green-600 text-foreground rounded-md hover:bg-green-700 text-sm"
                           disabled={!configured.enabled}
                         >
                           Test
                         </button>
                         <button
                           onClick={() => handleDeleteChannel(configured.id)}
-                          className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm"
+                          className="px-3 py-2 bg-red-600 text-foreground rounded-md hover:bg-red-700 text-sm"
                         >
                           <Trash2 className="inline-block w-4 h-4" />
                         </button>
@@ -996,7 +996,7 @@ const AlertsAndThresholds: React.FC = () => {
                           });
                           setIsConfiguringChannel(true);
                         }}
-                        className="w-full px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-sm"
+                        className="w-full px-3 py-2 bg-gray-600 text-foreground rounded-md hover:bg-gray-700 text-sm"
                       >
                         <Plus className="inline-block w-4 h-4 mr-1" />
                         Configure
