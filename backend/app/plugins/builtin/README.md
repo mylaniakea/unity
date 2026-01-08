@@ -1,193 +1,311 @@
 # Built-in Plugins
 
-This directory contains built-in plugins that ship with Unity.
+This directory contains all built-in monitoring plugins for Unity. These plugins are production-ready and cover common monitoring use cases.
 
 ## Available Plugins
 
 ### System Monitoring
-
-#### system-info
-**Category:** System  
-**Description:** Collects comprehensive system information including CPU, memory, disk, and network stats.  
-**Requirements:** psutil  
-**Configurable:** Yes (network stats can be toggled)
-
-#### process-monitor
-**Category:** System  
-**Description:** Monitors system processes, tracks top CPU/memory consumers, and provides process counts by status.  
-**Requirements:** psutil  
-**Configurable:** Yes (top N processes, sort by CPU/memory, include command lines)
+- **system-info** - Comprehensive system information (CPU, memory, disk, network)
+- **process-monitor** - Process tracking and resource consumption analysis
+- **thermal-monitor** - Temperature monitoring for CPU/GPU and fan speeds
 
 ### Network Monitoring
-
-#### network-monitor
-**Category:** Network  
-**Description:** Monitors network interface statistics, throughput, errors, and active connections.  
-**Requirements:** psutil  
-**Configurable:** Yes (interface filtering, connection tracking)
+- **network-monitor** - Network interface statistics, throughput, and connections
 
 ### Storage Monitoring
+- **disk-monitor** - Disk usage, I/O statistics, and partition monitoring
 
-#### disk-monitor
-**Category:** Storage  
-**Description:** Monitors disk usage, I/O statistics, and mounted partitions with configurable warning thresholds.  
-**Requirements:** psutil  
-**Configurable:** Yes (exclude filesystem types, I/O stats, warning threshold)
+### Container Orchestration
+- **docker-monitor** - Docker container stats, health, and network monitoring
 
----
+### Database Monitoring
+- **postgres-monitor** - PostgreSQL metrics (connections, queries, cache hits)
+- **mysql-monitor** - MySQL/MariaDB metrics (threads, queries, buffer pool)
+- **mongodb-monitor** - MongoDB metrics (operations, connections, replica status)
+- **redis-monitor** - Redis metrics (memory, commands, keyspace stats)
+- **influxdb-monitor** - InfluxDB metrics (writes, queries, measurements)
+- **sqlite-monitor** - SQLite database stats (size, queries, cache, integrity)
 
-## Creating a New Built-in Plugin
+### Application Monitoring
+- **web-service-monitor** - HTTP endpoint monitoring (response time, status, availability)
+- **log-monitor** - Log file analysis (error counts, patterns, rates)
 
-### 1. Create Plugin File
+## Quick Start
 
-Create a new Python file in this directory: `your_plugin_name.py`
+### Enable a Plugin
 
-### 2. Implement PluginBase
+```bash
+# List available plugins
+curl http://localhost:8000/api/v1/plugins
+
+# Enable a plugin
+curl -X POST http://localhost:8000/api/v1/plugins/system-info/enable
+
+# Execute plugin and get data
+curl -X POST http://localhost:8000/api/v1/plugins/system-info/execute
+```
+
+### Configure a Plugin
+
+```bash
+# Configure with custom settings
+curl -X POST http://localhost:8000/api/v1/plugins/postgres-monitor/configure \
+  -H "Content-Type: application/json" \
+  -d '{
+    "host": "localhost",
+    "port": 5432,
+    "user": "postgres",
+    "password": "${POSTGRES_PASSWORD}",
+    "database": "mydb"
+  }'
+```
+
+### Health Check
+
+```bash
+# Check plugin health
+curl http://localhost:8000/api/v1/plugins/system-info/health
+```
+
+## Plugin Structure
+
+All plugins inherit from `PluginBase` and implement:
 
 ```python
 from app.plugins.base import PluginBase, PluginMetadata, PluginCategory
 from typing import Dict, Any
 
-class YourPlugin(PluginBase):
+class MyPlugin(PluginBase):
     def get_metadata(self) -> PluginMetadata:
+        """Return plugin metadata"""
         return PluginMetadata(
-            id="your-plugin",
-            name="Your Plugin",
+            id="my-plugin",
+            name="My Plugin",
             version="1.0.0",
-            description="What your plugin does",
+            description="What it does",
             author="Your Name",
-            category=PluginCategory.SYSTEM,  # or NETWORK, STORAGE, etc.
-            tags=["monitoring", "example"],
-            requires_sudo=False,
-            supported_os=["linux", "darwin", "windows"],
-            dependencies=["psutil"],
-            config_schema={
-                "type": "object",
-                "properties": {
-                    "option": {
-                        "type": "boolean",
-                        "default": True,
-                        "description": "An example config option"
-                    }
-                }
-            }
+            category=PluginCategory.CUSTOM,
+            tags=["monitoring"],
+            dependencies=["psutil"]
         )
     
     async def collect_data(self) -> Dict[str, Any]:
-        """Collect your metrics here"""
+        """Collect and return metrics"""
         return {
-            "timestamp": "...",
-            "your_metrics": "..."
+            "timestamp": datetime.utcnow().isoformat(),
+            "metrics": {
+                # Your metrics here
+            }
         }
     
     async def health_check(self) -> Dict[str, Any]:
-        """Optional: Check if plugin is healthy"""
+        """Check if plugin is healthy"""
         return {
             "healthy": True,
-            "message": "Plugin is operational"
+            "message": "All systems operational"
         }
 ```
 
-### 3. Test Your Plugin
+## Creating a New Built-in Plugin
 
-Restart Unity and your plugin will be automatically discovered:
+### Option 1: Use the Plugin Generator (Recommended)
 
 ```bash
-cd backend
+# Generate a new plugin from template
+python -m app.plugins.tools.plugin_generator \
+  --id my-plugin \
+  --name "My Plugin" \
+  --category system \
+  --author "Your Name"
+```
+
+### Option 2: Manual Creation
+
+1. **Create plugin file**: `backend/app/plugins/builtin/my_plugin.py`
+
+2. **Implement required methods**:
+   - `get_metadata()` - Plugin information
+   - `collect_data()` - Data collection logic
+
+3. **Add optional methods**:
+   - `health_check()` - Health validation
+   - `validate_config()` - Config validation
+   - `on_enable()` / `on_disable()` - Lifecycle hooks
+
+4. **Register plugin**: No explicit registration needed - plugins are auto-discovered
+
+5. **Test plugin**:
+```bash
+# Validate plugin
+python -m app.plugins.tools.plugin_validator my_plugin.py
+
+# Test with mock data
+python -m app.plugins.tools.plugin_tester my-plugin
+
+# Start Unity and check logs
 uvicorn app.main:app --reload
 ```
 
-You should see in the logs:
-```
-📦 Discovered 5 plugin(s):
-   - Your Plugin (your-plugin) [○ disabled]
-```
-
-### 4. Enable and Test
-
-Use the API to enable and test your plugin:
-
-```bash
-# Enable
-curl -X POST -H "Authorization: Bearer $TOKEN" \
-  http://localhost:8000/api/plugins/v2/your-plugin/enable
-
-# Execute manually
-curl -X POST -H "Authorization: Bearer $TOKEN" \
-  http://localhost:8000/api/plugins/v2/your-plugin/execute
-
-# Check metrics
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:8000/api/plugins/v2/your-plugin/metrics
-```
-
----
-
 ## Plugin Best Practices
 
-### 1. Error Handling
-Always handle exceptions in `collect_data()`. The base class catches them, but you should handle expected errors gracefully.
+### 1. Configuration
 
-### 2. Performance
-Keep `collect_data()` fast (< 5 seconds). Use caching if needed.
+- **Use JSON Schema** for config validation
+- **Never hardcode secrets** - use environment variables
+- **Provide sensible defaults** for optional settings
 
-### 3. Configuration
-Make plugins configurable via `config_schema`. Use sensible defaults.
+### 2. Error Handling
 
-### 4. Health Checks
-Implement `health_check()` to verify dependencies and prerequisites.
+- **Catch specific exceptions** - avoid bare `except`
+- **Provide context** in error messages
+- **Implement graceful degradation** when possible
 
-### 5. Validation
-Override `on_config_change()` to validate configuration when it changes.
+### 3. Performance
 
-### 6. Documentation
-Include clear docstrings explaining what your plugin does and what data it collects.
+- **Use connection pooling** for database/network plugins
+- **Cache expensive operations** appropriately
+- **Implement timeouts** for all I/O operations
+- **Use async/await** for concurrent operations
 
----
+### 4. Testing
 
-## Categories
+- **Write unit tests** for core logic
+- **Test error conditions** and edge cases
+- **Use Docker** for integration tests with real services
+- **Validate against the schema** before deployment
 
-Choose the appropriate category for your plugin:
+### 5. Documentation
 
-- `PluginCategory.SYSTEM` - System-level monitoring (CPU, memory, processes)
-- `PluginCategory.NETWORK` - Network monitoring and statistics
-- `PluginCategory.STORAGE` - Disk and storage monitoring
-- `PluginCategory.THERMAL` - Temperature and cooling monitoring
-- `PluginCategory.CONTAINER` - Container orchestration (Docker, K8s)
-- `PluginCategory.DATABASE` - Database monitoring
-- `PluginCategory.APPLICATION` - Application-specific monitoring
-- `PluginCategory.SECURITY` - Security monitoring and alerts
-- `PluginCategory.AI_ML` - AI/ML monitoring and metrics
-- `PluginCategory.CUSTOM` - Custom/uncategorized plugins
+- **Clear docstrings** for all methods
+- **Document configuration options** with examples
+- **Include use cases** and common scenarios
+- **Provide troubleshooting tips** for common issues
 
----
+## Plugin Categories
 
-## Testing
+- `SYSTEM` - System resources (CPU, memory, processes)
+- `NETWORK` - Network interfaces and connections
+- `STORAGE` - Disk and filesystem monitoring
+- `THERMAL` - Temperature and cooling
+- `CONTAINER` - Docker, Kubernetes, etc.
+- `DATABASE` - Database monitoring
+- `APPLICATION` - Application/service monitoring
+- `SECURITY` - Security and access monitoring
+- `AI_ML` - AI/ML model and GPU monitoring
+- `CUSTOM` - Custom/specialized monitoring
 
-Run the plugin directly for quick testing:
+## Common Patterns
+
+### Database Plugin Pattern
 
 ```python
-import asyncio
-from your_plugin_name import YourPlugin
-
-async def test():
-    plugin = YourPlugin(config={"option": True})
-    metadata = plugin.get_metadata()
-    print(f"Testing: {metadata.name}")
+class DatabasePlugin(PluginBase):
+    def __init__(self, hub_client=None, config=None):
+        super().__init__(hub_client, config)
+        self.connection = None
     
-    health = await plugin.health_check()
-    print(f"Health: {health}")
+    async def on_enable(self):
+        await super().on_enable()
+        self.connection = await self._connect()
     
-    data = await plugin.collect_data()
-    print(f"Data: {data}")
-
-asyncio.run(test())
+    async def _connect(self):
+        # Establish connection with retry logic
+        pass
+    
+    async def collect_data(self) -> Dict[str, Any]:
+        if not self.connection:
+            await self._connect()
+        # Collect metrics
+        pass
+    
+    async def on_disable(self):
+        if self.connection:
+            await self.connection.close()
+        await super().on_disable()
 ```
 
----
+### HTTP Service Pattern
+
+```python
+class WebServicePlugin(PluginBase):
+    async def collect_data(self) -> Dict[str, Any]:
+        import aiohttp
+        
+        url = self.config["url"]
+        timeout = aiohttp.ClientTimeout(total=self.config.get("timeout", 10))
+        
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            start = time.time()
+            async with session.get(url) as response:
+                duration = time.time() - start
+                
+                return {
+                    "url": url,
+                    "status_code": response.status,
+                    "response_time_ms": round(duration * 1000, 2),
+                    "available": response.status < 500
+                }
+```
+
+### File Monitoring Pattern
+
+```python
+class LogMonitorPlugin(PluginBase):
+    def __init__(self, hub_client=None, config=None):
+        super().__init__(hub_client, config)
+        self.last_position = 0
+    
+    async def collect_data(self) -> Dict[str, Any]:
+        log_file = self.config["log_file"]
+        
+        with open(log_file, 'r') as f:
+            f.seek(self.last_position)
+            new_lines = f.readlines()
+            self.last_position = f.tell()
+        
+        # Analyze new lines
+        errors = [line for line in new_lines if 'ERROR' in line]
+        
+        return {
+            "lines_processed": len(new_lines),
+            "errors_found": len(errors),
+            "error_rate": len(errors) / len(new_lines) if new_lines else 0
+        }
+```
+
+## Development Tools
+
+Unity provides several tools to streamline plugin development:
+
+- **Plugin Generator** - `python -m app.plugins.tools.plugin_generator`
+  - Generate plugin boilerplate from templates
+  - Support for all plugin categories
+  - Includes tests and documentation
+
+- **Plugin Validator** - `python -m app.plugins.tools.plugin_validator`
+  - Validate plugin structure and code
+  - Check metadata completeness
+  - Verify config schema
+  - Lint code quality
+
+- **Plugin Tester** - `python -m app.plugins.tools.plugin_tester`
+  - Test plugins with mock data
+  - Simulate various scenarios
+  - Measure performance
+  - Validate output format
+
+## Documentation
+
+For comprehensive documentation, see:
+
+- **[Built-in Plugins Catalog](../../docs/BUILTIN_PLUGINS.md)** - Complete catalog of all builtin plugins
+- **[Plugin Development Guide](../../docs/PLUGIN_DEVELOPMENT.md)** - Full development guide with examples
+- **[Architecture Overview](../../ARCHITECTURE.md)** - System architecture details
 
 ## Need Help?
 
-- See existing plugins in this directory for examples
-- Check [TESTING-GUIDE.md](../../../../TESTING-GUIDE.md) for API usage
-- Read [HUB-IMPLEMENTATION-PLAN.md](../../../../HUB-IMPLEMENTATION-PLAN.md) for architecture details
+- Check the [Plugin Development Guide](../../docs/PLUGIN_DEVELOPMENT.md)
+- Review [example plugins](.) in this directory
+- Open an issue on GitHub
+- Join the community Discord
+
