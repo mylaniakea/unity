@@ -67,3 +67,4 @@ logs/
 # Secrets (keep examples)
 *-secret.yaml
 !*-secret-placeholder.yaml
+backend/data/*.rsa*

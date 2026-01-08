@@ -56,7 +56,7 @@ export default function Plugins() {
 
     const fetchPlugins = async () => {
         try {
-            const res = await api.get('/plugins/');
+            const res = await api.get('/plugins/v2');
             setPlugins(res.data.plugins);
             setCategories(res.data.categories);
         } catch (error) {
