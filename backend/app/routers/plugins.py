@@ -31,11 +31,18 @@ class InstallPluginRequest(BaseModel):
 
 # --- GET ALL AVAILABLE PLUGINS ---
 @router.get("/")
-def list_plugins():
-    """List all available plugins with their definitions."""
+def list_plugins(db: Session = Depends(get_db)):
+    """List all available plugins from database."""
+    from app.services.plugin_manager import PluginManager
+    manager = PluginManager(db)
+    plugins = manager.list_plugins()
+    
+    # Get categories from plugins
+    categories = list(set(p.get('category') for p in plugins if p.get('category')))
+    
     return {
-        "plugins": get_all_plugins(),
-        "categories": PLUGIN_CATEGORIES
+        "plugins": plugins,
+        "categories": categories
     }
 
 
