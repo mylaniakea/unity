@@ -30,7 +30,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter(
-    prefix="/api/k8s/clusters",
+    prefix="/k8s/clusters",
     tags=["kubernetes-clusters"],
     responses={404: {"description": "Not found"}},
 )

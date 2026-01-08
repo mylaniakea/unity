@@ -32,13 +32,13 @@ export default function Clusters() {
 
   const fetchClusters = async () => {
     try {
-      const [k8sRes] = await Promise.all([
-        api.get('/k8s/clusters')
+      const [k8sRes, dockerRes] = await Promise.all([
+        api.get('/k8s/clusters'),
+        api.get('/docker/hosts')
       ]);
       
       setK8sClusters(k8sRes.data.clusters || k8sRes.data || []);
-      // Docker hosts API coming soon
-      setDockerHosts([]);
+      setDockerHosts(dockerRes.data || []);
     } catch (error) {
       console.error('Failed to fetch clusters:', error);
     } finally {

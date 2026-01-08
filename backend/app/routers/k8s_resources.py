@@ -38,7 +38,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter(
-    prefix="/api/k8s/resources",
+    prefix="/k8s/resources",
     tags=["kubernetes-resources"],
     responses={404: {"description": "Not found"}},
 )
