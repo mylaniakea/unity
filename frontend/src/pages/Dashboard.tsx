@@ -118,8 +118,8 @@ export default function Dashboard() {
                 />
                 <StatCard
                     title="Load Average (1min)"
-                    value={stats?.load_average?.['1min']?.toFixed(2) || 'N/A'}
-                    subtext={`5min: ${stats?.load_average?.['5min']?.toFixed(2) || 'N/A'}, 15min: ${stats?.load_average?.['15min']?.toFixed(2) || 'N/A'}`}
+                    value={stats?.load_average?.['1min']?.toFixed(1) || 'N/A'}
+                    subtext={`5min: ${stats?.load_average?.['5min']?.toFixed(1) || 'N/A'}, 15min: ${stats?.load_average?.['15min']?.toFixed(1) || 'N/A'}`}
                     icon={Activity}
                     color="text-red-500"
                 />

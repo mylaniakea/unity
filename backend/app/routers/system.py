@@ -44,8 +44,14 @@ async def get_network():
 
 @router.get("/full")
 async def get_full_report():
+    hardware = SystemInfoService.get_hardware_info()
     return {
-        "hardware": SystemInfoService.get_hardware_info(),
+        "hardware": hardware,
         "os": SystemInfoService.get_os_info(),
-        "network": SystemInfoService.get_network_info()
+        "network": SystemInfoService.get_network_info(),
+        "memory": hardware.get("memory", {}),  # Also expose at top level for compatibility
+        "load_average": SystemInfoService.get_load_average(),
+        "processes": SystemInfoService.get_process_info(),
+        "file_descriptors": SystemInfoService.get_file_descriptors(),
+        "uptime_seconds": SystemInfoService.get_uptime_seconds()
     }
