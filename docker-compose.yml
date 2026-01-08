@@ -11,8 +11,24 @@ services:
       - homelab_db_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - homelab-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U homelab_user -d homelab_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
 
   backend:
     build: ./backend
@@ -22,19 +38,36 @@ services:
       - "8000:8000"
     volumes:
       - ./backend/data:/app/data
-      # Mount source code for dev reloading (optional, remove for prod)
-      # - ./backend/app:/app/app
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc:/host/etc:ro
+      - /etc/hostname:/host/etc/hostname:ro
     environment:
       - ALLOW_ORIGINS=*
       - DATABASE_URL=postgresql+psycopg2://homelab_user:homelab_password@db:5432/homelab_db
       - ENCRYPTION_KEY=6ty12Z9TYTSM5ESuOuXd_RxLBgunI3G0_TJbCpBb9FU=
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level debug
     depends_on:
-      - db
-    # Network mode host might be needed for some hardware discovery,
-    # but bridge is safer. Stick to bridge for now.
+      db:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - homelab-net
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/health\").read()' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
   frontend:
     build: ./frontend
@@ -43,9 +76,26 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - homelab-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
 
 volumes:
   homelab_db_data:

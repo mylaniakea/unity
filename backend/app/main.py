@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.middleware.tenant_context import TenantContextMiddleware
 from app.routers import (
     profiles, ai, settings, reports, knowledge, system,
-    terminal, plugins, thresholds, alerts, push, auth, users, credentials
+    terminal, plugins, thresholds, alerts, push, auth, users, credentials, docker_hosts
 )
 # Import new plugin routers
 from app.routers import plugins_v2_secure, plugin_keys
@@ -209,6 +209,7 @@ app.include_router(credentials.router)  # Credential management
 app.include_router(thresholds.router)
 app.include_router(alerts.router)
 app.include_router(push.router)
+app.include_router(docker_hosts.router)
 # Kubernetes control plane routers
 app.include_router(k8s_clusters.router)  # Cluster management
 app.include_router(k8s_resources.router)  # Resource management
@@ -407,8 +408,33 @@ def read_root():
 
 @app.get("/health")
 def health_check():
+    components = {}
+    # Database connectivity check
+    try:
+        from app.database import SessionLocal
+        db = SessionLocal()
+        db.execute("SELECT 1")
+        components["database"] = "healthy"
+    except Exception as e:
+        components["database"] = "error"
+        components["database_error"] = str(e)
+    finally:
+        try:
+            db.close()
+        except Exception:
+            pass
+
+    # Redis placeholder (not configured)
+    components["redis"] = "unavailable"
+
     return {
-        "status": "ok",
+        "status": "ok" if components.get("database") == "healthy" else "degraded",
         "app": "Unity",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "components": components,
     }
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for container orchestration."""
+    return {"status": "healthy", "service": "unity-backend"}
