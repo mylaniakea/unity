@@ -56,9 +56,7 @@ export default function Layout() {
         { icon: Bot, label: 'Intelligence', path: '/ai' },
         { icon: FileText, label: 'Reports', path: '/reports' },
         { icon: Brain, label: 'Knowledge', path: '/knowledge' },
-        { icon: AlertTriangle, label: 'Thresholds', path: '/thresholds' },
-        { icon: Bell, label: 'Alerts', path: '/alerts', dynamicColor: getAlertColor() },
-        { icon: Clock, label: 'Automations', path: '/automations' },
+        { icon: Bell, label: 'Alerts & Thresholds', path: '/alerts', dynamicColor: getAlertColor() },
         { icon: Users, label: 'Users', path: '/users' },
         { icon: Settings, label: 'Settings', path: '/settings' },
     ];

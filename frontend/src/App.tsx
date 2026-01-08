@@ -9,10 +9,8 @@ import Reports from './pages/Reports';
 import Knowledge from './pages/Knowledge';
 import Homelab from './pages/Homelab';
 import ServerHardware from './pages/ServerHardware';
-import Automations from './pages/Automations';
 import Plugins from './pages/Plugins';
-import Thresholds from './pages/Thresholds';
-import Alerts from './pages/Alerts';
+import AlertsAndThresholds from './pages/AlertsAndThresholds';
 import Users from './pages/Users';
 import LoginPage from './pages/LoginPage';
 import Clusters from './pages/Clusters';
@@ -44,9 +42,7 @@ function App() {
                                 <Route path="ai" element={<Intelligence />} />
                                 <Route path="reports" element={<Reports />} />
                                 <Route path="knowledge" element={<Knowledge />} />
-                                <Route path="thresholds" element={<Thresholds />} />
-                                <Route path="alerts" element={<Alerts />} />
-                                <Route path="automations" element={<Automations />} />
+                                <Route path="alerts" element={<AlertsAndThresholds />} />
                                 <Route path="users" element={<Users />} />
                                 <Route path="settings" element={<Settings />} />
                             </Route>
