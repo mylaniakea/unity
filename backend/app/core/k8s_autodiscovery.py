@@ -13,22 +13,47 @@ logger = logging.getLogger(__name__)
 
 async def autodiscover_k8s_cluster(db: Session, tenant_id: str = "default"):
     """
-    Auto-discover and register the Kubernetes cluster if running inside one.
-    Checks for in-cluster service account and registers if found.
+    Auto-discover and register the Kubernetes cluster.
+    Checks for:
+    1. In-cluster service account (running inside K8s)
+    2. Mounted kubeconfig file at /app/data/kubeconfig or /root/.kube/config
     """
-    # Check if running in Kubernetes
-    if not os.path.exists("/var/run/secrets/kubernetes.io/serviceaccount/token"):
-        logger.info("Not running in Kubernetes - skipping cluster auto-discovery")
+    kubeconfig_path = None
+    provider = "unknown"
+    description = "Auto-discovered Kubernetes cluster"
+    
+    # 1. Check for in-cluster config
+    if os.path.exists("/var/run/secrets/kubernetes.io/serviceaccount/token"):
+        logger.info("🔍 Detected in-cluster Kubernetes environment")
+        kubeconfig_path = "in-cluster"
+        provider = "in-cluster"
+    
+    # 2. Check for mounted kubeconfig (common mount points)
+    elif os.path.exists("/app/data/kubeconfig"):
+        logger.info("🔍 Detected mounted kubeconfig at /app/data/kubeconfig")
+        kubeconfig_path = "/app/data/kubeconfig"
+        provider = "imported"
+        description = "Imported via /app/data/kubeconfig"
+    
+    elif os.path.exists("/root/.kube/config"):
+        logger.info("🔍 Detected mounted kubeconfig at /root/.kube/config")
+        kubeconfig_path = "/root/.kube/config"
+        provider = "imported"
+        description = "Imported via default location"
+
+    if not kubeconfig_path:
+        logger.info("Not running in Kubernetes and no kubeconfig found - skipping cluster auto-discovery")
         return None
     
-    logger.info("🔍 Detected Kubernetes environment - auto-discovering cluster...")
+    logger.info(f"Using kubeconfig: {kubeconfig_path}")
     
     try:
         # Check if cluster already registered
         existing = db.execute(
             select(KubernetesCluster).where(
                 KubernetesCluster.tenant_id == tenant_id,
-                KubernetesCluster.name == "local-cluster"
+                # We'll match loosely on name 'local-cluster' or if the path matches
+                ((KubernetesCluster.name == "local-cluster") | (KubernetesCluster.kubeconfig_path == kubeconfig_path))
             )
         ).scalar_one_or_none()
         
@@ -43,11 +68,11 @@ async def autodiscover_k8s_cluster(db: Session, tenant_id: str = "default"):
         cluster = KubernetesCluster(
             tenant_id=tenant_id,
             name=cluster_name,
-            description="Auto-discovered local Kubernetes cluster",
-            kubeconfig_path="in-cluster",  # Special marker for in-cluster config
+            description=description,
+            kubeconfig_path=kubeconfig_path,
             is_active=True,
             is_default=True,
-            provider="k3s",  # Can be detected or set via env var
+            provider=provider,
         )
         
         db.add(cluster)

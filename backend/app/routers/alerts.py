@@ -31,7 +31,7 @@ def get_alerts(
 def get_alert_stats(db: Session = Depends(get_db),
     tenant_id: str = Depends(get_tenant_id)):
     """Get alert statistics for dashboard"""
-    total = db.query(models.Alert).count()
+    total = db.query(models.Alert).filter(models.Alert.tenant_id == tenant_id).count()
     unresolved = db.query(models.Alert).filter(models.Alert.tenant_id == tenant_id).filter(models.Alert.resolved == False).count()
 
     # Count by severity

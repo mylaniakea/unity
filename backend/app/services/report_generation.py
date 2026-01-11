@@ -70,9 +70,35 @@ async def generate_24_hour_report(db: Session, server_id: int, tenant_id: str = 
             .all()
 
         if not snapshots:
-            # If no snapshots, no report can be generated from historical data
-            return None
-
+            # No snapshots - generate report from current profile data
+            server_profile = db.query(models.ServerProfile).filter(models.ServerProfile.tenant_id == tenant_id).filter(models.ServerProfile.id == server_id).first()
+            if not server_profile:
+                return None
+            
+            # Create a basic report from current profile data
+            aggregated_data = {
+                "period_start": start_time.isoformat(),
+                "period_end": end_time.isoformat(),
+                "server_name": server_profile.name,
+                "cpu_current": server_profile.hardware_info.get("cpu", {}).get("usage_percent", 0) if server_profile.hardware_info else 0,
+                "memory_current": server_profile.hardware_info.get("memory", {}).get("percent", 0) if server_profile.hardware_info else 0,
+                "disk_current": server_profile.hardware_info.get("disk", {}).get("percent", 0) if server_profile.hardware_info else 0,
+                "snapshot_count": 0,
+                "note": "No historical snapshots available. Showing current state only."
+            }
+            
+            new_report = models.Report(
+                tenant_id=tenant_id,
+                server_id=server_id,
+                report_type="24-hour",
+                start_time=start_time,
+                end_time=end_time,
+                aggregated_data=aggregated_data
+            )
+            db.add(new_report)
+            db.commit()
+            db.refresh(new_report)
+            return new_report
         server_profile = db.query(models.ServerProfile).filter(models.ServerProfile.tenant_id == tenant_id).filter(models.ServerProfile.id == server_id).first()
         if not server_profile:
             # This case should ideally not happen if snapshots exist for the server_id

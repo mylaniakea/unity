@@ -756,3 +756,34 @@ class DeploymentIntent(Base):
     user = relationship("User", backref="deployment_intents")
     blueprint = relationship("ApplicationBlueprint", back_populates="deployments")
     cluster = relationship("KubernetesCluster", backref="deployment_intents")
+
+
+class DockerHost(Base):
+    """Docker host connection information"""
+    __tablename__ = "docker_hosts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(String(50), ForeignKey('tenants.id'), nullable=False, default='default', index=True)
+    name = Column(String(255), unique=True, index=True, nullable=False)
+    description = Column(Text, nullable=True)
+
+    # Connection details
+    host_url = Column(String(500), nullable=False)  # e.g., unix:///var/run/docker.sock or tcp://1.2.3.4:2375
+
+    # Status
+    is_active = Column(Boolean, default=True, index=True)
+    last_health_check = Column(DateTime(timezone=True), nullable=True)
+    health_status = Column(String(50), default='unknown')  # healthy, unhealthy, unknown, unreachable
+    health_message = Column(Text, nullable=True)
+    container_count = Column(Integer, default=0)
+
+    # Configuration
+    config = Column(JSON().with_variant(JSONB, "postgresql"), default={})
+    labels = Column(JSON().with_variant(JSONB, "postgresql"), default={})
+
+    # Ownership
+    created_by = Column(Integer, ForeignKey('users.id'), nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())

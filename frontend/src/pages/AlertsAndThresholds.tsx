@@ -231,9 +231,11 @@ const AlertsAndThresholds: React.FC = () => {
   const fetchSettings = async () => {
     try {
       const res = await api.get('/settings/');
-      const soundSetting = res.data.find((s: any) => s.key === 'alert_sound_enabled');
-      if (soundSetting) {
-        setAlertSoundEnabled(soundSetting.value === 'true');
+      // Settings endpoint returns an object now, check for alert_sound_enabled directly
+      if (res.data && (res.data.alert_sound_enabled === true || res.data.alert_sound_enabled === 'true')) {
+        setAlertSoundEnabled(true);
+      } else {
+        setAlertSoundEnabled(false);
       }
     } catch (error) {
       console.error('Failed to fetch settings', error);

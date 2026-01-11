@@ -25,7 +25,8 @@ async def get_current_admin(
 @router.get("/", response_model=List[schemas.User])
 async def list_users(
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_admin)
+    current_user: models.User = Depends(get_current_admin),
+    tenant_id: str = Depends(get_tenant_id),
 ):
     """List all users (admin only)"""
     users = db.query(models.User).filter(models.User.tenant_id == tenant_id).all()

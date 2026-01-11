@@ -5,11 +5,40 @@ from app.database import get_db
 from app.core.dependencies import get_tenant_id
 from app import models
 
+from app.core.k8s_autodiscovery import autodiscover_k8s_cluster
+from app.core.docker_autodiscovery import autodiscover_docker_host
+
 router = APIRouter(
     prefix="/system",
     tags=["system"],
     responses={404: {"description": "Not found"}},
 )
+
+@router.post("/scan")
+async def scan_infrastructure(db: Session = Depends(get_db), tenant_id: str = Depends(get_tenant_id)):
+    """
+    Manually trigger auto-discovery for Docker hosts and K8s clusters.
+    """
+    results = {
+        "docker": None,
+        "kubernetes": None
+    }
+    
+    # Docker
+    docker_host = await autodiscover_docker_host(db, tenant_id)
+    if docker_host:
+        results["docker"] = f"Registered: {docker_host.name}"
+    else:
+        results["docker"] = "Not found or already registered"
+        
+    # Kubernetes
+    k8s_cluster = await autodiscover_k8s_cluster(db, tenant_id)
+    if k8s_cluster:
+        results["kubernetes"] = f"Registered: {k8s_cluster.name}"
+    else:
+        results["kubernetes"] = "Not found or already registered"
+        
+    return results
 
 @router.get("/dashboard-stats")
 def get_dashboard_stats(db: Session = Depends(get_db),

@@ -546,3 +546,317 @@ def create_k8s_client(
         context=context,
         in_cluster=in_cluster
     )
+
+    async def get_cluster_version(self) -> str:
+        """
+        Get Kubernetes cluster version string.
+
+        Returns:
+            Version string (e.g., "v1.28.0")
+
+        Raises:
+            KubernetesClientError: If request fails
+        """
+        version_info = await self.get_api_versions()
+        return version_info.get("git_version", "unknown")
+
+    async def get_nodes(self) -> List[Dict[str, Any]]:
+        """
+        List all nodes in the cluster with their status and metrics.
+
+        Returns:
+            List of node dictionaries with name, status, conditions, capacity, etc.
+
+        Raises:
+            KubernetesClientError: If request fails
+        """
+        try:
+            api = self.get_core_v1_api()
+
+            # Run in executor to avoid blocking
+            loop = asyncio.get_event_loop()
+            nodes = await loop.run_in_executor(
+                None,
+                api.list_node
+            )
+
+            result = []
+            for node in nodes.items:
+                # Extract node conditions
+                conditions = []
+                if node.status.conditions:
+                    for cond in node.status.conditions:
+                        conditions.append({
+                            "type": cond.type,
+                            "status": cond.status,
+                            "reason": cond.reason or "",
+                            "message": cond.message or ""
+                        })
+
+                # Determine node status (Ready/NotReady)
+                node_status = "Unknown"
+                for cond in conditions:
+                    if cond["type"] == "Ready":
+                        node_status = "Ready" if cond["status"] == "True" else "NotReady"
+                        break
+
+                # Extract node roles
+                roles = []
+                if node.metadata.labels:
+                    for label_key in node.metadata.labels:
+                        if label_key.startswith("node-role.kubernetes.io/"):
+                            role = label_key.split("/", 1)[1]
+                            if role:
+                                roles.append(role)
+
+                # Extract capacity and allocatable
+                capacity = {}
+                allocatable = {}
+                if node.status.capacity:
+                    capacity = {
+                        "cpu": node.status.capacity.get("cpu", "0"),
+                        "memory": node.status.capacity.get("memory", "0"),
+                        "pods": node.status.capacity.get("pods", "0"),
+                        "ephemeral_storage": node.status.capacity.get("ephemeral-storage", "0")
+                    }
+                if node.status.allocatable:
+                    allocatable = {
+                        "cpu": node.status.allocatable.get("cpu", "0"),
+                        "memory": node.status.allocatable.get("memory", "0"),
+                        "pods": node.status.allocatable.get("pods", "0"),
+                        "ephemeral_storage": node.status.allocatable.get("ephemeral-storage", "0")
+                    }
+
+                result.append({
+                    "name": node.metadata.name,
+                    "status": node_status,
+                    "roles": roles if roles else ["worker"],
+                    "labels": node.metadata.labels or {},
+                    "annotations": node.metadata.annotations or {},
+                    "created_at": node.metadata.creation_timestamp.isoformat() if node.metadata.creation_timestamp else None,
+                    "conditions": conditions,
+                    "capacity": capacity,
+                    "allocatable": allocatable,
+                    "node_info": {
+                        "kubelet_version": node.status.node_info.kubelet_version if node.status.node_info else None,
+                        "os_image": node.status.node_info.os_image if node.status.node_info else None,
+                        "kernel_version": node.status.node_info.kernel_version if node.status.node_info else None,
+                        "container_runtime": node.status.node_info.container_runtime_version if node.status.node_info else None,
+                        "architecture": node.status.node_info.architecture if node.status.node_info else None,
+                        "operating_system": node.status.node_info.operating_system if node.status.node_info else None,
+                    },
+                    "addresses": [
+                        {"type": addr.type, "address": addr.address}
+                        for addr in (node.status.addresses or [])
+                    ],
+                    "uid": node.metadata.uid
+                })
+
+            logger.info(f"Listed {len(result)} nodes")
+            return result
+
+        except ApiException as e:
+            logger.error(f"Kubernetes API error listing nodes: {e}")
+            raise KubernetesClientError(
+                f"Failed to list nodes: {e.reason} (status={e.status})"
+            ) from e
+
+        except Exception as e:
+            logger.error(f"Unexpected error listing nodes: {e}")
+            raise KubernetesClientError(f"Failed to list nodes: {e}") from e
+
+    async def get_all_pods(self, label_selector: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        List all pods across all namespaces.
+
+        Args:
+            label_selector: Optional label selector to filter pods
+
+        Returns:
+            List of pod dictionaries
+
+        Raises:
+            KubernetesClientError: If request fails
+        """
+        try:
+            api = self.get_core_v1_api()
+
+            # Run in executor to avoid blocking
+            loop = asyncio.get_event_loop()
+            pods = await loop.run_in_executor(
+                None,
+                lambda: api.list_pod_for_all_namespaces(label_selector=label_selector)
+            )
+
+            result = []
+            for pod in pods.items:
+                # Extract container statuses
+                container_statuses = []
+                if pod.status.container_statuses:
+                    for cs in pod.status.container_statuses:
+                        container_statuses.append({
+                            "name": cs.name,
+                            "ready": cs.ready,
+                            "restart_count": cs.restart_count,
+                            "image": cs.image,
+                            "state": self._get_container_state(cs.state)
+                        })
+
+                result.append({
+                    "name": pod.metadata.name,
+                    "namespace": pod.metadata.namespace,
+                    "labels": pod.metadata.labels or {},
+                    "created_at": pod.metadata.creation_timestamp.isoformat() if pod.metadata.creation_timestamp else None,
+                    "phase": pod.status.phase,
+                    "host_ip": pod.status.host_ip,
+                    "pod_ip": pod.status.pod_ip,
+                    "node_name": pod.spec.node_name if pod.spec else None,
+                    "container_statuses": container_statuses,
+                    "uid": pod.metadata.uid
+                })
+
+            logger.info(f"Listed {len(result)} pods across all namespaces")
+            return result
+
+        except ApiException as e:
+            logger.error(f"Kubernetes API error listing all pods: {e}")
+            raise KubernetesClientError(
+                f"Failed to list all pods: {e.reason} (status={e.status})"
+            ) from e
+
+        except Exception as e:
+            logger.error(f"Unexpected error listing all pods: {e}")
+            raise KubernetesClientError(f"Failed to list all pods: {e}") from e
+
+    async def get_node_metrics(self) -> List[Dict[str, Any]]:
+        """
+        Get resource metrics for all nodes (requires metrics-server).
+
+        Returns:
+            List of node metrics with CPU and memory usage
+
+        Raises:
+            KubernetesClientError: If metrics-server not available or request fails
+        """
+        try:
+            # Use CustomObjectsApi to query metrics-server
+            api = client.CustomObjectsApi()
+
+            loop = asyncio.get_event_loop()
+            metrics = await loop.run_in_executor(
+                None,
+                lambda: api.list_cluster_custom_object(
+                    group="metrics.k8s.io",
+                    version="v1beta1",
+                    plural="nodes"
+                )
+            )
+
+            result = []
+            for item in metrics.get("items", []):
+                metadata = item.get("metadata", {})
+                usage = item.get("usage", {})
+
+                result.append({
+                    "node_name": metadata.get("name"),
+                    "timestamp": item.get("timestamp"),
+                    "window": item.get("window"),
+                    "cpu_usage": usage.get("cpu", "0"),  # e.g., "100m" for 100 millicores
+                    "memory_usage": usage.get("memory", "0")  # e.g., "100Mi"
+                })
+
+            logger.info(f"Retrieved metrics for {len(result)} nodes")
+            return result
+
+        except ApiException as e:
+            if e.status == 404:
+                logger.warning("metrics-server not found in cluster")
+                # Return empty list instead of raising error
+                return []
+            logger.error(f"Kubernetes API error getting node metrics: {e}")
+            raise KubernetesClientError(
+                f"Failed to get node metrics: {e.reason} (status={e.status})"
+            ) from e
+
+        except Exception as e:
+            logger.error(f"Unexpected error getting node metrics: {e}")
+            raise KubernetesClientError(f"Failed to get node metrics: {e}") from e
+
+    async def get_cluster_events(self, namespace: Optional[str] = None, minutes: int = 60) -> List[Dict[str, Any]]:
+        """
+        Get recent cluster events.
+
+        Args:
+            namespace: Namespace to filter events (None for all namespaces)
+            minutes: How many minutes back to fetch events
+
+        Returns:
+            List of event dictionaries
+
+        Raises:
+            KubernetesClientError: If request fails
+        """
+        try:
+            api = self.get_core_v1_api()
+            loop = asyncio.get_event_loop()
+
+            if namespace:
+                events = await loop.run_in_executor(
+                    None,
+                    lambda: api.list_namespaced_event(namespace=namespace)
+                )
+            else:
+                events = await loop.run_in_executor(
+                    None,
+                    api.list_event_for_all_namespaces
+                )
+
+            from datetime import datetime, timedelta, timezone
+            cutoff_time = datetime.now(timezone.utc) - timedelta(minutes=minutes)
+
+            result = []
+            for event in events.items:
+                event_time = event.last_timestamp or event.event_time or event.metadata.creation_timestamp
+                if event_time and event_time.replace(tzinfo=timezone.utc) > cutoff_time:
+                    result.append({
+                        "name": event.metadata.name,
+                        "namespace": event.metadata.namespace,
+                        "type": event.type,  # Normal, Warning, Error
+                        "reason": event.reason,
+                        "message": event.message,
+                        "count": event.count,
+                        "first_timestamp": event.first_timestamp.isoformat() if event.first_timestamp else None,
+                        "last_timestamp": event.last_timestamp.isoformat() if event.last_timestamp else None,
+                        "involved_object": {
+                            "kind": event.involved_object.kind if event.involved_object else None,
+                            "name": event.involved_object.name if event.involved_object else None,
+                            "namespace": event.involved_object.namespace if event.involved_object else None,
+                        }
+                    })
+
+            logger.info(f"Retrieved {len(result)} events from last {minutes} minutes")
+            return result
+
+        except ApiException as e:
+            logger.error(f"Kubernetes API error getting events: {e}")
+            raise KubernetesClientError(
+                f"Failed to get events: {e.reason} (status={e.status})"
+            ) from e
+
+        except Exception as e:
+            logger.error(f"Unexpected error getting events: {e}")
+            raise KubernetesClientError(f"Failed to get events: {e}") from e
+
+    async def check_connectivity(self) -> bool:
+        """
+        Quick connectivity check to verify cluster is reachable.
+
+        Returns:
+            True if cluster is reachable, False otherwise
+        """
+        try:
+            await self.get_cluster_version()
+            return True
+        except Exception as e:
+            logger.warning(f"Connectivity check failed: {e}")
+            return False

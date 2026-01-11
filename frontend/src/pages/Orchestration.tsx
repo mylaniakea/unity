@@ -25,7 +25,7 @@ export default function Orchestration() {
         setResult(null);
 
         try {
-            const res = await api.post('/api/orchestration/deploy', {
+            const res = await api.post('/orchestration/deploy', {
                 command: command.trim(),
                 cluster_id: 1, // Default cluster
                 namespace: 'default'

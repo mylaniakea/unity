@@ -65,7 +65,7 @@ async def chat_with_ai(request: ChatRequest, db: Session = Depends(get_db),
 @router.get("/models")
 async def get_ai_models(db: Session = Depends(get_db),
     tenant_id: str = Depends(get_tenant_id)):
-    settings_obj = get_settings(db) # Get settings from the database (SQLAlchemy model)
+    settings_obj = get_settings(db, tenant_id) # Get settings from the database (SQLAlchemy model)
     # Convert to Pydantic model to ensure we have a clean dict structure
     settings_schema = schemas_settings.Settings.model_validate(settings_obj)
     orchestrator = AIOrchestrator(settings_schema.model_dump()) # Initialize orchestrator with dict

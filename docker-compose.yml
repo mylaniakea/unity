@@ -4,9 +4,9 @@ services:
     container_name: homelab-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: homelab_db
-      POSTGRES_USER: homelab_user
-      POSTGRES_PASSWORD: homelab_password
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - homelab_db_data:/var/lib/postgresql/data
     ports:
@@ -16,7 +16,7 @@ services:
     networks:
       - homelab-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U homelab_user -d homelab_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -30,6 +30,33 @@ services:
           cpus: '0.25'
           memory: 256M
 
+  redis:
+    image: redis:7-alpine
+    container_name: homelab-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - homelab_redis_data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - homelab-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
   backend:
     build: ./backend
     container_name: homelab-backend
@@ -38,17 +65,21 @@ services:
       - "8000:8000"
     volumes:
       - ./backend/data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /etc:/host/etc:ro
       - /etc/hostname:/host/etc/hostname:ro
     environment:
-      - ALLOW_ORIGINS=*
-      - DATABASE_URL=postgresql+psycopg2://homelab_user:homelab_password@db:5432/homelab_db
-      - ENCRYPTION_KEY=6ty12Z9TYTSM5ESuOuXd_RxLBgunI3G0_TJbCpBb9FU=
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level debug
+      - ALLOW_ORIGINS=${ALLOW_ORIGINS}
+      - DATABASE_URL=${DATABASE_URL}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - REDIS_URL=${REDIS_URL}
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level ${LOG_LEVEL}
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -83,7 +114,7 @@ services:
     networks:
       - homelab-net
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost/ || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -99,6 +130,7 @@ services:
 
 volumes:
   homelab_db_data:
+  homelab_redis_data:
 
 networks:
   homelab-net:

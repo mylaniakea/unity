@@ -18,12 +18,16 @@ from app.services import report_generation
 from app.services.snapshot_service import SnapshotService
 from app.services.ssh import SSHService
 from app.core.k8s_autodiscovery import autodiscover_k8s_cluster
+from app.core.docker_autodiscovery import autodiscover_docker_host
 from app.services.threshold_monitor import ThresholdMonitor
 from app.services.plugin_manager import PluginManager
 from app.services.k8s_reconciler import KubernetesReconciler
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 import logging
+import os
+import redis
 from datetime import datetime
 import sys
 
@@ -270,6 +274,15 @@ async def startup_event():
                     print(f"   ✅ Registered cluster: {cluster.name}", flush=True)
                 else:
                     print("   ℹ️  Not running in Kubernetes environment", flush=True)
+            
+                # Auto-discover Docker Host
+                print("\n🐳 Auto-discovering Docker host...", flush=True)
+                docker_host = await autodiscover_docker_host(db, tenant_id="default")
+                if docker_host:
+                    print(f"   ✅ Registered Docker host: {docker_host.name}", flush=True)
+                else:
+                    print("   ℹ️  Local Docker socket not found or already registered", flush=True)
+
             finally:
                 db.close()
         except Exception as e:
@@ -413,7 +426,7 @@ def health_check():
     try:
         from app.database import SessionLocal
         db = SessionLocal()
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         components["database"] = "healthy"
     except Exception as e:
         components["database"] = "error"
@@ -424,8 +437,15 @@ def health_check():
         except Exception:
             pass
 
-    # Redis placeholder (not configured)
-    components["redis"] = "unavailable"
+    # Redis connectivity check
+    try:
+        redis_url = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+        redis_client = redis.from_url(redis_url, socket_connect_timeout=2)
+        redis_client.ping()
+        components["redis"] = "healthy"
+    except Exception as e:
+        components["redis"] = "unavailable"
+        components["redis_error"] = str(e)
 
     return {
         "status": "ok" if components.get("database") == "healthy" else "degraded",

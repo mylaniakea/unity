@@ -34,12 +34,6 @@ export default function Clusters() {
   const [scanning, setScanning] = useState(false);
   const [showAddK8sModal, setShowAddK8sModal] = useState(false);
   const [showAddDockerModal, setShowAddDockerModal] = useState(false);
-  const [showEditK8sModal, setShowEditK8sModal] = useState(false);
-  const [showEditDockerModal, setShowEditDockerModal] = useState(false);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [selectedCluster, setSelectedCluster] = useState<K8sCluster | null>(null);
-  const [selectedHost, setSelectedHost] = useState<DockerHost | null>(null);
-  const [detailsType, setDetailsType] = useState<'k8s' | 'docker' | null>(null);
   
   const { isAdmin } = useRole();
   const { showNotification } = useNotification();
@@ -89,48 +83,7 @@ export default function Clusters() {
   };
 
   if (loading) {
-  
-  const handleDeleteK8sCluster = async (cluster: K8sCluster) => {
-    if (!window.confirm(`Delete Kubernetes cluster "${cluster.name}"?\n\nThis action cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      await api.delete(`/k8s/clusters/${cluster.id}`);
-      showNotification(`Cluster "${cluster.name}" deleted successfully`, 'success');
-      fetchClusters();
-    } catch (error: any) {
-      console.error('Failed to delete cluster', error);
-      showNotification(error.response?.data?.detail || 'Failed to delete cluster', 'error');
-    }
-  };
-
-  const handleDeleteDockerHost = async (host: DockerHost) => {
-    if (!window.confirm(`Delete Docker host "${host.name}"?\n\nThis action cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      await api.delete(`/docker/hosts/${host.id}`);
-      showNotification(`Docker host "${host.name}" deleted successfully`, 'success');
-      fetchClusters();
-    } catch (error: any) {
-      console.error('Failed to delete Docker host', error);
-      showNotification(error.response?.data?.detail || 'Failed to delete Docker host', 'error');
-    }
-  };
-
-  const handleViewDetails = (item: K8sCluster | DockerHost, type: 'k8s' | 'docker') => {
-    if (type === 'k8s') {
-      setSelectedCluster(item as K8sCluster);
-    } else {
-      setSelectedHost(item as DockerHost);
-    }
-    setDetailsType(type);
-    setShowDetailsModal(true);
-  };
-
-  return (
+    return (
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center space-y-4">
           <RefreshCw className="w-8 h-8 animate-spin text-blue-500" />
@@ -139,47 +92,6 @@ export default function Clusters() {
       </div>
     );
   }
-
-
-  const handleDeleteK8sCluster = async (cluster: K8sCluster) => {
-    if (!window.confirm(`Delete Kubernetes cluster "${cluster.name}"?\n\nThis action cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      await api.delete(`/k8s/clusters/${cluster.id}`);
-      showNotification(`Cluster "${cluster.name}" deleted successfully`, 'success');
-      fetchClusters();
-    } catch (error: any) {
-      console.error('Failed to delete cluster', error);
-      showNotification(error.response?.data?.detail || 'Failed to delete cluster', 'error');
-    }
-  };
-
-  const handleDeleteDockerHost = async (host: DockerHost) => {
-    if (!window.confirm(`Delete Docker host "${host.name}"?\n\nThis action cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      await api.delete(`/docker/hosts/${host.id}`);
-      showNotification(`Docker host "${host.name}" deleted successfully`, 'success');
-      fetchClusters();
-    } catch (error: any) {
-      console.error('Failed to delete Docker host', error);
-      showNotification(error.response?.data?.detail || 'Failed to delete Docker host', 'error');
-    }
-  };
-
-  const handleViewDetails = (item: K8sCluster | DockerHost, type: 'k8s' | 'docker') => {
-    if (type === 'k8s') {
-      setSelectedCluster(item as K8sCluster);
-    } else {
-      setSelectedHost(item as DockerHost);
-    }
-    setDetailsType(type);
-    setShowDetailsModal(true);
-  };
 
   return (
     <div className="p-6 space-y-6">
@@ -247,13 +159,10 @@ export default function Clusters() {
                   namespaces: cluster.namespace_count
                 }}
                 lastSync={cluster.last_sync}
-                hostUrl={cluster.kubeconfig_path}
-                onViewDetails={() => handleViewDetails(cluster, 'k8s')}
-                onEdit={isAdmin ? () => {
-                  setSelectedCluster(cluster);
-                  setShowEditK8sModal(true);
-                } : undefined}
-                onDelete={isAdmin ? () => handleDeleteK8sCluster(cluster) : undefined}
+                onViewDetails={() => {
+                  // TODO: Navigate to cluster details
+                  console.log('View details for', cluster.name);
+                }}
               />
             ))}
           </div>
@@ -313,13 +222,10 @@ export default function Clusters() {
                 metrics={{
                   containers: host.container_count
                 }}
-                hostUrl={host.host_url}
-                onViewDetails={() => handleViewDetails(host, 'docker')}
-                onEdit={isAdmin ? () => {
-                  setSelectedHost(host);
-                  setShowEditDockerModal(true);
-                } : undefined}
-                onDelete={isAdmin ? () => handleDeleteDockerHost(host) : undefined}
+                onViewDetails={() => {
+                  // TODO: Navigate to host details
+                  console.log('View details for', host.name);
+                }}
               />
             ))}
           </div>
@@ -369,41 +275,6 @@ export default function Clusters() {
           }}
         />
       )}
-
-      {showEditK8sModal && selectedCluster && (
-        <EditK8sClusterModal
-          cluster={selectedCluster}
-          onClose={() => {
-            setShowEditK8sModal(false);
-            setSelectedCluster(null);
-          }}
-          onSuccess={fetchClusters}
-        />
-      )}
-
-      {showEditDockerModal && selectedHost && (
-        <EditDockerHostModal
-          host={selectedHost}
-          onClose={() => {
-            setShowEditDockerModal(false);
-            setSelectedHost(null);
-          }}
-          onSuccess={fetchClusters}
-        />
-      )}
-
-      {showDetailsModal && (
-        <DetailsModal
-          item={detailsType === "k8s" ? selectedCluster : selectedHost}
-          type={detailsType}
-          onClose={() => {
-            setShowDetailsModal(false);
-            setSelectedCluster(null);
-            setSelectedHost(null);
-            setDetailsType(null);
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -434,47 +305,6 @@ function AddK8sClusterModal({ onClose, onSuccess }: { onClose: () => void, onSuc
     } finally {
       setLoading(false);
     }
-  };
-
-
-  const handleDeleteK8sCluster = async (cluster: K8sCluster) => {
-    if (!window.confirm(`Delete Kubernetes cluster "${cluster.name}"?\n\nThis action cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      await api.delete(`/k8s/clusters/${cluster.id}`);
-      showNotification(`Cluster "${cluster.name}" deleted successfully`, 'success');
-      fetchClusters();
-    } catch (error: any) {
-      console.error('Failed to delete cluster', error);
-      showNotification(error.response?.data?.detail || 'Failed to delete cluster', 'error');
-    }
-  };
-
-  const handleDeleteDockerHost = async (host: DockerHost) => {
-    if (!window.confirm(`Delete Docker host "${host.name}"?\n\nThis action cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      await api.delete(`/docker/hosts/${host.id}`);
-      showNotification(`Docker host "${host.name}" deleted successfully`, 'success');
-      fetchClusters();
-    } catch (error: any) {
-      console.error('Failed to delete Docker host', error);
-      showNotification(error.response?.data?.detail || 'Failed to delete Docker host', 'error');
-    }
-  };
-
-  const handleViewDetails = (item: K8sCluster | DockerHost, type: 'k8s' | 'docker') => {
-    if (type === 'k8s') {
-      setSelectedCluster(item as K8sCluster);
-    } else {
-      setSelectedHost(item as DockerHost);
-    }
-    setDetailsType(type);
-    setShowDetailsModal(true);
   };
 
   return (
@@ -590,47 +420,6 @@ function AddDockerHostModal({ onClose, onSuccess }: { onClose: () => void, onSuc
     } finally {
       setLoading(false);
     }
-  };
-
-
-  const handleDeleteK8sCluster = async (cluster: K8sCluster) => {
-    if (!window.confirm(`Delete Kubernetes cluster "${cluster.name}"?\n\nThis action cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      await api.delete(`/k8s/clusters/${cluster.id}`);
-      showNotification(`Cluster "${cluster.name}" deleted successfully`, 'success');
-      fetchClusters();
-    } catch (error: any) {
-      console.error('Failed to delete cluster', error);
-      showNotification(error.response?.data?.detail || 'Failed to delete cluster', 'error');
-    }
-  };
-
-  const handleDeleteDockerHost = async (host: DockerHost) => {
-    if (!window.confirm(`Delete Docker host "${host.name}"?\n\nThis action cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      await api.delete(`/docker/hosts/${host.id}`);
-      showNotification(`Docker host "${host.name}" deleted successfully`, 'success');
-      fetchClusters();
-    } catch (error: any) {
-      console.error('Failed to delete Docker host', error);
-      showNotification(error.response?.data?.detail || 'Failed to delete Docker host', 'error');
-    }
-  };
-
-  const handleViewDetails = (item: K8sCluster | DockerHost, type: 'k8s' | 'docker') => {
-    if (type === 'k8s') {
-      setSelectedCluster(item as K8sCluster);
-    } else {
-      setSelectedHost(item as DockerHost);
-    }
-    setDetailsType(type);
-    setShowDetailsModal(true);
   };
 
   return (
