@@ -68,3 +68,5 @@ logs/
 *-secret.yaml
 !*-secret-placeholder.yaml
 backend/data/*.rsa*
+backend/data/homelab_id_rsa
+backend/data/homelab_id_rsa.pub
