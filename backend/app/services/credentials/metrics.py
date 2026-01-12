@@ -52,7 +52,7 @@ audit_log_entries = Counter(
 )
 
 
-def update_metrics(db: Session):
+def update_metrics(db: Session, tenant_id: str = "default"):
     """Update all Prometheus metrics from database"""
     
     # Count totals

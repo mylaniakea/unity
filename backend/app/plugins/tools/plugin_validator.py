@@ -145,13 +145,7 @@ class PluginValidator:
         if not hasattr(self, 'plugin_class'):
             return
         
-        # Collect both sync and async methods from class body
-        methods = {}
-        for node in self.plugin_class.body:
-            if isinstance(node, ast.FunctionDef):
-                methods[node.name] = ('sync', node)
-            elif isinstance(node, ast.AsyncFunctionDef):
-                methods[node.name] = ('async', node)
+        methods = {node.name: node for node in self.plugin_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
         
         required_methods = {
             "get_metadata": "Returns plugin metadata",
@@ -162,12 +156,11 @@ class PluginValidator:
             if method_name not in methods:
                 self.result.add_error(f"Missing required method: {method_name} ({description})")
             else:
-                method_type, method_node = methods[method_name]
-                # Check if collect_data is async
-                if method_name == "collect_data" and method_type != "async":
-                    self.result.add_error(f"Method '{method_name}' must be async (use 'async def')")
-                elif method_name == "get_metadata" and method_type == "async":
-                    self.result.add_warning(f"Method '{method_name}' is async but typically should be sync")
+                # Check if method is async for collect_data
+                if method_name == "collect_data":
+                    method = methods[method_name]
+                    if not isinstance(method, ast.AsyncFunctionDef):
+                        self.result.add_error(f"Method '{method_name}' must be async")
         
         # Check optional but recommended methods
         recommended_methods = {
@@ -180,11 +173,6 @@ class PluginValidator:
         for method_name, description in recommended_methods.items():
             if method_name not in methods:
                 self.result.add_info(f"Optional method not implemented: {method_name} ({description})")
-            else:
-                method_type, method_node = methods[method_name]
-                # Health check should typically be async
-                if method_name == "health_check" and method_type != "async":
-                    self.result.add_info(f"Method '{method_name}' is sync - consider making it async for consistency")
     
     def _check_docstrings(self, tree: ast.AST):
         """Check for docstrings"""

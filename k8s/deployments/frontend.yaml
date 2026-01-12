@@ -15,11 +15,11 @@ spec:
       labels:
         app: unity-frontend
     spec:
+      imagePullSecrets:
+      - name: ghcr-pull-secret
       containers:
       - name: frontend
         image: docker.io/library/unity-frontend:latest
-        imagePullPolicy: Never
-        imagePullPolicy: Never
         imagePullPolicy: Never
         ports:
         - name: http
@@ -57,5 +57,5 @@ spec:
     app: unity-frontend
   ports:
   - name: http
-    port: 3000
+    port: 80
     targetPort: 80

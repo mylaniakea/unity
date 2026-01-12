@@ -1,39 +1,44 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from app.core.database import get_db
+from app.database import get_db
+from app.core.dependencies import get_tenant_id
 from app import models
-from app.schemas.alerts import ThresholdRule, ThresholdRuleCreate, ThresholdRuleUpdate
+from app.schemas_alerts import ThresholdRule, ThresholdRuleCreate, ThresholdRuleUpdate
 
 router = APIRouter(prefix="/thresholds", tags=["thresholds"])
 
 @router.get("/", response_model=List[ThresholdRule])
-def get_threshold_rules(db: Session = Depends(get_db)):
+def get_threshold_rules(db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Get all threshold rules"""
-    rules = db.query(models.ThresholdRule).all()
+    rules = db.query(models.ThresholdRule).filter(models.ThresholdRule.tenant_id == tenant_id).all()
     return rules
 
 @router.get("/{rule_id}", response_model=ThresholdRule)
-def get_threshold_rule(rule_id: int, db: Session = Depends(get_db)):
+def get_threshold_rule(rule_id: int, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Get a specific threshold rule"""
-    rule = db.query(models.ThresholdRule).filter(models.ThresholdRule.id == rule_id).first()
+    rule = db.query(models.ThresholdRule).filter(models.ThresholdRule.tenant_id == tenant_id).filter(models.ThresholdRule.id == rule_id).first()
     if not rule:
         raise HTTPException(status_code=404, detail="Threshold rule not found")
     return rule
 
 @router.post("/", response_model=ThresholdRule)
-def create_threshold_rule(rule: ThresholdRuleCreate, db: Session = Depends(get_db)):
+def create_threshold_rule(rule: ThresholdRuleCreate, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Create a new threshold rule"""
-    db_rule = models.ThresholdRule(**rule.model_dump())
+    db_rule = models.ThresholdRule(tenant_id=tenant_id, **rule.model_dump())
     db.add(db_rule)
     db.commit()
     db.refresh(db_rule)
     return db_rule
 
 @router.put("/{rule_id}", response_model=ThresholdRule)
-def update_threshold_rule(rule_id: int, rule: ThresholdRuleUpdate, db: Session = Depends(get_db)):
+def update_threshold_rule(rule_id: int, rule: ThresholdRuleUpdate, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Update a threshold rule"""
-    db_rule = db.query(models.ThresholdRule).filter(models.ThresholdRule.id == rule_id).first()
+    db_rule = db.query(models.ThresholdRule).filter(models.ThresholdRule.tenant_id == tenant_id).filter(models.ThresholdRule.id == rule_id).first()
     if not db_rule:
         raise HTTPException(status_code=404, detail="Threshold rule not found")
 
@@ -46,9 +51,10 @@ def update_threshold_rule(rule_id: int, rule: ThresholdRuleUpdate, db: Session =
     return db_rule
 
 @router.post("/{rule_id}/mute", response_model=ThresholdRule)
-def mute_threshold_rule(rule_id: int, mute_duration_minutes: int, db: Session = Depends(get_db)):
+def mute_threshold_rule(rule_id: int, mute_duration_minutes: int, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Mute a threshold rule for a specified duration in minutes"""
-    db_rule = db.query(models.ThresholdRule).filter(models.ThresholdRule.id == rule_id).first()
+    db_rule = db.query(models.ThresholdRule).filter(models.ThresholdRule.tenant_id == tenant_id).filter(models.ThresholdRule.id == rule_id).first()
     if not db_rule:
         raise HTTPException(status_code=404, detail="Threshold rule not found")
 
@@ -58,9 +64,10 @@ def mute_threshold_rule(rule_id: int, mute_duration_minutes: int, db: Session = 
     return db_rule
 
 @router.delete("/{rule_id}")
-def delete_threshold_rule(rule_id: int, db: Session = Depends(get_db)):
+def delete_threshold_rule(rule_id: int, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Delete a threshold rule"""
-    db_rule = db.query(models.ThresholdRule).filter(models.ThresholdRule.id == rule_id).first()
+    db_rule = db.query(models.ThresholdRule).filter(models.ThresholdRule.tenant_id == tenant_id).filter(models.ThresholdRule.id == rule_id).first()
     if not db_rule:
         raise HTTPException(status_code=404, detail="Threshold rule not found")
 

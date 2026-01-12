@@ -4,97 +4,134 @@ services:
     container_name: homelab-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-homelab_db}
-      POSTGRES_USER: ${POSTGRES_USER:-homelab_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-homelab_password}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-    - homelab_db_data:/var/lib/postgresql/data
+      - homelab_db_data:/var/lib/postgresql/data
     ports:
-    - 5432:5432
+      - "5432:5432"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
-    - homelab-net
+      - homelab-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-homelab_user} -d ${POSTGRES_DB:-homelab_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
   redis:
     image: redis:7-alpine
     container_name: homelab-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes
-    volumes:
-    - homelab_redis_data:/data
     ports:
-    - 6379:6379
+      - "6379:6379"
+    volumes:
+      - homelab_redis_data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf
     networks:
-    - homelab-net
+      - homelab-net
     healthcheck:
-      test:
-      - CMD
-      - redis-cli
-      - ping
-      interval: 5s
-      timeout: 3s
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
       retries: 5
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
   backend:
     build: ./backend
     container_name: homelab-backend
     restart: unless-stopped
     ports:
-    - 8000:8000
+      - "8000:8000"
     volumes:
-    - ./stacks:/app/stacks
-    - /var/run/docker.sock:/var/run/docker.sock
-    - ./backend/data:/app/data
+      - ./backend/data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc:/host/etc:ro
+      - /etc/hostname:/host/etc/hostname:ro
     environment:
-      ALLOW_ORIGINS: ${ALLOW_ORIGINS:-*}
-      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://${POSTGRES_USER:-homelab_user}:${POSTGRES_PASSWORD:-homelab_password}@db:5432/${POSTGRES_DB:-homelab_db}}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-secret-key-change-in-production}
-      STACKS_DIR: ${STACKS_DIR:-/app/stacks}
-      DEPLOYMENTS_ENABLED: ${DEPLOYMENTS_ENABLED:-true}
-      DEBUG: ${DEBUG:-false}
-      LOG_LEVEL: ${LOG_LEVEL:-info}
-    env_file:
-      - .env
-    # Note: .env file is optional - defaults will be used if not present
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info
+      - ALLOW_ORIGINS=${ALLOW_ORIGINS}
+      - DATABASE_URL=${DATABASE_URL}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - REDIS_URL=${REDIS_URL}
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level ${LOG_LEVEL}
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
-    - homelab-net
+      - homelab-net
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"]
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/health\").read()' || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
   frontend:
     build: ./frontend
     container_name: homelab-frontend
     restart: unless-stopped
     ports:
-    - 80:80
+      - "80:80"
     depends_on:
       backend:
         condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
-    - homelab-net
+      - homelab-net
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
 volumes:
-  homelab_redis_data: null
-  homelab_db_data: null
+  homelab_db_data:
+  homelab_redis_data:
+
 networks:
   homelab-net:
     driver: bridge

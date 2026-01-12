@@ -1,0 +1,107 @@
+name: authentik
+description: Authentik - Open-source Identity Provider
+category: auth
+platform: both
+type: deployment
+is_official: true
+
+defaults:
+  replicas: 1
+  image: ghcr.io/goauthentik/server:latest
+  port: 9000
+  domain: auth.local
+  storage_size: 5Gi
+
+dependencies:
+  - postgresql
+  - redis
+
+ports:
+  - name: http
+    port: 9000
+    targetPort: 9000
+    protocol: TCP
+  - name: https
+    port: 9443
+    targetPort: 9443
+    protocol: TCP
+
+volumes:
+  - name: media
+    mount_path: /media
+    size: 5Gi
+  - name: templates
+    mount_path: /templates
+    size: 1Gi
+
+environment:
+  AUTHENTIK_SECRET_KEY: ${authentik_secret_key}
+  AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+  AUTHENTIK_POSTGRESQL__HOST: postgresql
+  AUTHENTIK_POSTGRESQL__NAME: ${postgres_db}
+  AUTHENTIK_POSTGRESQL__USER: ${postgres_user}
+  AUTHENTIK_POSTGRESQL__PASSWORD: ${postgres_password}
+  AUTHENTIK_REDIS__HOST: redis
+  AUTHENTIK_LISTEN__HTTP: "0.0.0.0:9000"
+  AUTHENTIK_LISTEN__HTTPS: "0.0.0.0:9443"
+
+template:
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: authentik
+    namespace: ${namespace}
+    labels:
+      app: authentik
+  spec:
+    replicas: ${replicas}
+    selector:
+      matchLabels:
+        app: authentik
+    template:
+      metadata:
+        labels:
+          app: authentik
+      spec:
+        containers:
+          - name: server
+            image: ${image}
+            args: ["server"]
+            ports:
+              - containerPort: 9000
+                name: http
+              - containerPort: 9443
+                name: https
+            env:
+              - name: AUTHENTIK_SECRET_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: authentik-secret
+                    key: secret-key
+              - name: AUTHENTIK_ERROR_REPORTING__ENABLED
+                value: "false"
+              - name: AUTHENTIK_POSTGRESQL__HOST
+                value: postgresql
+              - name: AUTHENTIK_POSTGRESQL__NAME
+                value: ${postgres_db}
+              - name: AUTHENTIK_POSTGRESQL__USER
+                value: ${postgres_user}
+              - name: AUTHENTIK_POSTGRESQL__PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: postgresql-secret
+                    key: password
+              - name: AUTHENTIK_REDIS__HOST
+                value: redis
+            volumeMounts:
+              - name: media
+                mountPath: /media
+              - name: templates
+                mountPath: /templates
+        volumes:
+          - name: media
+            persistentVolumeClaim:
+              claimName: authentik-media
+          - name: templates
+            persistentVolumeClaim:
+              claimName: authentik-templates

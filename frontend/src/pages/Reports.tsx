@@ -5,6 +5,7 @@ import api from '@/api/client';
 import ReactMarkdown from 'react-markdown';
 import { useNotification } from '@/contexts/NotificationContext';
 import { useConfirm } from '@/contexts/ConfirmDialogContext';
+import { formatBytes } from '@/lib/utils';
 
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
 import { Line } from 'react-chartjs-2';

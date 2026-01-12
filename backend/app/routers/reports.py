@@ -2,10 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
-from app.core.database import get_db
+from app.database import get_db
+from app.core.dependencies import get_tenant_id
 from app import models
-from app.schemas.reports import Report as ReportSchema, ReportCreate
-from app.services.core import report_generation
+from app.schemas_reports import Report as ReportSchema, ReportCreate
+from app.services import report_generation
 from fastapi.responses import Response, StreamingResponse # Import for file responses
 import io # Import io for file-like objects
 from datetime import datetime
@@ -34,7 +35,8 @@ class ManualReportUpdate(BaseModel):
 def get_all_reports(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
 ):
     """Get all reports across all servers."""
     reports = db.query(models.Report)\
@@ -50,9 +52,10 @@ def get_all_reports(
 async def generate_report(
     server_id: int,
     report_type: str, # "24-hour", "7-day", "monthly"
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
 ):
-    server_profile = db.query(models.ServerProfile).filter(models.ServerProfile.id == server_id).first()
+    server_profile = db.query(models.ServerProfile).filter(models.ServerProfile.tenant_id == tenant_id).filter(models.ServerProfile.id == server_id).first()
     if not server_profile:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Server profile not found")
 
@@ -75,12 +78,13 @@ async def generate_report(
 @router.post("/")
 def create_manual_report(
     report_data: ManualReportCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
 ):
     """Create a manual report (e.g., AI-generated summary from Intelligence page)."""
     now = datetime.now()
     
-    new_report = models.Report(
+    new_report = models.Report(tenant_id=tenant_id, 
         server_id=report_data.server_id,  # Can be None for local system reports
         report_type=report_data.type,
         start_time=now,
@@ -104,10 +108,11 @@ def create_manual_report(
 def update_report(
     report_id: int,
     report_data: ManualReportUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
 ):
     """Update an existing report."""
-    report = db.query(models.Report).filter(models.Report.id == report_id).first()
+    report = db.query(models.Report).filter(models.Report.tenant_id == tenant_id).filter(models.Report.id == report_id).first()
     if not report:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found")
     
@@ -137,10 +142,11 @@ def get_reports_for_server(
     server_id: int,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
 ):
     """Get all reports for a specific server."""
-    server_profile = db.query(models.ServerProfile).filter(models.ServerProfile.id == server_id).first()
+    server_profile = db.query(models.ServerProfile).filter(models.ServerProfile.tenant_id == tenant_id).filter(models.ServerProfile.id == server_id).first()
     if not server_profile:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Server profile not found")
 
@@ -157,10 +163,11 @@ def get_reports_for_server(
 @router.get("/{report_id}", response_model=ReportSchema)
 def get_report_by_id(
     report_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
 ):
     """Get a specific report by its ID."""
-    report = db.query(models.Report).filter(models.Report.id == report_id).first()
+    report = db.query(models.Report).filter(models.Report.tenant_id == tenant_id).filter(models.Report.id == report_id).first()
     if not report:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found")
     return report
@@ -171,9 +178,10 @@ def get_report_by_id(
 async def export_report(
     report_id: int,
     format: str, # "csv" or "pdf"
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
 ):
-    report = db.query(models.Report).filter(models.Report.id == report_id).first()
+    report = db.query(models.Report).filter(models.Report.tenant_id == tenant_id).filter(models.Report.id == report_id).first()
     if not report:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found")
 
@@ -201,8 +209,9 @@ async def export_report(
 
 # --- DELETE REPORT ---
 @router.delete("/{report_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_report(report_id: int, db: Session = Depends(get_db)):
-    report = db.query(models.Report).filter(models.Report.id == report_id).first()
+def delete_report(report_id: int, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
+    report = db.query(models.Report).filter(models.Report.tenant_id == tenant_id).filter(models.Report.id == report_id).first()
     if not report:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found")
     db.delete(report)

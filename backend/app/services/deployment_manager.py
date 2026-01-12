@@ -1,414 +1,612 @@
 """
 Deployment Manager Service
 
-Manages Docker Compose stacks using Docker Python SDK.
-Provides file-system based stack management similar to Dockge.
+Unified deployment interface for both Kubernetes and Docker platforms.
+Provides high-level deployment operations that abstract away platform differences.
 """
-import os
-import yaml
-import shutil
-import asyncio
+
 import logging
-from pathlib import Path
-from typing import List, Dict, Optional, AsyncGenerator
+import asyncio
+import subprocess
+import json
+import yaml
+from typing import Dict, Any, List, Optional
 from datetime import datetime
-import docker
-from docker.errors import DockerException, NotFound, APIError
+from pathlib import Path
+
+from app.services.k8s_client import KubernetesClient, KubernetesClientError
 
 logger = logging.getLogger(__name__)
 
 
+class DeploymentManagerError(Exception):
+    """Base exception for deployment manager errors"""
+    pass
+
+
 class DeploymentManager:
-    """Manages Docker Compose stacks with file-system integration."""
-    
-    def __init__(self, stacks_dir: str = "/app/stacks"):
+    """
+    Unified deployment manager for Kubernetes and Docker.
+
+    Provides a consistent interface for deploying, updating, scaling, and removing
+    applications across different platforms.
+    """
+
+    def __init__(self, db_session=None):
         """
-        Initialize DeploymentManager.
-        
+        Initialize deployment manager.
+
         Args:
-            stacks_dir: Directory where stacks are stored
+            db_session: SQLAlchemy database session for persistence
         """
-        self.stacks_dir = Path(stacks_dir)
-        self.stacks_dir.mkdir(parents=True, exist_ok=True)
-        
-        try:
-            self.docker_client = docker.from_env()
-            logger.info(f"✓ Connected to Docker daemon")
-        except DockerException as e:
-            logger.error(f"Failed to connect to Docker: {e}")
-            raise
-    
-    def list_stacks(self) -> List[Dict]:
+        self.db = db_session
+        self.logger = logger
+
+    # ==================
+    # Kubernetes Deployment Methods
+    # ==================
+
+    async def deploy_to_kubernetes(
+        self,
+        manifests: List[Dict[str, Any]],
+        namespace: str = "default",
+        cluster_id: Optional[int] = None,
+        kubeconfig_path: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
-        List all stacks in the stacks directory.
-        
+        Deploy resources to Kubernetes cluster.
+
+        Args:
+            manifests: List of Kubernetes manifest dictionaries
+            namespace: Target namespace
+            cluster_id: Database ID of cluster (used to lookup kubeconfig)
+            kubeconfig_path: Path to kubeconfig file (overrides cluster_id)
+
         Returns:
-            List of stack metadata dictionaries
+            Dict with deployment result:
+            {
+                "success": bool,
+                "deployed_resources": List[Dict],
+                "errors": List[str],
+                "namespace": str,
+                "cluster": str
+            }
         """
-        stacks = []
-        
-        for stack_dir in self.stacks_dir.iterdir():
-            if not stack_dir.is_dir() or stack_dir.name.startswith('.'):
-                continue
-            
-            compose_file = stack_dir / "compose.yaml"
-            if not compose_file.exists():
-                compose_file = stack_dir / "docker-compose.yml"
-            
-            if compose_file.exists():
+        self.logger.info(f"Deploying {len(manifests)} manifests to Kubernetes namespace '{namespace}'")
+
+        try:
+            # Get kubeconfig path from cluster if cluster_id provided
+            if cluster_id and not kubeconfig_path and self.db:
+                from app.models import KubernetesCluster
+                cluster = self.db.query(KubernetesCluster).filter_by(id=cluster_id).first()
+                if cluster and cluster.kubeconfig_data:
+                    # Write kubeconfig to temp file
+                    import tempfile
+                    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+                        f.write(cluster.kubeconfig_data)
+                        kubeconfig_path = f.name
+
+            # Initialize Kubernetes client
+            k8s_client = KubernetesClient(kubeconfig_path=kubeconfig_path)
+            await k8s_client.load_config()
+
+            # Test connection
+            if not await k8s_client.test_connection():
+                raise DeploymentManagerError("Failed to connect to Kubernetes cluster")
+
+            # Create namespace if it doesn't exist
+            try:
+                await k8s_client.create_namespace(namespace)
+                self.logger.info(f"Created namespace: {namespace}")
+            except Exception as e:
+                # Namespace might already exist, that's ok
+                self.logger.debug(f"Namespace creation note: {e}")
+
+            deployed_resources = []
+            errors = []
+
+            # Apply each manifest
+            for manifest in manifests:
                 try:
-                    # Read compose file
-                    with open(compose_file, 'r') as f:
-                        compose_data = yaml.safe_load(f)
-                    
-                    # Get container status
-                    containers = self._get_stack_containers(stack_dir.name)
-                    
-                    running_count = sum(1 for c in containers if c['state'] == 'running')
-                    total_count = len(containers)
-                    
-                    status = 'running' if running_count == total_count and total_count > 0 else \
-                             'partial' if running_count > 0 else \
-                             'stopped' if total_count > 0 else 'unknown'
-                    
-                    stacks.append({
-                        'name': stack_dir.name,
-                        'path': str(stack_dir),
-                        'compose_file': str(compose_file),
-                        'status': status,
-                        'containers': total_count,
-                        'running': running_count,
-                        'created_at': datetime.fromtimestamp(compose_file.stat().st_ctime).isoformat(),
-                        'updated_at': datetime.fromtimestamp(compose_file.stat().st_mtime).isoformat(),
-                    })
+                    result = await self._apply_k8s_manifest(k8s_client, manifest, namespace)
+                    deployed_resources.append(result)
+                    self.logger.info(
+                        f"Applied {result['kind']}/{result['name']} to namespace {namespace}"
+                    )
                 except Exception as e:
-                    logger.warning(f"Error reading stack {stack_dir.name}: {e}")
-                    continue
-        
-        return sorted(stacks, key=lambda x: x['name'])
-    
-    def get_stack(self, name: str) -> Optional[Dict]:
-        """
-        Get detailed information about a stack.
-        
-        Args:
-            name: Stack name
-            
-        Returns:
-            Stack details including compose content and container info
-        """
-        stack_dir = self.stacks_dir / name
-        if not stack_dir.exists():
-            return None
-        
-        compose_file = stack_dir / "compose.yaml"
-        if not compose_file.exists():
-            compose_file = stack_dir / "docker-compose.yml"
-        
-        if not compose_file.exists():
-            return None
-        
-        try:
-            with open(compose_file, 'r') as f:
-                compose_content = f.read()
-                compose_data = yaml.safe_load(compose_content)
-            
-            containers = self._get_stack_containers(name)
-            
+                    error_msg = f"Failed to apply {manifest.get('kind', 'unknown')}: {str(e)}"
+                    errors.append(error_msg)
+                    self.logger.error(error_msg)
+
+            success = len(errors) == 0
+
             return {
-                'name': name,
-                'path': str(stack_dir),
-                'compose_file': str(compose_file),
-                'compose_content': compose_content,
-                'compose_data': compose_data,
-                'containers': containers,
-                'created_at': datetime.fromtimestamp(compose_file.stat().st_ctime).isoformat(),
-                'updated_at': datetime.fromtimestamp(compose_file.stat().st_mtime).isoformat(),
+                "success": success,
+                "deployed_resources": deployed_resources,
+                "errors": errors,
+                "namespace": namespace,
+                "cluster": kubeconfig_path or "default",
+                "deployment_time": datetime.utcnow().isoformat()
+            }
+
+        except Exception as e:
+            self.logger.error(f"Kubernetes deployment failed: {e}")
+            return {
+                "success": False,
+                "deployed_resources": [],
+                "errors": [str(e)],
+                "namespace": namespace,
+                "cluster": kubeconfig_path or "default"
+            }
+
+    async def _apply_k8s_manifest(
+        self,
+        k8s_client: KubernetesClient,
+        manifest: Dict[str, Any],
+        namespace: str
+    ) -> Dict[str, Any]:
+        """Apply a single Kubernetes manifest."""
+        kind = manifest.get("kind", "Unknown")
+        name = manifest.get("metadata", {}).get("name", "unknown")
+
+        # Set namespace in metadata if not present
+        if "metadata" not in manifest:
+            manifest["metadata"] = {}
+        if "namespace" not in manifest["metadata"]:
+            manifest["metadata"]["namespace"] = namespace
+
+        # Apply manifest using kubectl-style dynamic client
+        result = await k8s_client.apply_manifest(manifest)
+
+        return {
+            "kind": kind,
+            "name": name,
+            "namespace": namespace,
+            "status": "created" if result.get("created") else "updated",
+            "api_version": manifest.get("apiVersion", "unknown")
+        }
+
+    async def update_kubernetes_deployment(
+        self,
+        deployment_name: str,
+        namespace: str,
+        new_manifests: List[Dict[str, Any]],
+        kubeconfig_path: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Update existing Kubernetes deployment.
+
+        This is essentially the same as deploy_to_kubernetes since kubectl apply
+        handles both creation and updates.
+        """
+        return await self.deploy_to_kubernetes(
+            manifests=new_manifests,
+            namespace=namespace,
+            kubeconfig_path=kubeconfig_path
+        )
+
+    async def scale_kubernetes_deployment(
+        self,
+        deployment_name: str,
+        namespace: str,
+        replicas: int,
+        kubeconfig_path: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Scale Kubernetes deployment.
+
+        Args:
+            deployment_name: Name of deployment to scale
+            namespace: Namespace containing deployment
+            replicas: Target replica count
+            kubeconfig_path: Path to kubeconfig file
+
+        Returns:
+            Dict with scale result
+        """
+        self.logger.info(f"Scaling {deployment_name} in {namespace} to {replicas} replicas")
+
+        try:
+            k8s_client = KubernetesClient(kubeconfig_path=kubeconfig_path)
+            await k8s_client.load_config()
+
+            result = await k8s_client.scale_deployment(deployment_name, namespace, replicas)
+
+            return {
+                "success": True,
+                "deployment": deployment_name,
+                "namespace": namespace,
+                "replicas": replicas,
+                "status": result
             }
         except Exception as e:
-            logger.error(f"Error getting stack {name}: {e}")
-            return None
-    
-    async def create_stack(self, name: str, compose_content: str, deploy: bool = True) -> Dict:
+            self.logger.error(f"Failed to scale deployment: {e}")
+            return {
+                "success": False,
+                "deployment": deployment_name,
+                "namespace": namespace,
+                "error": str(e)
+            }
+
+    async def remove_kubernetes_deployment(
+        self,
+        deployment_name: str,
+        namespace: str,
+        kubeconfig_path: Optional[str] = None,
+        delete_namespace: bool = False
+    ) -> Dict[str, Any]:
         """
-        Create a new stack.
-        
+        Remove Kubernetes deployment and associated resources.
+
         Args:
-            name: Stack name
+            deployment_name: Name of deployment to remove
+            namespace: Namespace containing deployment
+            kubeconfig_path: Path to kubeconfig file
+            delete_namespace: If True, delete entire namespace
+
+        Returns:
+            Dict with removal result
+        """
+        self.logger.info(f"Removing deployment {deployment_name} from namespace {namespace}")
+
+        try:
+            k8s_client = KubernetesClient(kubeconfig_path=kubeconfig_path)
+            await k8s_client.load_config()
+
+            if delete_namespace:
+                # Delete entire namespace
+                result = await k8s_client.delete_namespace(namespace)
+                return {
+                    "success": True,
+                    "action": "namespace_deleted",
+                    "namespace": namespace,
+                    "status": result
+                }
+            else:
+                # Delete specific deployment
+                result = await k8s_client.delete_deployment(deployment_name, namespace)
+                return {
+                    "success": True,
+                    "action": "deployment_deleted",
+                    "deployment": deployment_name,
+                    "namespace": namespace,
+                    "status": result
+                }
+        except Exception as e:
+            self.logger.error(f"Failed to remove deployment: {e}")
+            return {
+                "success": False,
+                "deployment": deployment_name,
+                "namespace": namespace,
+                "error": str(e)
+            }
+
+    async def get_kubernetes_deployment_status(
+        self,
+        deployment_name: str,
+        namespace: str,
+        kubeconfig_path: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Get status of Kubernetes deployment.
+
+        Returns:
+            Dict with deployment status including replicas, conditions, etc.
+        """
+        try:
+            k8s_client = KubernetesClient(kubeconfig_path=kubeconfig_path)
+            await k8s_client.load_config()
+
+            status = await k8s_client.get_deployment_status(deployment_name, namespace)
+
+            return {
+                "success": True,
+                "deployment": deployment_name,
+                "namespace": namespace,
+                "status": status
+            }
+        except Exception as e:
+            self.logger.error(f"Failed to get deployment status: {e}")
+            return {
+                "success": False,
+                "deployment": deployment_name,
+                "namespace": namespace,
+                "error": str(e)
+            }
+
+    # ==================
+    # Docker Deployment Methods
+    # ==================
+
+    async def deploy_to_docker(
+        self,
+        compose_content: str,
+        project_name: str,
+        env_vars: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Deploy using Docker Compose.
+
+        Args:
             compose_content: Docker Compose YAML content
-            deploy: Whether to deploy immediately
-            
+            project_name: Docker Compose project name
+            env_vars: Environment variables for compose
+
         Returns:
-            Stack information
+            Dict with deployment result
         """
-        # Validate stack name
-        if not name or '/' in name or '\\' in name:
-            raise ValueError("Invalid stack name")
-        
-        stack_dir = self.stacks_dir / name
-        if stack_dir.exists():
-            raise ValueError(f"Stack {name} already exists")
-        
-        # Validate YAML
+        self.logger.info(f"Deploying Docker Compose project: {project_name}")
+
         try:
-            yaml.safe_load(compose_content)
-        except yaml.YAMLError as e:
-            raise ValueError(f"Invalid YAML: {e}")
-        
-        # Create stack directory
-        stack_dir.mkdir(parents=True)
-        
-        # Write compose file atomically
-        compose_file = stack_dir / "compose.yaml"
-        temp_file = stack_dir / ".compose.yaml.tmp"
-        
-        try:
-            with open(temp_file, 'w') as f:
+            # Write compose file to temp location
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.yml', delete=False) as f:
                 f.write(compose_content)
-            temp_file.rename(compose_file)
-            
-            logger.info(f"Created stack {name}")
-            
-            if deploy:
-                await self._deploy_stack(name)
-            
-            return self.get_stack(name)
+                compose_file = f.name
+
+            # Build docker-compose command
+            cmd = [
+                "docker-compose",
+                "-f", compose_file,
+                "-p", project_name,
+                "up", "-d"
+            ]
+
+            # Set environment variables
+            env = env_vars.copy() if env_vars else {}
+
+            # Execute docker-compose
+            result = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env={**os.environ, **env}
+            )
+
+            stdout, stderr = await result.communicate()
+
+            success = result.returncode == 0
+
+            if success:
+                # Get container status
+                containers = await self._get_docker_containers(project_name)
+
+                return {
+                    "success": True,
+                    "project": project_name,
+                    "containers": containers,
+                    "output": stdout.decode(),
+                    "deployment_time": datetime.utcnow().isoformat()
+                }
+            else:
+                return {
+                    "success": False,
+                    "project": project_name,
+                    "error": stderr.decode(),
+                    "output": stdout.decode()
+                }
+
         except Exception as e:
-            # Cleanup on error
-            if stack_dir.exists():
-                shutil.rmtree(stack_dir)
-            raise Exception(f"Failed to create stack: {e}")
-    
-    async def update_stack(self, name: str, compose_content: str, redeploy: bool = True) -> Dict:
+            self.logger.error(f"Docker deployment failed: {e}")
+            return {
+                "success": False,
+                "project": project_name,
+                "error": str(e)
+            }
+
+    async def update_docker_deployment(
+        self,
+        project_name: str,
+        compose_content: str,
+        env_vars: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
         """
-        Update an existing stack.
-        
+        Update existing Docker Compose deployment.
+
+        This recreates containers with new configuration.
+        """
+        return await self.deploy_to_docker(compose_content, project_name, env_vars)
+
+    async def scale_docker_service(
+        self,
+        project_name: str,
+        service_name: str,
+        replicas: int
+    ) -> Dict[str, Any]:
+        """
+        Scale Docker Compose service.
+
         Args:
-            name: Stack name
-            compose_content: New Docker Compose YAML content
-            redeploy: Whether to redeploy after update
-            
-        Returns:
-            Updated stack information
+            project_name: Docker Compose project name
+            service_name: Service to scale
+            replicas: Target replica count
         """
-        stack_dir = self.stacks_dir / name
-        if not stack_dir.exists():
-            raise ValueError(f"Stack {name} does not exist")
-        
-        # Validate YAML
+        self.logger.info(f"Scaling Docker service {service_name} to {replicas}")
+
         try:
-            yaml.safe_load(compose_content)
-        except yaml.YAMLError as e:
-            raise ValueError(f"Invalid YAML: {e}")
-        
-        compose_file = stack_dir / "compose.yaml"
-        if not compose_file.exists():
-            compose_file = stack_dir / "docker-compose.yml"
-        
-        # Backup current file
-        backup_file = stack_dir / f".compose.yaml.backup.{int(datetime.now().timestamp())}"
-        if compose_file.exists():
-            shutil.copy(compose_file, backup_file)
-        
-        # Write new content atomically
-        temp_file = stack_dir / ".compose.yaml.tmp"
-        
-        try:
-            with open(temp_file, 'w') as f:
-                f.write(compose_content)
-            temp_file.rename(compose_file)
-            
-            logger.info(f"Updated stack {name}")
-            
-            if redeploy:
-                await self._deploy_stack(name)
-            
-            return self.get_stack(name)
-        except Exception as e:
-            # Restore backup on error
-            if backup_file.exists():
-                shutil.copy(backup_file, compose_file)
-            raise Exception(f"Failed to update stack: {e}")
-        finally:
-            # Cleanup backup
-            if backup_file.exists():
-                backup_file.unlink()
-    
-    async def delete_stack(self, name: str, stop_containers: bool = True) -> bool:
-        """
-        Delete a stack.
-        
-        Args:
-            name: Stack name
-            stop_containers: Whether to stop containers first
-            
-        Returns:
-            True if successful
-        """
-        stack_dir = self.stacks_dir / name
-        if not stack_dir.exists():
-            raise ValueError(f"Stack {name} does not exist")
-        
-        try:
-            if stop_containers:
-                await self.stop_stack(name)
-            
-            # Remove stack directory
-            shutil.rmtree(stack_dir)
-            logger.info(f"Deleted stack {name}")
-            return True
-        except Exception as e:
-            raise Exception(f"Failed to delete stack: {e}")
-    
-    async def start_stack(self, name: str) -> Dict:
-        """Start a stopped stack."""
-        await self._deploy_stack(name)
-        return self.get_stack(name)
-    
-    async def stop_stack(self, name: str) -> Dict:
-        """Stop a running stack."""
-        stack_dir = self.stacks_dir / name
-        compose_file = stack_dir / "compose.yaml"
-        if not compose_file.exists():
-            compose_file = stack_dir / "docker-compose.yml"
-        
-        try:
-            # Use docker compose down
-            process = await asyncio.create_subprocess_exec(
-                'docker', 'compose', '-f', str(compose_file), '-p', name, 'down',
+            cmd = [
+                "docker-compose",
+                "-p", project_name,
+                "up", "-d",
+                "--scale", f"{service_name}={replicas}"
+            ]
+
+            result = await asyncio.create_subprocess_exec(
+                *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
-            stdout, stderr = await process.wait()
-            
-            logger.info(f"Stopped stack {name}")
-            return self.get_stack(name)
+
+            stdout, stderr = await result.communicate()
+
+            return {
+                "success": result.returncode == 0,
+                "project": project_name,
+                "service": service_name,
+                "replicas": replicas,
+                "output": stdout.decode()
+            }
         except Exception as e:
-            raise Exception(f"Failed to stop stack: {e}")
-    
-    async def restart_stack(self, name: str) -> Dict:
-        """Restart a stack."""
-        await self.stop_stack(name)
-        await asyncio.sleep(1)  # Give containers time to stop
-        await self.start_stack(name)
-        return self.get_stack(name)
-    
-    async def get_stack_logs(self, name: str, follow: bool = False, tail: int = 100) -> AsyncGenerator[str, None]:
+            self.logger.error(f"Failed to scale Docker service: {e}")
+            return {
+                "success": False,
+                "project": project_name,
+                "service": service_name,
+                "error": str(e)
+            }
+
+    async def remove_docker_deployment(
+        self,
+        project_name: str,
+        remove_volumes: bool = False
+    ) -> Dict[str, Any]:
         """
-        Stream logs from all containers in a stack.
-        
+        Remove Docker Compose deployment.
+
         Args:
-            name: Stack name
-            follow: Whether to follow logs
-            tail: Number of lines to show from end
-            
-        Yields:
-            Log lines
+            project_name: Docker Compose project name
+            remove_volumes: If True, also remove volumes
         """
-        containers = self._get_stack_containers(name)
-        
-        for container_info in containers:
-            try:
-                container = self.docker_client.containers.get(container_info['id'])
-                logs = container.logs(stream=follow, follow=follow, tail=tail, timestamps=True)
-                
-                if follow:
-                    for line in logs:
-                        yield f"[{container_info['name']}] {line.decode('utf-8', errors='ignore').strip()}"
-                else:
-                    for line in logs.decode('utf-8', errors='ignore').split('\n'):
-                        if line.strip():
-                            yield f"[{container_info['name']}] {line.strip()}"
-            except Exception as e:
-                logger.error(f"Error getting logs from {container_info['name']}: {e}")
-                continue
-    
-    def get_stack_metrics(self, name: str) -> Dict:
-        """
-        Get resource metrics for a stack.
-        
-        Args:
-            name: Stack name
-            
-        Returns:
-            Metrics dictionary
-        """
-        containers = self._get_stack_containers(name)
-        metrics = []
-        
-        for container_info in containers:
-            try:
-                container = self.docker_client.containers.get(container_info['id'])
-                stats = container.stats(stream=False)
-                
-                # Calculate CPU percentage
-                cpu_delta = stats['cpu_stats']['cpu_usage']['total_usage'] - \
-                           stats['precpu_stats']['cpu_usage']['total_usage']
-                system_delta = stats['cpu_stats']['system_cpu_usage'] - \
-                              stats['precpu_stats']['system_cpu_usage']
-                cpu_percent = (cpu_delta / system_delta) * 100.0 if system_delta > 0 else 0.0
-                
-                # Calculate memory usage
-                mem_usage = stats['memory_stats'].get('usage', 0)
-                mem_limit = stats['memory_stats'].get('limit', 1)
-                mem_percent = (mem_usage / mem_limit) * 100.0 if mem_limit > 0 else 0.0
-                
-                metrics.append({
-                    'container': container_info['name'],
-                    'cpu_percent': round(cpu_percent, 2),
-                    'memory_usage': mem_usage,
-                    'memory_limit': mem_limit,
-                    'memory_percent': round(mem_percent, 2),
-                })
-            except Exception as e:
-                logger.error(f"Error getting metrics from {container_info['name']}: {e}")
-                continue
-        
-        return {'stack': name, 'containers': metrics}
-    
-    def _get_stack_containers(self, stack_name: str) -> List[Dict]:
-        """Get containers belonging to a stack."""
+        self.logger.info(f"Removing Docker Compose project: {project_name}")
+
         try:
-            containers = self.docker_client.containers.list(
-                all=True,
-                filters={'label': f'com.docker.compose.project={stack_name}'}
+            cmd = ["docker-compose", "-p", project_name, "down"]
+            if remove_volumes:
+                cmd.append("-v")
+
+            result = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
             )
-            
-            return [{
-                'id': c.id,
-                'name': c.name,
-                'image': c.image.tags[0] if c.image.tags else c.image.id,
-                'state': c.status,
-                'created': c.attrs['Created'],
-            } for c in containers]
+
+            stdout, stderr = await result.communicate()
+
+            return {
+                "success": result.returncode == 0,
+                "project": project_name,
+                "action": "removed",
+                "output": stdout.decode()
+            }
         except Exception as e:
-            logger.error(f"Error listing containers for stack {stack_name}: {e}")
+            self.logger.error(f"Failed to remove Docker deployment: {e}")
+            return {
+                "success": False,
+                "project": project_name,
+                "error": str(e)
+            }
+
+    async def get_docker_deployment_status(
+        self,
+        project_name: str
+    ) -> Dict[str, Any]:
+        """
+        Get status of Docker Compose deployment.
+        """
+        try:
+            containers = await self._get_docker_containers(project_name)
+
+            return {
+                "success": True,
+                "project": project_name,
+                "containers": containers,
+                "running": sum(1 for c in containers if c["status"] == "running")
+            }
+        except Exception as e:
+            self.logger.error(f"Failed to get Docker status: {e}")
+            return {
+                "success": False,
+                "project": project_name,
+                "error": str(e)
+            }
+
+    async def _get_docker_containers(self, project_name: str) -> List[Dict[str, Any]]:
+        """Get list of containers for a Docker Compose project."""
+        cmd = [
+            "docker-compose",
+            "-p", project_name,
+            "ps", "--format", "json"
+        ]
+
+        result = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+
+        stdout, stderr = await result.communicate()
+
+        if result.returncode != 0:
             return []
-    
-    async def _deploy_stack(self, name: str):
-        """Deploy a stack using docker compose up."""
-        stack_dir = self.stacks_dir / name
-        compose_file = stack_dir / "compose.yaml"
-        if not compose_file.exists():
-            compose_file = stack_dir / "docker-compose.yml"
-        
+
+        # Parse JSON output
         try:
-            process = await asyncio.create_subprocess_exec(
-                'docker', 'compose', '-f', str(compose_file), '-p', name, 'up', '-d',
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+            containers = json.loads(stdout.decode())
+            return containers if isinstance(containers, list) else [containers]
+        except:
+            return []
+
+    # ==================
+    # Platform-Agnostic Methods
+    # ==================
+
+    async def deploy(
+        self,
+        platform: str,
+        config: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Platform-agnostic deployment method.
+
+        Args:
+            platform: "kubernetes" or "docker"
+            config: Platform-specific configuration
+
+        Returns:
+            Dict with deployment result
+        """
+        if platform == "kubernetes":
+            return await self.deploy_to_kubernetes(
+                manifests=config.get("manifests", []),
+                namespace=config.get("namespace", "default"),
+                cluster_id=config.get("cluster_id"),
+                kubeconfig_path=config.get("kubeconfig_path")
             )
-            stdout, stderr = await process.wait()
-            
-            if process.returncode != 0:
-                raise Exception(f"Deploy failed: {stderr.decode()}")
-            
-            logger.info(f"Deployed stack {name}")
-        except Exception as e:
-            raise Exception(f"Failed to deploy stack: {e}")
+        elif platform == "docker":
+            return await self.deploy_to_docker(
+                compose_content=config.get("compose_content", ""),
+                project_name=config.get("project_name", ""),
+                env_vars=config.get("env_vars", {})
+            )
+        else:
+            raise DeploymentManagerError(f"Unsupported platform: {platform}")
+
+    async def get_deployment_status(
+        self,
+        platform: str,
+        deployment_id: str,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """
+        Platform-agnostic status check.
+
+        Args:
+            platform: "kubernetes" or "docker"
+            deployment_id: Deployment identifier
+            **kwargs: Platform-specific parameters
+        """
+        if platform == "kubernetes":
+            return await self.get_kubernetes_deployment_status(
+                deployment_name=deployment_id,
+                namespace=kwargs.get("namespace", "default"),
+                kubeconfig_path=kwargs.get("kubeconfig_path")
+            )
+        elif platform == "docker":
+            return await self.get_docker_deployment_status(
+                project_name=deployment_id
+            )
+        else:
+            raise DeploymentManagerError(f"Unsupported platform: {platform}")
 
 
-# Global instance
-deployment_manager = DeploymentManager(
-    stacks_dir=os.getenv('STACKS_DIR', '/app/stacks')
-)
+import os

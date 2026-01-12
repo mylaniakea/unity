@@ -1,9 +1,16 @@
-from .environment_intelligence import EnvironmentIntelligence
+"""
+Orchestration Module
+
+Provides semantic AI orchestration for Kubernetes and Docker deployments.
+"""
+
+from .blueprint_loader import BlueprintLoader, get_blueprint_loader
 from .manifest_generator import ManifestGenerator
-from .blueprint_loader import BlueprintLoader
+from .auto_wiring import AutoWiringEngine
 
 __all__ = [
-    "EnvironmentIntelligence",
-    "ManifestGenerator",
-    "BlueprintLoader",
+    'BlueprintLoader',
+    'get_blueprint_loader',
+    'ManifestGenerator',
+    'AutoWiringEngine',
 ]

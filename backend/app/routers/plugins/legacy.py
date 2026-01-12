@@ -6,10 +6,11 @@ from sqlalchemy.orm import Session
 from typing import List, Dict
 from pydantic import BaseModel
 
-from app.core.database import get_db
+from app.core.dependencies import get_tenant_id
+from app.database import get_db
 from app import models
-from app.services.plugins.plugin_registry import PLUGINS, PLUGIN_CATEGORIES, get_all_plugins, get_plugin
-from app.services.core.ssh import SSHService
+from app.services.plugin_registry import PLUGINS, PLUGIN_CATEGORIES, get_all_plugins, get_plugin
+from app.services.ssh import SSHService
 
 router = APIRouter(
     prefix="/plugins",
@@ -30,11 +31,18 @@ class InstallPluginRequest(BaseModel):
 
 # --- GET ALL AVAILABLE PLUGINS ---
 @router.get("/")
-def list_plugins():
-    """List all available plugins with their definitions."""
+def list_plugins(db: Session = Depends(get_db)):
+    """List all available plugins from database."""
+    from app.services.plugin_manager import PluginManager
+    manager = PluginManager(db)
+    plugins = manager.list_plugins()
+    
+    # Get categories from plugins
+    categories = list(set(p.get('category') for p in plugins if p.get('category')))
+    
     return {
-        "plugins": get_all_plugins(),
-        "categories": PLUGIN_CATEGORIES
+        "plugins": plugins,
+        "categories": categories
     }
 
 
@@ -50,9 +58,10 @@ def get_plugin_details(plugin_id: str):
 
 # --- CHECK PLUGIN AVAILABILITY ON SERVER ---
 @router.get("/check/{server_id}")
-async def check_plugins_on_server(server_id: int, db: Session = Depends(get_db)):
+async def check_plugins_on_server(server_id: int, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Check which plugins are available (tools installed) on a server."""
-    profile = db.query(models.ServerProfile).filter(models.ServerProfile.id == server_id).first()
+    profile = db.query(models.ServerProfile).filter(models.ServerProfile.tenant_id == tenant_id).filter(models.ServerProfile.id == server_id).first()
     if not profile:
         raise HTTPException(status_code=404, detail="Server profile not found")
     
@@ -85,9 +94,10 @@ async def check_plugins_on_server(server_id: int, db: Session = Depends(get_db))
 
 # --- TOGGLE PLUGIN FOR SERVER ---
 @router.post("/toggle/{server_id}")
-def toggle_plugin(server_id: int, request: PluginToggleRequest, db: Session = Depends(get_db)):
+def toggle_plugin(server_id: int, request: PluginToggleRequest, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Enable or disable a plugin for a specific server."""
-    profile = db.query(models.ServerProfile).filter(models.ServerProfile.id == server_id).first()
+    profile = db.query(models.ServerProfile).filter(models.ServerProfile.tenant_id == tenant_id).filter(models.ServerProfile.id == server_id).first()
     if not profile:
         raise HTTPException(status_code=404, detail="Server profile not found")
     
@@ -117,9 +127,10 @@ def toggle_plugin(server_id: int, request: PluginToggleRequest, db: Session = De
 
 # --- GET SERVER PLUGIN STATUS ---
 @router.get("/status/{server_id}")
-def get_server_plugin_status(server_id: int, db: Session = Depends(get_db)):
+def get_server_plugin_status(server_id: int, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Get enabled and detected plugins for a server."""
-    profile = db.query(models.ServerProfile).filter(models.ServerProfile.id == server_id).first()
+    profile = db.query(models.ServerProfile).filter(models.ServerProfile.tenant_id == tenant_id).filter(models.ServerProfile.id == server_id).first()
     if not profile:
         raise HTTPException(status_code=404, detail="Server profile not found")
     
@@ -133,9 +144,10 @@ def get_server_plugin_status(server_id: int, db: Session = Depends(get_db)):
 
 # --- INSTALL PLUGIN ON SERVER ---
 @router.post("/install/{server_id}")
-async def install_plugin(server_id: int, request: InstallPluginRequest, db: Session = Depends(get_db)):
+async def install_plugin(server_id: int, request: InstallPluginRequest, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Execute install script for a plugin on a server."""
-    profile = db.query(models.ServerProfile).filter(models.ServerProfile.id == server_id).first()
+    profile = db.query(models.ServerProfile).filter(models.ServerProfile.tenant_id == tenant_id).filter(models.ServerProfile.id == server_id).first()
     if not profile:
         raise HTTPException(status_code=404, detail="Server profile not found")
     

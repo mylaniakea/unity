@@ -3,10 +3,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
 from typing import List, Optional
 from datetime import datetime, timedelta
-from app.core.database import get_db
+from app.database import get_db
+from app.core.dependencies import get_tenant_id
 from app import models
-from app.schemas.alerts import Alert, AlertUpdate, AlertChannel, AlertChannelCreate, AlertChannelUpdate, NotificationLogResponse
-from app.services.monitoring.alert_channels import get_all_channels
+from app.schemas_alerts import Alert, AlertUpdate, AlertChannel, AlertChannelCreate, AlertChannelUpdate, NotificationLogResponse
+from app.services.alert_channels import get_all_channels
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])
 
@@ -14,10 +15,11 @@ router = APIRouter(prefix="/alerts", tags=["alerts"])
 def get_alerts(
     limit: int = 100,
     unresolved_only: bool = False,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
 ):
     """Get alerts with optional filtering"""
-    query = db.query(models.Alert).order_by(models.Alert.triggered_at.desc())
+    query = db.query(models.Alert).filter(models.Alert.tenant_id == tenant_id).order_by(models.Alert.triggered_at.desc())
 
     if unresolved_only:
         query = query.filter(models.Alert.resolved == False)
@@ -26,19 +28,20 @@ def get_alerts(
     return alerts
 
 @router.get("/stats")
-def get_alert_stats(db: Session = Depends(get_db)):
+def get_alert_stats(db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Get alert statistics for dashboard"""
-    total = db.query(models.Alert).count()
-    unresolved = db.query(models.Alert).filter(models.Alert.resolved == False).count()
+    total = db.query(models.Alert).filter(models.Alert.tenant_id == tenant_id).count()
+    unresolved = db.query(models.Alert).filter(models.Alert.tenant_id == tenant_id).filter(models.Alert.resolved == False).count()
 
     # Count by severity
-    critical = db.query(models.Alert).filter(
+    critical = db.query(models.Alert).filter(models.Alert.tenant_id == tenant_id).filter(
         and_(models.Alert.severity == "critical", models.Alert.resolved == False)
     ).count()
-    warning = db.query(models.Alert).filter(
+    warning = db.query(models.Alert).filter(models.Alert.tenant_id == tenant_id).filter(
         and_(models.Alert.severity == "warning", models.Alert.resolved == False)
     ).count()
-    info = db.query(models.Alert).filter(
+    info = db.query(models.Alert).filter(models.Alert.tenant_id == tenant_id).filter(
         and_(models.Alert.severity == "info", models.Alert.resolved == False)
     ).count()
 
@@ -51,9 +54,10 @@ def get_alert_stats(db: Session = Depends(get_db)):
     }
 
 @router.put("/{alert_id}", response_model=Alert)
-def update_alert(alert_id: int, alert_update: AlertUpdate, db: Session = Depends(get_db)):
+def update_alert(alert_id: int, alert_update: AlertUpdate, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Update an alert (acknowledge or resolve)"""
-    db_alert = db.query(models.Alert).filter(models.Alert.id == alert_id).first()
+    db_alert = db.query(models.Alert).filter(models.Alert.tenant_id == tenant_id).filter(models.Alert.id == alert_id).first()
     if not db_alert:
         raise HTTPException(status_code=404, detail="Alert not found")
 
@@ -70,9 +74,10 @@ def update_alert(alert_id: int, alert_update: AlertUpdate, db: Session = Depends
     return db_alert
 
 @router.post("/{alert_id}/acknowledge", response_model=Alert)
-def acknowledge_alert(alert_id: int, db: Session = Depends(get_db)):
+def acknowledge_alert(alert_id: int, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Acknowledge an alert"""
-    db_alert = db.query(models.Alert).filter(models.Alert.id == alert_id).first()
+    db_alert = db.query(models.Alert).filter(models.Alert.tenant_id == tenant_id).filter(models.Alert.id == alert_id).first()
     if not db_alert:
         raise HTTPException(status_code=404, detail="Alert not found")
 
@@ -83,9 +88,10 @@ def acknowledge_alert(alert_id: int, db: Session = Depends(get_db)):
     return db_alert
 
 @router.post("/{alert_id}/resolve", response_model=Alert)
-def resolve_alert(alert_id: int, db: Session = Depends(get_db)):
+def resolve_alert(alert_id: int, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Resolve an alert"""
-    db_alert = db.query(models.Alert).filter(models.Alert.id == alert_id).first()
+    db_alert = db.query(models.Alert).filter(models.Alert.tenant_id == tenant_id).filter(models.Alert.id == alert_id).first()
     if not db_alert:
         raise HTTPException(status_code=404, detail="Alert not found")
 
@@ -96,9 +102,10 @@ def resolve_alert(alert_id: int, db: Session = Depends(get_db)):
     return db_alert
 
 @router.post("/{alert_id}/snooze", response_model=Alert)
-def snooze_alert(alert_id: int, snooze_duration_minutes: int, db: Session = Depends(get_db)):
+def snooze_alert(alert_id: int, snooze_duration_minutes: int, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Snooze an alert for a specified duration in minutes"""
-    db_alert = db.query(models.Alert).filter(models.Alert.id == alert_id).first()
+    db_alert = db.query(models.Alert).filter(models.Alert.tenant_id == tenant_id).filter(models.Alert.id == alert_id).first()
     if not db_alert:
         raise HTTPException(status_code=404, detail="Alert not found")
 
@@ -108,9 +115,10 @@ def snooze_alert(alert_id: int, snooze_duration_minutes: int, db: Session = Depe
     return db_alert
 
 @router.delete("/{alert_id}")
-def delete_alert(alert_id: int, db: Session = Depends(get_db)):
+def delete_alert(alert_id: int, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Delete an alert"""
-    db_alert = db.query(models.Alert).filter(models.Alert.id == alert_id).first()
+    db_alert = db.query(models.Alert).filter(models.Alert.tenant_id == tenant_id).filter(models.Alert.id == alert_id).first()
     if not db_alert:
         raise HTTPException(status_code=404, detail="Alert not found")
 
@@ -119,9 +127,10 @@ def delete_alert(alert_id: int, db: Session = Depends(get_db)):
     return {"message": "Alert deleted successfully"}
 
 @router.post("/acknowledge-all", response_model=List[Alert])
-def bulk_acknowledge_alerts(alert_ids: List[int] = [], db: Session = Depends(get_db)):
+def bulk_acknowledge_alerts(alert_ids: List[int] = [], db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Acknowledge multiple alerts. If alert_ids is empty, acknowledges all unresolved alerts."""
-    query = db.query(models.Alert).filter(models.Alert.resolved == False)
+    query = db.query(models.Alert).filter(models.Alert.tenant_id == tenant_id).filter(models.Alert.resolved == False)
     if alert_ids:
         query = query.filter(models.Alert.id.in_(alert_ids))
     
@@ -139,9 +148,10 @@ def bulk_acknowledge_alerts(alert_ids: List[int] = [], db: Session = Depends(get
     return alerts_to_update
 
 @router.post("/resolve-all", response_model=List[Alert])
-def bulk_resolve_alerts(alert_ids: List[int] = [], db: Session = Depends(get_db)):
+def bulk_resolve_alerts(alert_ids: List[int] = [], db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Resolve multiple alerts. If alert_ids is empty, resolves all unresolved alerts."""
-    query = db.query(models.Alert).filter(models.Alert.resolved == False)
+    query = db.query(models.Alert).filter(models.Alert.tenant_id == tenant_id).filter(models.Alert.resolved == False)
     if alert_ids:
         query = query.filter(models.Alert.id.in_(alert_ids))
     
@@ -165,15 +175,17 @@ def get_available_channels():
     return get_all_channels()
 
 @router.get("/channels/", response_model=List[AlertChannel])
-def get_alert_channels(db: Session = Depends(get_db)):
+def get_alert_channels(db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Get all configured alert channels"""
-    channels = db.query(models.AlertChannel).all()
+    channels = db.query(models.AlertChannel).filter(models.AlertChannel.tenant_id == tenant_id).all()
     return channels
 
 @router.post("/channels/", response_model=AlertChannel)
-def create_alert_channel(channel: AlertChannelCreate, db: Session = Depends(get_db)):
+def create_alert_channel(channel: AlertChannelCreate, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Create a new alert channel"""
-    db_channel = models.AlertChannel(
+    db_channel = models.AlertChannel(tenant_id=tenant_id, 
         name=channel.name,
         channel_type=channel.channel_type,
         enabled=channel.enabled,
@@ -189,10 +201,11 @@ def create_alert_channel(channel: AlertChannelCreate, db: Session = Depends(get_
 def update_alert_channel(
     channel_id: int,
     channel_update: AlertChannelUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
 ):
     """Update an alert channel"""
-    db_channel = db.query(models.AlertChannel).filter(models.AlertChannel.id == channel_id).first()
+    db_channel = db.query(models.AlertChannel).filter(models.AlertChannel.tenant_id == tenant_id).filter(models.AlertChannel.id == channel_id).first()
     if not db_channel:
         raise HTTPException(status_code=404, detail="Alert channel not found")
 
@@ -205,9 +218,10 @@ def update_alert_channel(
     return db_channel
 
 @router.delete("/channels/{channel_id}")
-def delete_alert_channel(channel_id: int, db: Session = Depends(get_db)):
+def delete_alert_channel(channel_id: int, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Delete an alert channel"""
-    db_channel = db.query(models.AlertChannel).filter(models.AlertChannel.id == channel_id).first()
+    db_channel = db.query(models.AlertChannel).filter(models.AlertChannel.tenant_id == tenant_id).filter(models.AlertChannel.id == channel_id).first()
     if not db_channel:
         raise HTTPException(status_code=404, detail="Alert channel not found")
 
@@ -220,10 +234,11 @@ def get_notification_logs(
     alert_id: Optional[int] = None,
     channel_id: Optional[int] = None,
     limit: int = 50,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
 ):
     """Get notification logs with optional filtering by alert_id or channel_id"""
-    query = db.query(models.NotificationLog).order_by(models.NotificationLog.timestamp.desc())
+    query = db.query(models.NotificationLog).filter(models.NotificationLog.tenant_id == tenant_id).order_by(models.NotificationLog.timestamp.desc())
 
     if alert_id:
         query = query.filter(models.NotificationLog.alert_id == alert_id)
@@ -234,9 +249,10 @@ def get_notification_logs(
     return logs
 
 @router.post("/channels/{channel_id}/test")
-def test_alert_channel(channel_id: int, db: Session = Depends(get_db)):
+def test_alert_channel(channel_id: int, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     """Send a test alert through the specified channel"""
-    db_channel = db.query(models.AlertChannel).filter(models.AlertChannel.id == channel_id).first()
+    db_channel = db.query(models.AlertChannel).filter(models.AlertChannel.tenant_id == tenant_id).filter(models.AlertChannel.id == channel_id).first()
     if not db_channel:
         raise HTTPException(status_code=404, detail="Alert channel not found")
 

@@ -1,5 +1,19 @@
 import React from 'react';
 import { useEffect, useState } from 'react';
+
+// Helper function to format bytes
+const formatBytes = (bytes: string | number): string => {
+    const num = typeof bytes === "string" ? parseInt(bytes) : bytes;
+    if (isNaN(num)) return bytes.toString();
+    const units = ["B", "KB", "MB", "GB", "TB", "PB"];
+    let i = 0;
+    let value = num;
+    while (value >= 1024 && i < units.length - 1) {
+        value /= 1024;
+        i++;
+    }
+    return `${value.toFixed(2)} ${units[i]}`;
+};
 import { HardDrive, Cpu, Server as ServerIcon, RefreshCw, Network, Zap, BookPlus, Clock, Database, Layers } from 'lucide-react';
 import api from '@/api/client';
 import { motion } from 'framer-motion';
@@ -64,6 +78,9 @@ export default function ServerHardware() {
         setLoading(true);
         try {
             await api.post(`/profiles/${selectedId}/scan-hardware`);
+            // Give backend time to finish writing to DB
+            await new Promise(resolve => setTimeout(resolve, 500));
+            // Refetch all profiles to update UI
             const res = await api.get('/profiles/');
             setProfiles(res.data);
             showNotification("Hardware scan completed!", "success");
@@ -123,11 +140,11 @@ export default function ServerHardware() {
     const nonRaidDisks = allDisks.filter(d => !isRaidMember(d));
 
     const diskGroups = {
-        nvme: nonRaidDisks.filter(d => d.name.startsWith('nvme')),
-        ssd: nonRaidDisks.filter(d => !d.name.startsWith('nvme') && isSSD(d) && d.tran !== 'usb'),
+        nvme: nonRaidDisks.filter(d => d.name?.startsWith('nvme')),
+        ssd: nonRaidDisks.filter(d => !d.name?.startsWith('nvme') && isSSD(d) && d.tran !== 'usb'),
         hdd: nonRaidDisks.filter(d => isHDD(d) && d.tran !== 'usb'),
         usb: nonRaidDisks.filter(d => d.tran === 'usb'),
-        other: nonRaidDisks.filter(d => !d.name.startsWith('nvme') && !isSSD(d) && !isHDD(d) && d.tran !== 'usb')
+        other: nonRaidDisks.filter(d => !d.name?.startsWith('nvme') && !isSSD(d) && !isHDD(d) && d.tran !== 'usb')
     };
 
     // Grouping Logic for PCI

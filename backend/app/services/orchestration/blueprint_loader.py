@@ -1,208 +1,383 @@
 """
-Blueprint Loader - Loads and manages application blueprints.
+Blueprint Loader Service
+
+Loads and manages application blueprints for semantic deployment orchestration.
+Supports both database-stored and file-based blueprints.
 """
+
 import logging
-import json
 import yaml
-from typing import Dict, List, Any, Optional
+import json
+from typing import Dict, Any, List, Optional
 from pathlib import Path
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
 
+class BlueprintLoaderError(Exception):
+    """Base exception for blueprint loader errors"""
+    pass
+
+
+class BlueprintNotFoundError(BlueprintLoaderError):
+    """Raised when blueprint is not found"""
+    pass
+
+
+class BlueprintValidationError(BlueprintLoaderError):
+    """Raised when blueprint validation fails"""
+    pass
+
+
 class BlueprintLoader:
-    """Manages application blueprints for deployment."""
-    
-    def __init__(self, blueprint_dir: Optional[str] = None):
-        """Initialize blueprint loader."""
-        if blueprint_dir:
-            self.blueprint_dir = Path(blueprint_dir)
-        else:
-            self.blueprint_dir = Path(__file__).parent.parent.parent / "blueprints"
-        
-        self.blueprints = {}
-        self._load_all_blueprints()
-    
-    def _load_all_blueprints(self):
-        """Load all blueprints from directory."""
-        if not self.blueprint_dir.exists():
-            logger.warning(f"Blueprint directory not found: {self.blueprint_dir}")
-            self._register_builtin_blueprints()
-            return
-        
-        for yaml_file in self.blueprint_dir.glob("*.yaml"):
-            self._load_blueprint(yaml_file)
-        
-        # Register built-in blueprints as fallback
-        self._register_builtin_blueprints()
-    
-    def _load_blueprint(self, path: Path):
-        """Load a single blueprint from file."""
-        try:
-            with open(path, 'r') as f:
-                blueprint = yaml.safe_load(f)
-                if blueprint and blueprint.get("name"):
-                    self.blueprints[blueprint["name"]] = blueprint
-                    logger.info(f"Loaded blueprint: {blueprint['name']}")
-        except Exception as e:
-            logger.error(f"Error loading blueprint {path}: {e}")
-    
-    def _register_builtin_blueprints(self):
-        """Register built-in blueprints."""
-        # PostgreSQL blueprint
-        self.blueprints["postgresql"] = {
-            "name": "postgresql",
-            "description": "PostgreSQL Database",
-            "type": "statefulset",
-            "image": "postgres:15-alpine",
-            "port": 5432,
-            "replicas": 1,
-            "storage": {
-                "size": "20Gi",
-                "storage_class": "local-path",
-                "mount_path": "/var/lib/postgresql/data"
-            },
-            "secrets": {
-                "POSTGRES_USER": "auto-generate",
-                "POSTGRES_PASSWORD": "auto-generate"
-            },
-            "env": {
-                "POSTGRES_DB": "app_db",
-                "PGDATA": "/var/lib/postgresql/data/pgdata"
-            },
-            "resources": {
-                "cpu": "500m",
-                "memory": "512Mi"
-            }
-        }
-        
-        # Nginx blueprint
-        self.blueprints["nginx"] = {
-            "name": "nginx",
-            "description": "Nginx Reverse Proxy",
-            "type": "deployment",
-            "image": "nginx:latest",
-            "port": 80,
-            "replicas": 1,
-            "service_type": "ClusterIP",
-            "ingress": {
-                "host": "*.local"
-            },
-            "config": {
-                "nginx.conf": """
-                upstream backend {
-                    server backend-service.homelab.svc.cluster.local:8000;
-                }
-                server {
-                    listen 80;
-                    location / {
-                        proxy_pass http://backend;
-                    }
-                }
-                """
-            },
-            "resources": {
-                "cpu": "100m",
-                "memory": "128Mi"
-            },
-            "health_check": True
-        }
-        
-        # Generic app blueprint
-        self.blueprints["generic"] = {
-            "name": "generic",
-            "description": "Generic Application Template",
-            "type": "deployment",
-            "image": "ubuntu:latest",
-            "port": 8000,
-            "replicas": 1,
-            "service_type": "ClusterIP",
-            "resources": {
-                "cpu": "100m",
-                "memory": "128Mi"
-            },
-            "health_check": False
-        }
-    
+    """
+    Loads application blueprints from database or filesystem.
+
+    Blueprints define how applications should be deployed, including:
+    - Required dependencies
+    - Resource templates (K8s manifests or Docker Compose)
+    - Configuration parameters
+    - Auto-wiring logic
+    """
+
+    def __init__(self, db_session: Optional[Session] = None, blueprints_dir: Optional[str] = None):
+        """
+        Initialize blueprint loader.
+
+        Args:
+            db_session: SQLAlchemy database session (optional)
+            blueprints_dir: Directory containing blueprint YAML files
+        """
+        self.db = db_session
+        self.blueprints_dir = Path(blueprints_dir) if blueprints_dir else Path(__file__).parent.parent.parent / "blueprints"
+        self.logger = logger
+        self._cache: Dict[str, Dict[str, Any]] = {}
+
+        # Create blueprints directory if it doesn't exist
+        if not self.blueprints_dir.exists():
+            logger.info(f"Creating blueprints directory: {self.blueprints_dir}")
+            self.blueprints_dir.mkdir(parents=True, exist_ok=True)
+
     def get_blueprint(self, name: str) -> Optional[Dict[str, Any]]:
-        """Get a blueprint by name."""
-        return self.blueprints.get(name.lower())
-    
-    def list_blueprints(self) -> List[str]:
-        """List all available blueprint names."""
-        return list(self.blueprints.keys())
-    
-    def search_blueprints(self, keyword: str) -> List[Dict[str, Any]]:
-        """Search blueprints by keyword in name or description."""
-        keyword = keyword.lower()
-        results = []
-        
-        for blueprint in self.blueprints.values():
-            name = blueprint.get("name", "").lower()
-            desc = blueprint.get("description", "").lower()
-            
-            if keyword in name or keyword in desc:
-                results.append({
-                    "name": blueprint["name"],
-                    "description": blueprint.get("description", ""),
-                    "type": blueprint.get("type", "deployment")
+        """
+        Get blueprint by name.
+
+        First checks database, then falls back to filesystem.
+
+        Args:
+            name: Blueprint name (e.g., "authentik", "postgresql")
+
+        Returns:
+            Blueprint dictionary or None if not found
+        """
+        # Check cache first
+        if name in self._cache:
+            self.logger.debug(f"Blueprint '{name}' loaded from cache")
+            return self._cache[name]
+
+        # Try database first
+        blueprint = self._load_from_database(name)
+        if blueprint:
+            self._cache[name] = blueprint
+            return blueprint
+
+        # Fall back to filesystem
+        blueprint = self._load_from_filesystem(name)
+        if blueprint:
+            self._cache[name] = blueprint
+            return blueprint
+
+        self.logger.warning(f"Blueprint '{name}' not found in database or filesystem")
+        return None
+
+    def _load_from_database(self, name: str) -> Optional[Dict[str, Any]]:
+        """Load blueprint from database."""
+        try:
+            from app.models import ApplicationBlueprint
+
+            blueprint = self.db.query(ApplicationBlueprint).filter_by(
+                name=name,
+                is_active=True
+            ).first()
+
+            if not blueprint:
+                return None
+
+            self.logger.info(f"Loaded blueprint '{name}' from database")
+
+            return {
+                "name": blueprint.name,
+                "description": blueprint.description,
+                "category": blueprint.category,
+                "platform": blueprint.platform,
+                "type": blueprint.blueprint_type,
+                "template": blueprint.manifest_template,
+                "variables": blueprint.variables,
+                "defaults": blueprint.default_values,
+                "dependencies": blueprint.dependencies,
+                "ports": blueprint.ports,
+                "volumes": blueprint.volumes,
+                "environment": blueprint.environment_vars,
+                "metadata": blueprint.metadata,
+                "is_official": blueprint.is_official
+            }
+
+        except Exception as e:
+            self.logger.error(f"Failed to load blueprint from database: {e}")
+            return None
+
+    def _load_from_filesystem(self, name: str) -> Optional[Dict[str, Any]]:
+        """Load blueprint from YAML file."""
+        try:
+            # Try .yaml and .yml extensions
+            for ext in ['.yaml', '.yml']:
+                blueprint_path = self.blueprints_dir / f"{name}{ext}"
+                if blueprint_path.exists():
+                    with open(blueprint_path, 'r') as f:
+                        blueprint = yaml.safe_load(f)
+
+                    self.logger.info(f"Loaded blueprint '{name}' from {blueprint_path}")
+                    return blueprint
+
+            return None
+
+        except Exception as e:
+            self.logger.error(f"Failed to load blueprint from filesystem: {e}")
+            return None
+
+    def list_blueprints(self, category: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        List all available blueprints.
+
+        Args:
+            category: Optional category filter
+
+        Returns:
+            List of blueprint metadata dictionaries
+        """
+        blueprints = []
+
+        # Load from database
+        try:
+            from app.models import ApplicationBlueprint
+
+            query = self.db.query(ApplicationBlueprint).filter_by(is_active=True)
+            if category:
+                query = query.filter_by(category=category)
+
+            db_blueprints = query.all()
+
+            for bp in db_blueprints:
+                blueprints.append({
+                    "name": bp.name,
+                    "description": bp.description,
+                    "category": bp.category,
+                    "platform": bp.platform,
+                    "type": bp.blueprint_type,
+                    "is_official": bp.is_official,
+                    "deployment_count": bp.deployment_count,
+                    "source": "database"
                 })
-        
+
+        except Exception as e:
+            self.logger.error(f"Failed to list blueprints from database: {e}")
+
+        # Load from filesystem
+        if self.blueprints_dir.exists():
+            for blueprint_file in self.blueprints_dir.glob("*.y*ml"):
+                try:
+                    with open(blueprint_file, 'r') as f:
+                        bp = yaml.safe_load(f)
+
+                    # Skip if already loaded from database
+                    if any(b["name"] == bp.get("name") for b in blueprints):
+                        continue
+
+                    if category and bp.get("category") != category:
+                        continue
+
+                    blueprints.append({
+                        "name": bp.get("name"),
+                        "description": bp.get("description"),
+                        "category": bp.get("category"),
+                        "platform": bp.get("platform", "both"),
+                        "type": bp.get("type"),
+                        "is_official": bp.get("is_official", False),
+                        "source": "filesystem"
+                    })
+
+                except Exception as e:
+                    self.logger.error(f"Failed to load blueprint {blueprint_file}: {e}")
+
+        return blueprints
+
+    def clear_cache(self):
+        """Clear the blueprint cache."""
+        self._cache.clear()
+        self.logger.debug("Blueprint cache cleared")
+
+    def validate_blueprint(self, blueprint: Dict[str, Any], name: str) -> None:
+        """
+        Validate blueprint structure and required fields.
+
+        Args:
+            blueprint: Blueprint dictionary to validate
+            name: Blueprint name (for error messages)
+
+        Raises:
+            BlueprintValidationError: If validation fails
+        """
+        errors = []
+
+        # Check for metadata
+        if 'metadata' in blueprint:
+            metadata = blueprint.get('metadata', {})
+            if not metadata.get('name'):
+                errors.append("Missing metadata.name")
+            if not metadata.get('version'):
+                errors.append("Missing metadata.version")
+        elif 'name' not in blueprint:
+            errors.append("Missing name field")
+
+        # Check for requirements
+        if 'requirements' not in blueprint:
+            errors.append("Missing requirements section")
+
+        # Check for templates
+        if 'templates' in blueprint:
+            templates = blueprint.get('templates', {})
+            if not templates.get('kubernetes') and not templates.get('docker'):
+                errors.append("Templates must contain kubernetes or docker section")
+
+        if errors:
+            error_msg = f"Blueprint '{name}' validation failed:\n" + "\n".join(f"  - {e}" for e in errors)
+            logger.error(error_msg)
+            raise BlueprintValidationError(error_msg)
+
+        logger.debug(f"Blueprint '{name}' validation passed")
+
+    def save_blueprint(self, name: str, blueprint: Dict[str, Any]) -> None:
+        """
+        Save a blueprint to filesystem.
+
+        Args:
+            name: Blueprint name
+            blueprint: Blueprint dictionary
+
+        Raises:
+            BlueprintValidationError: If blueprint is invalid
+        """
+        # Validate before saving
+        self.validate_blueprint(blueprint, name)
+
+        blueprint_path = self.blueprints_dir / f"{name}.yaml"
+
+        try:
+            with open(blueprint_path, 'w') as f:
+                yaml.dump(blueprint, f, default_flow_style=False, sort_keys=False)
+
+            logger.info(f"Saved blueprint to: {blueprint_path}")
+
+            # Update cache
+            self._cache[name] = blueprint
+
+        except Exception as e:
+            logger.error(f"Error saving blueprint {name}: {e}")
+            raise BlueprintLoaderError(f"Failed to save blueprint '{name}': {e}") from e
+
+    def delete_blueprint(self, name: str) -> None:
+        """
+        Delete a blueprint file.
+
+        Args:
+            name: Blueprint name
+
+        Raises:
+            BlueprintNotFoundError: If blueprint doesn't exist
+        """
+        blueprint_path = self.blueprints_dir / f"{name}.yaml"
+        if not blueprint_path.exists():
+            blueprint_path = self.blueprints_dir / f"{name}.yml"
+
+        if not blueprint_path.exists():
+            raise BlueprintNotFoundError(f"Blueprint '{name}' not found")
+
+        try:
+            blueprint_path.unlink()
+            logger.info(f"Deleted blueprint: {blueprint_path}")
+
+            # Remove from cache
+            if name in self._cache:
+                del self._cache[name]
+
+        except Exception as e:
+            logger.error(f"Error deleting blueprint {name}: {e}")
+            raise BlueprintLoaderError(f"Failed to delete blueprint '{name}': {e}") from e
+
+    def search_blueprints(
+        self,
+        query: Optional[str] = None,
+        category: Optional[str] = None,
+        tags: Optional[List[str]] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Search blueprints by name, category, or tags.
+
+        Args:
+            query: Search query (matches name and description)
+            category: Filter by category
+            tags: Filter by tags (matches any)
+
+        Returns:
+            List of matching blueprint metadata
+        """
+        all_blueprints = self.list_blueprints(category=category)
+
+        if not query and not tags:
+            return all_blueprints
+
+        results = []
+
+        for blueprint in all_blueprints:
+            # Filter by tags
+            if tags:
+                blueprint_tags = blueprint.get('tags', [])
+                if isinstance(blueprint_tags, list):
+                    blueprint_tags = [str(t).lower() for t in blueprint_tags]
+                    if not any(tag.lower() in blueprint_tags for tag in tags):
+                        continue
+
+            # Filter by query
+            if query:
+                query_lower = query.lower()
+                name_match = query_lower in blueprint.get('name', '').lower()
+                desc_match = query_lower in blueprint.get('description', '').lower()
+                if not (name_match or desc_match):
+                    continue
+
+            results.append(blueprint)
+
+        logger.info(f"Search found {len(results)} blueprints (query={query}, category={category}, tags={tags})")
         return results
-    
-    def create_custom_blueprint(self, name: str, config: Dict[str, Any]) -> Dict[str, Any]:
-        """Create a custom blueprint."""
-        blueprint = {
-            "name": name,
-            "description": config.get("description", f"{name} application"),
-            "type": config.get("type", "deployment"),
-            "image": config.get("image", f"{name}:latest"),
-            "port": config.get("port", 8000),
-            "replicas": config.get("replicas", 1),
-            "service_type": config.get("service_type", "ClusterIP"),
-            "env": config.get("env", {}),
-            "secrets": config.get("secrets", {}),
-            "storage": config.get("storage"),
-            "resources": config.get("resources", {
-                "cpu": "100m",
-                "memory": "128Mi"
-            }),
-            "health_check": config.get("health_check", False)
-        }
-        
-        self.blueprints[name.lower()] = blueprint
-        return blueprint
-    
-    def merge_blueprints(self, *blueprint_names: str) -> Dict[str, Any]:
-        """
-        Merge multiple blueprints.
-        Useful for combining app + database + proxy.
-        """
-        merged = {
-            "components": [],
-            "dependencies": [],
-            "secrets": {},
-            "env": {},
-            "storage": None
-        }
-        
-        for name in blueprint_names:
-            blueprint = self.get_blueprint(name)
-            if blueprint:
-                merged["components"].append(blueprint)
-                merged["dependencies"].append(name)
-                
-                # Merge secrets
-                if blueprint.get("secrets"):
-                    merged["secrets"].update(blueprint["secrets"])
-                
-                # Merge env
-                if blueprint.get("env"):
-                    merged["env"].update(blueprint["env"])
-                
-                # Take largest storage
-                if blueprint.get("storage"):
-                    if not merged["storage"]:
-                        merged["storage"] = blueprint["storage"]
-        
-        return merged
+
+
+# Global blueprint loader instance
+_blueprint_loader: Optional[BlueprintLoader] = None
+
+
+def get_blueprint_loader(db_session: Optional[Session] = None, blueprints_dir: Optional[str] = None) -> BlueprintLoader:
+    """
+    Get or create the global blueprint loader instance.
+
+    Args:
+        db_session: SQLAlchemy database session (optional)
+        blueprints_dir: Directory containing blueprints (optional)
+
+    Returns:
+        BlueprintLoader instance
+    """
+    global _blueprint_loader
+    if _blueprint_loader is None:
+        _blueprint_loader = BlueprintLoader(db_session, blueprints_dir)
+    return _blueprint_loader

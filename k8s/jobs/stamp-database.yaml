@@ -1,0 +1,30 @@
+---
+# Stamp database as being at tenant_support_001 version
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: unity-db-stamp
+  namespace: unity
+spec:
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: stamp
+        image: docker.io/library/unity-backend:latest
+        imagePullPolicy: Never
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            export DATABASE_URL="postgresql+psycopg2://homelab_user:${POSTGRES_PASSWORD}@postgres-service.unity.svc.cluster.local:5432/homelab_db"
+            echo "Stamping database with tenant_support_001..."
+            alembic stamp tenant_support_001
+            echo "Current version:"
+            alembic current
+        env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: unity-secrets
+              key: postgres-password

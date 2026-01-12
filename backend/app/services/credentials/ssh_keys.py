@@ -174,7 +174,7 @@ class SSHKeyService:
         return list(result.scalars().all())
     
     @staticmethod
-    def update_last_used(db: Session, key_id: int):
+    def update_last_used(db: Session, key_id: int, tenant_id: str = "default"):
         """Update last_used timestamp"""
         
         stmt = select(SSHKey).where(SSHKey.id == key_id)

@@ -3,9 +3,10 @@ import json
 import logging
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.core.database import get_db
+from app.database import get_db
+from app.core.dependencies import get_tenant_id
 from app import models
-from app.services.core.ssh import SSHService
+from app.services.ssh import SSHService
 import asyncssh
 
 router = APIRouter(
@@ -16,10 +17,11 @@ router = APIRouter(
 logger = logging.getLogger("uvicorn")
 
 @router.websocket("/ws/{profile_id}")
-async def websocket_terminal(websocket: WebSocket, profile_id: int, db: Session = Depends(get_db)):
+async def websocket_terminal(websocket: WebSocket, profile_id: int, db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)):
     await websocket.accept()
     
-    profile = db.query(models.ServerProfile).filter(models.ServerProfile.id == profile_id).first()
+    profile = db.query(models.ServerProfile).filter(models.ServerProfile.tenant_id == tenant_id).filter(models.ServerProfile.id == profile_id).first()
     if not profile:
         await websocket.close(code=1008, reason="Profile not found")
         return

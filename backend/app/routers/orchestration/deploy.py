@@ -1,237 +1,420 @@
 """
-Orchestration Router - API endpoints for AI-driven deployment.
-"""
-import logging
-from typing import Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
+Orchestration API Endpoints
 
-from app.core.database import get_db
-from app.services.orchestration import EnvironmentIntelligence, ManifestGenerator, BlueprintLoader
-from app.services.ai.ai_provider import AIOrchestrator
-from app.routers.settings import get_settings
-from app.routers.orchestration.intent_parser import IntentParser
-from app import models
+Semantic AI-powered deployment orchestration API.
+Allows users to deploy applications using natural language commands.
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from sqlalchemy.orm import Session
+from typing import List, Optional
+from pydantic import BaseModel, Field
+import logging
+
+from app.database import get_db
+from app.core.dependencies import get_tenant_id
+from app.services.auth import get_current_active_user as get_current_user
+from app.models import User, DeploymentIntent
+from app.services.orchestration.deployment_orchestrator import DeploymentOrchestrator
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/orchestrate", tags=["orchestration"])
+router = APIRouter(
+    prefix="/api/orchestration",
+    tags=["orchestration"]
+)
 
 
-class DeploymentRequest(BaseModel):
-    """User's deployment request."""
-    request: str
-    namespace: str = "homelab"
-    approve: bool = False
-    dry_run: bool = False
+# ==================
+# Request/Response Schemas
+# ==================
 
+class DeployRequest(BaseModel):
+    """Request to deploy an application via natural language command."""
+    command: str = Field(..., description="Natural language deployment command", example="install authentik")
+    options: Optional[dict] = Field(default={}, description="Optional configuration overrides")
 
-class EnvironmentResponse(BaseModel):
-    """Environment information."""
-    cluster: Dict[str, Any]
-    storage: Dict[str, Any]
-    networking: Dict[str, Any]
-    ready_to_deploy: bool
-
-
-@router.get("/environment")
-async def get_environment() -> Dict[str, Any]:
-    """Get current cluster environment state."""
-    try:
-        env_intel = EnvironmentIntelligence()
-        summary = env_intel.get_environment_summary()
-        return summary
-    except Exception as e:
-        logger.error(f"Error getting environment: {e}")
-        return {"error": str(e), "ready_to_deploy": False}
-
-
-@router.get("/templates")
-async def list_templates() -> Dict[str, Any]:
-    """List available application templates."""
-    try:
-        loader = BlueprintLoader()
-        templates = loader.list_blueprints()
-        return {
-            "templates": templates,
-            "count": len(templates)
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "command": "install authentik with TLS",
+                "options": {
+                    "namespace": "auth",
+                    "domain": "auth.example.com"
+                }
+            }
         }
-    except Exception as e:
-        logger.error(f"Error listing templates: {e}")
-        return {"error": str(e), "templates": []}
 
 
-@router.post("/preview")
-async def preview_deployment(
-    req: DeploymentRequest,
-    db: Session = Depends(get_db)
-) -> Dict[str, Any]:
-    """Preview what would be deployed (dry-run)."""
+class DeployResponse(BaseModel):
+    """Response from deployment request."""
+    success: bool
+    intent_id: int
+    application: Optional[str] = None
+    platform: Optional[str] = None
+    message: str
+    deployment_result: Optional[dict] = None
+    duration_ms: Optional[int] = None
+    error: Optional[str] = None
+
+
+class IntentStatusResponse(BaseModel):
+    """Deployment intent status."""
+    id: int
+    command: str
+    status: str
+    platform: Optional[str]
+    namespace: Optional[str]
+    application: Optional[str]
+    created_at: Optional[str]
+    started_at: Optional[str]
+    completed_at: Optional[str]
+    duration_ms: Optional[int]
+    error: Optional[str]
+    logs: List[dict] = []
+    deployed_resources: List[dict] = []
+
+
+class BlueprintResponse(BaseModel):
+    """Application blueprint metadata."""
+    name: str
+    description: Optional[str]
+    category: Optional[str]
+    platform: str
+    type: str
+    is_official: bool
+    source: str
+
+
+# ==================
+# Deployment Endpoints
+# ==================
+
+@router.post("/deploy", response_model=DeployResponse)
+async def deploy_application(
+    request: DeployRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Deploy application using natural language command.
+
+    Examples:
+    - "install authentik"
+    - "deploy postgresql with 3 replicas"
+    - "setup grafana with TLS and ingress"
+
+    The system will:
+    1. Parse the command using AI
+    2. Load the application blueprint
+    3. Resolve dependencies
+    4. Generate platform-specific manifests
+    5. Deploy to the target platform
+    6. Track status and provide logs
+    """
     try:
-        # Get settings for AI
-        settings = db.query(models.Settings).first()
-        if not settings:
-            return {"error": "System not configured"}
-        
-        # Initialize components
-        ai_orchestrator = AIOrchestrator(settings.providers if hasattr(settings, 'providers') else {})
-        intent_parser = IntentParser(ai_orchestrator)
-        blueprint_loader = BlueprintLoader()
-        manifest_gen = ManifestGenerator()
-        env_intel = EnvironmentIntelligence()
-        
-        # Get cluster context
-        cluster_info = env_intel.get_cluster_info()
-        storage_info = env_intel.get_available_storage()
-        
-        context = {
-            "cpu_available": str(cluster_info.get("total_cpu", 0)),
-            "memory_available": f"{cluster_info.get('total_memory_gb', 0)}Gi",
-            "storage_available": storage_info.get("recommended_size_gb", 20)
-        }
-        
-        # Parse intent
-        intent = await intent_parser.parse(req.request, context)
-        
-        if "error" in intent:
-            return {"error": intent.get("error"), "manifests": []}
-        
-        # Get blueprints
-        app = intent.get("app")
-        if not app:
-            return {"error": "Could not determine application to deploy", "manifests": []}
-        
-        blueprint = blueprint_loader.get_blueprint(app)
-        if not blueprint:
-            return {"error": f"No blueprint found for {app}", "manifests": []}
-        
-        # Generate manifests
-        result = manifest_gen.generate_from_blueprint(
-            blueprint,
-            namespace=req.namespace
+        logger.info(f"User {current_user.username} requested deployment: {request.command}")
+
+        orchestrator = DeploymentOrchestrator(db)
+
+        # Execute deployment in background to avoid timeout
+        result = await orchestrator.execute_intent(
+            command_text=request.command,
+            user_id=current_user.id,
+            options=request.options
         )
-        
-        # Add dependencies
-        if intent.get("dependencies"):
-            for dep in intent["dependencies"]:
-                dep_blueprint = blueprint_loader.get_blueprint(dep)
-                if dep_blueprint:
-                    dep_result = manifest_gen.generate_from_blueprint(
-                        dep_blueprint,
-                        namespace=req.namespace
-                    )
-                    result["manifests"].extend(dep_result["manifests"])
-        
-        # Validate
-        validation = manifest_gen.validate_manifests()
-        
-        return {
-            "intent": intent,
-            "manifests": result["manifests"],
-            "manifest_count": len(result["manifests"]),
-            "yaml": manifest_gen.to_yaml(),
-            "validation": validation,
-            "ready_to_deploy": validation["valid"]
-        }
-    
+
+        return DeployResponse(**result)
+
     except Exception as e:
-        logger.error(f"Error previewing deployment: {e}")
-        return {"error": str(e), "manifests": []}
+        logger.error(f"Deployment request failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Deployment failed: {str(e)}"
+        )
 
 
-@router.post("/deploy")
-async def deploy(
-    req: DeploymentRequest,
-    db: Session = Depends(get_db)
-) -> Dict[str, Any]:
-    """Deploy an application based on natural language request."""
+@router.get("/intents", response_model=List[IntentStatusResponse])
+async def list_deployment_intents(
+    limit: int = 50,
+    offset: int = 0,
+    status_filter: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    List deployment intents.
+
+    Filter by status: pending, parsing, generating, deploying, completed, failed, cancelled
+    """
     try:
-        if not req.approve:
-            return {"error": "Deployment must be approved (approve=true)"}
-        
-        # Get settings for AI
-        settings = db.query(models.Settings).first()
-        if not settings:
-            return {"error": "System not configured"}
-        
-        # Initialize components
-        ai_orchestrator = AIOrchestrator(settings.providers if hasattr(settings, 'providers') else {})
-        intent_parser = IntentParser(ai_orchestrator)
-        blueprint_loader = BlueprintLoader()
-        manifest_gen = ManifestGenerator()
-        env_intel = EnvironmentIntelligence()
-        
-        # Get cluster context
-        cluster_info = env_intel.get_cluster_info()
-        storage_info = env_intel.get_available_storage()
-        
-        context = {
-            "cpu_available": str(cluster_info.get("total_cpu", 0)),
-            "memory_available": f"{cluster_info.get('total_memory_gb', 0)}Gi",
-            "storage_available": storage_info.get("recommended_size_gb", 20)
-        }
-        
-        # Parse intent
-        intent = await intent_parser.parse(req.request, context)
-        
-        if "error" in intent:
-            raise Exception(intent.get("error"))
-        
-        # Get blueprints and generate manifests
-        app = intent.get("app")
-        blueprint = blueprint_loader.get_blueprint(app)
-        
+        query = db.query(DeploymentIntent).filter_by(user_id=current_user.id)
+
+        if status_filter:
+            query = query.filter_by(status=status_filter)
+
+        intents = query.order_by(DeploymentIntent.created_at.desc()).offset(offset).limit(limit).all()
+
+        return [
+            IntentStatusResponse(
+                id=intent.id,
+                command=intent.command_text,
+                status=intent.status,
+                platform=intent.target_platform,
+                namespace=intent.target_namespace,
+                application=intent.parsed_intent.get("application") if intent.parsed_intent else None,
+                created_at=intent.created_at.isoformat() if intent.created_at else None,
+                started_at=intent.started_at.isoformat() if intent.started_at else None,
+                completed_at=intent.completed_at.isoformat() if intent.completed_at else None,
+                duration_ms=intent.duration_ms,
+                error=intent.error_message,
+                logs=intent.execution_log or [],
+                deployed_resources=intent.deployed_resources or []
+            )
+            for intent in intents
+        ]
+
+    except Exception as e:
+        logger.error(f"Failed to list intents: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list intents: {str(e)}"
+        )
+
+
+@router.get("/intents/{intent_id}", response_model=IntentStatusResponse)
+async def get_deployment_intent(
+    intent_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get detailed status of a deployment intent.
+
+    Includes:
+    - Current status
+    - Execution logs
+    - Deployed resources
+    - Error messages (if failed)
+    """
+    try:
+        intent = db.query(DeploymentIntent).filter_by(
+            id=intent_id,
+            user_id=current_user.id
+        ).first()
+
+        if not intent:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Intent {intent_id} not found"
+            )
+
+        return IntentStatusResponse(
+            id=intent.id,
+            command=intent.command_text,
+            status=intent.status,
+            platform=intent.target_platform,
+            namespace=intent.target_namespace,
+            application=intent.parsed_intent.get("application") if intent.parsed_intent else None,
+            created_at=intent.created_at.isoformat() if intent.created_at else None,
+            started_at=intent.started_at.isoformat() if intent.started_at else None,
+            completed_at=intent.completed_at.isoformat() if intent.completed_at else None,
+            duration_ms=intent.duration_ms,
+            error=intent.error_message,
+            logs=intent.execution_log or [],
+            deployed_resources=intent.deployed_resources or []
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get intent: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get intent: {str(e)}"
+        )
+
+
+@router.post("/intents/{intent_id}/retry")
+async def retry_deployment_intent(
+    intent_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Retry a failed deployment intent.
+
+    Only intents with status 'failed' or 'cancelled' can be retried.
+    """
+    try:
+        intent = db.query(DeploymentIntent).filter_by(
+            id=intent_id,
+            user_id=current_user.id
+        ).first()
+
+        if not intent:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Intent {intent_id} not found"
+            )
+
+        orchestrator = DeploymentOrchestrator(db)
+        result = await orchestrator.retry_intent(intent_id)
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to retry intent: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retry intent: {str(e)}"
+        )
+
+
+@router.delete("/intents/{intent_id}")
+async def cancel_deployment_intent(
+    intent_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Cancel a running or pending deployment intent.
+
+    Completed intents cannot be cancelled.
+    """
+    try:
+        intent = db.query(DeploymentIntent).filter_by(
+            id=intent_id,
+            user_id=current_user.id
+        ).first()
+
+        if not intent:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Intent {intent_id} not found"
+            )
+
+        orchestrator = DeploymentOrchestrator(db)
+        result = await orchestrator.cancel_intent(intent_id)
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to cancel intent: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to cancel intent: {str(e)}"
+        )
+
+
+# ==================
+# Blueprint Endpoints
+# ==================
+
+@router.get("/blueprints", response_model=List[BlueprintResponse])
+async def list_blueprints(
+    category: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    List available application blueprints.
+
+    Blueprints define how applications are deployed, including:
+    - Required dependencies
+    - Default configuration
+    - Platform support
+    - Resource templates
+
+    Filter by category: auth, database, cache, monitoring, web, proxy, etc.
+    """
+    try:
+        from app.services.orchestration.blueprint_loader import BlueprintLoader
+
+        loader = BlueprintLoader(db)
+        blueprints = loader.list_blueprints(category=category)
+
+        return [BlueprintResponse(**bp) for bp in blueprints]
+
+    except Exception as e:
+        logger.error(f"Failed to list blueprints: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list blueprints: {str(e)}"
+        )
+
+
+@router.get("/blueprints/{name}")
+async def get_blueprint(
+    name: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get detailed information about a specific blueprint.
+
+    Includes:
+    - Template structure
+    - Variables and defaults
+    - Dependencies
+    - Ports and volumes
+    - Environment variables
+    """
+    try:
+        from app.services.orchestration.blueprint_loader import BlueprintLoader
+
+        loader = BlueprintLoader(db)
+        blueprint = loader.get_blueprint(name)
+
         if not blueprint:
-            raise Exception(f"No blueprint found for {app}")
-        
-        result = manifest_gen.generate_from_blueprint(blueprint, namespace=req.namespace)
-        
-        # Add dependencies
-        for dep in intent.get("dependencies", []):
-            dep_blueprint = blueprint_loader.get_blueprint(dep)
-            if dep_blueprint:
-                dep_result = manifest_gen.generate_from_blueprint(
-                    dep_blueprint,
-                    namespace=req.namespace
-                )
-                result["manifests"].extend(dep_result["manifests"])
-        
-        # Validate
-        validation = manifest_gen.validate_manifests()
-        if not validation["valid"]:
-            raise Exception(f"Invalid manifests: {validation['errors']}")
-        
-        # TODO: Apply manifests to Kubernetes
-        # For now, just return what would be deployed
-        
-        return {
-            "status": "success",
-            "app": app,
-            "dependencies": intent.get("dependencies", []),
-            "namespace": req.namespace,
-            "manifest_count": len(result["manifests"]),
-            "manifests": result["manifests"],
-            "yaml": manifest_gen.to_yaml(),
-            "message": f"{app} and its dependencies are ready to deploy. Manifests validated and ready for kubectl apply."
-        }
-    
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Blueprint '{name}' not found"
+            )
+
+        return blueprint
+
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error deploying: {e}")
-        return {"error": str(e), "status": "failed"}
+        logger.error(f"Failed to get blueprint: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get blueprint: {str(e)}"
+        )
 
 
-@router.get("/status")
-async def deployment_status() -> Dict[str, Any]:
-    """Get status of deployments."""
+@router.get("/blueprints/{name}/dependencies")
+async def get_blueprint_dependencies(
+    name: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get all dependencies for a blueprint (recursive).
+
+    Returns list of blueprint names that must be deployed first.
+    """
     try:
-        env_intel = EnvironmentIntelligence()
-        services = env_intel.get_deployed_services()
-        
+        from app.services.orchestration.blueprint_loader import BlueprintLoader
+
+        loader = BlueprintLoader(db)
+        dependencies = loader.get_blueprint_dependencies(name)
+
         return {
-            "status": "operational",
-            "services": services
+            "application": name,
+            "dependencies": dependencies,
+            "count": len(dependencies)
         }
+
     except Exception as e:
-        logger.error(f"Error getting status: {e}")
-        return {"status": "error", "error": str(e)}
+        logger.error(f"Failed to get dependencies: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get dependencies: {str(e)}"
+        )

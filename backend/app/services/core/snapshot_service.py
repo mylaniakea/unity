@@ -12,10 +12,10 @@ logger = logging.getLogger(__name__)
 
 class SnapshotService:
     @staticmethod
-    async def take_local_snapshot(db: Session, server_id: int):
+    async def take_local_snapshot(db: Session, server_id: int, tenant_id: str = "default"):
         # For the backend's own system information
         snapshot_data = SystemInfoService.get_full_system_snapshot()
-        new_snapshot = models.ServerSnapshot(
+        new_snapshot = models.ServerSnapshot(tenant_id=tenant_id, 
             server_id=server_id,
             timestamp=datetime.utcnow(),
             data=snapshot_data
@@ -26,7 +26,7 @@ class SnapshotService:
         return new_snapshot
 
     @staticmethod
-    async def take_remote_snapshot(db: Session, server_profile: models.ServerProfile):
+    async def take_remote_snapshot(db: Session, server_profile: models.ServerProfile, tenant_id: str = "default"):
         # This method will connect to a remote server via SSH and gather information
         # using commands. This is a more realistic scenario for Homelab Intelligence.
         
@@ -246,7 +246,7 @@ class SnapshotService:
                 
                 snapshot_data["plugins"] = plugin_data
             
-            new_snapshot = models.ServerSnapshot(
+            new_snapshot = models.ServerSnapshot(tenant_id=tenant_id, 
                 server_id=server_profile.id,
                 timestamp=datetime.utcnow(),
                 data=snapshot_data

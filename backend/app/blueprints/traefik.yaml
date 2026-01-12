@@ -1,0 +1,151 @@
+# Traefik Reverse Proxy Blueprint
+# Modern HTTP reverse proxy and load balancer with automatic HTTPS
+
+name: traefik
+description: Traefik reverse proxy with automatic TLS, load balancing, and service discovery
+category: proxy
+platform: kubernetes
+blueprint_type: deployment
+
+# Variables
+variables:
+  version:
+    type: string
+    description: Traefik version
+    required: false
+  enable_dashboard:
+    type: boolean
+    description: Enable Traefik dashboard
+    required: false
+  dashboard_domain:
+    type: string
+    description: Domain for dashboard access
+    required: false
+  acme_email:
+    type: string
+    description: Email for Let's Encrypt ACME
+    required: false
+  enable_acme:
+    type: boolean
+    description: Enable Let's Encrypt automatic certificates
+    required: false
+  log_level:
+    type: string
+    description: Log level (DEBUG, INFO, WARN, ERROR)
+    required: false
+
+# Defaults
+default_values:
+  version: "v2.11"
+  enable_dashboard: true
+  enable_acme: false
+  log_level: "INFO"
+
+dependencies: []
+
+ports:
+  - port: 80
+    protocol: TCP
+    name: web
+  - port: 443
+    protocol: TCP
+    name: websecure
+  - port: 8080
+    protocol: TCP
+    name: admin
+
+volumes:
+  - name: acme
+    mount_path: /acme
+    size: "1Gi"
+
+environment_vars: {}
+
+metadata:
+  tags:
+    - proxy
+    - reverse-proxy
+    - load-balancer
+    - traefik
+    - ingress
+  version: "1.0.0"
+  author: "Unity Team"
+  documentation_url: "https://doc.traefik.io/traefik/"
+  icon_url: "https://doc.traefik.io/traefik/assets/img/traefik.logo.png"
+
+# Kubernetes manifest
+manifest_template:
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: "traefik-{{ instance_name | default('default') }}"
+    labels:
+      app: traefik
+      instance: "{{ instance_name | default('default') }}"
+      managed-by: unity
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: traefik
+        instance: "{{ instance_name | default('default') }}"
+    template:
+      metadata:
+        labels:
+          app: traefik
+          instance: "{{ instance_name | default('default') }}"
+      spec:
+        serviceAccountName: traefik
+        containers:
+          - name: traefik
+            image: "traefik:{{ version }}"
+            args:
+              - --api.dashboard={{ enable_dashboard }}
+              - --api.insecure=true
+              - --entrypoints.web.address=:80
+              - --entrypoints.websecure.address=:443
+              - --providers.kubernetesingress=true
+              - --providers.kubernetescrd=true
+              - --log.level={{ log_level }}
+              {% if enable_acme %}
+              - --certificatesresolvers.letsencrypt.acme.email={{ acme_email }}
+              - --certificatesresolvers.letsencrypt.acme.storage=/acme/acme.json
+              - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+              {% endif %}
+            ports:
+              - containerPort: 80
+                name: web
+              - containerPort: 443
+                name: websecure
+              - containerPort: 8080
+                name: admin
+            volumeMounts:
+              {% if enable_acme %}
+              - name: acme
+                mountPath: /acme
+              {% endif %}
+            resources:
+              requests:
+                memory: "128Mi"
+                cpu: "100m"
+              limits:
+                memory: "{{ memory_limit | default('512Mi') }}"
+                cpu: "{{ cpu_limit | default('500m') }}"
+            livenessProbe:
+              httpGet:
+                path: /ping
+                port: 8080
+              initialDelaySeconds: 10
+              periodSeconds: 10
+            readinessProbe:
+              httpGet:
+                path: /ping
+                port: 8080
+              initialDelaySeconds: 5
+              periodSeconds: 5
+        {% if enable_acme %}
+        volumes:
+          - name: acme
+            persistentVolumeClaim:
+              claimName: "traefik-{{ instance_name | default('default') }}-acme-pvc"
+        {% endif %}

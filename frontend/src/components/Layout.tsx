@@ -1,17 +1,13 @@
-import React from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Server, Bot, Menu, X, Settings, FileText, Brain, Network, HardDrive, Clock, Plug, AlertTriangle, Bell, LogOut, User, Users, Package } from 'lucide-react';
+import { LayoutDashboard, Server, Bot, Menu, X, Settings, FileText, Brain, Network, HardDrive, Clock, Plug, AlertTriangle, Bell, LogOut, User, Users, Boxes, Rocket } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { useRole } from '@/contexts/RoleContext';
 import ThemeToggle from '@/components/ThemeToggle';
-import UpdatesToggle from '@/components/UpdatesToggle';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import api from '@/api/client';
-import { updateFaviconBadge, initializeFaviconManager } from '@/lib/favicon';
 import { useNotification } from '@/contexts/NotificationContext';
-import { useUpdates } from '@/contexts/UpdatesContext';
 
 export default function Layout() {
     const { isSidebarOpen, toggleSidebar } = useSidebar();
@@ -19,48 +15,22 @@ export default function Layout() {
     const location = useLocation();
     const navigate = useNavigate();
     const { showNotification } = useNotification();
-    const { updatesPaused } = useUpdates();
     const [alertStats, setAlertStats] = useState({ critical: 0, warning: 0, info: 0 });
-    const faviconLinkRef = useRef<HTMLLinkElement | null>(null);
 
     useEffect(() => {
-        // Initialize favicon link element if it doesn't exist
-        faviconLinkRef.current = initializeFaviconManager();
-
         fetchAlertStats();
-        if (!updatesPaused) {
-            const interval = setInterval(fetchAlertStats, 180000); // Refresh every 3 minutes
-            return () => clearInterval(interval);
-        }
-    }, [updatesPaused, fetchAlertStats]);
+        const interval = setInterval(fetchAlertStats, 30000); // Refresh every 30 seconds
+        return () => clearInterval(interval);
+    }, []);
 
-    useEffect(() => {
-        // Update favicon badge whenever alertStats changes
-        if (faviconLinkRef.current) {
-            updateFaviconBadge({
-                criticalCount: alertStats.critical,
-                warningCount: alertStats.warning,
-                originalFaviconUrl: '/vite.svg' // Specify the path to your original favicon
-            }).then(dataUrl => {
-                if (faviconLinkRef.current) {
-                    faviconLinkRef.current.href = dataUrl;
-                }
-            }).catch(error => {
-                console.error("Failed to update favicon badge:", error);
-            });
-        }
-    }, [alertStats]);
-
-    const fetchAlertStats = useCallback(async () => {
-        /*
+    const fetchAlertStats = async () => {
         try {
             const res = await api.get('/alerts/stats');
             setAlertStats(res.data);
         } catch (error) {
             console.error('Failed to fetch alert stats', error);
         }
-        */
-    }, []);
+    };
 
     const handleLogout = () => {
         localStorage.removeItem('access_token');
@@ -77,6 +47,8 @@ export default function Layout() {
 
     const allNavItems = [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+        { icon: Boxes, label: 'Clusters', path: '/clusters' },
+        { icon: Rocket, label: 'Orchestration', path: '/orchestration' },
         { icon: Network, label: 'Environment', path: '/homelab' },
         { icon: Server, label: 'Servers', path: '/profiles' },
         { icon: HardDrive, label: 'Hardware', path: '/hardware' },
@@ -84,11 +56,8 @@ export default function Layout() {
         { icon: Bot, label: 'Intelligence', path: '/ai' },
         { icon: FileText, label: 'Reports', path: '/reports' },
         { icon: Brain, label: 'Knowledge', path: '/knowledge' },
-        { icon: AlertTriangle, label: 'Thresholds', path: '/thresholds' },
-        { icon: Bell, label: 'Alerts', path: '/alerts', dynamicColor: getAlertColor() },
-        { icon: Clock, label: 'Automations', path: '/automations' },
+        { icon: Bell, label: 'Alerts & Thresholds', path: '/alerts', dynamicColor: getAlertColor() },
         { icon: Users, label: 'Users', path: '/users' },
-        { icon: Package, label: 'Deployments', path: '/deployments' },
         { icon: Settings, label: 'Settings', path: '/settings' },
     ];
 
@@ -109,12 +78,7 @@ export default function Layout() {
                         <div>Intelligence</div>
                     </div>
                     <div className="flex items-center gap-2">
-                        {isSidebarOpen && (
-                            <>
-                                <UpdatesToggle />
-                                <ThemeToggle />
-                            </>
-                        )}
+                        {isSidebarOpen && <ThemeToggle />}
                         <button onClick={toggleSidebar} className="p-1 hover:bg-muted rounded" title={isSidebarOpen ? "Close Sidebar" : "Open Sidebar"}>
                             {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
                         </button>

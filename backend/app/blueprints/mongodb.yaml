@@ -1,0 +1,146 @@
+# MongoDB NoSQL Database Blueprint
+# Document-oriented NoSQL database
+
+name: mongodb
+description: MongoDB NoSQL database with persistent storage and authentication
+category: database
+platform: kubernetes
+blueprint_type: statefulset
+
+# Variables
+variables:
+  version:
+    type: string
+    description: MongoDB version
+    required: false
+  storage_size:
+    type: string
+    description: Persistent volume size
+    required: false
+  root_username:
+    type: string
+    description: Root username
+    required: true
+  root_password:
+    type: string
+    description: Root password
+    required: true
+    sensitive: true
+  database_name:
+    type: string
+    description: Initial database name
+    required: false
+
+# Defaults
+default_values:
+  version: "7"
+  storage_size: "10Gi"
+  root_username: "admin"
+
+dependencies: []
+
+ports:
+  - port: 27017
+    protocol: TCP
+    name: mongodb
+
+volumes:
+  - name: data
+    mount_path: /data/db
+    size: "{{ storage_size }}"
+
+environment_vars:
+  MONGO_INITDB_ROOT_USERNAME: "{{ root_username }}"
+  MONGO_INITDB_ROOT_PASSWORD: "{{ root_password }}"
+  MONGO_INITDB_DATABASE: "{{ database_name }}"
+
+metadata:
+  tags:
+    - database
+    - nosql
+    - mongodb
+    - document
+  version: "1.0.0"
+  author: "Unity Team"
+  documentation_url: "https://www.mongodb.com/docs/"
+  icon_url: "https://www.mongodb.com/assets/images/global/leaf.png"
+
+# Kubernetes manifest
+manifest_template:
+  apiVersion: apps/v1
+  kind: StatefulSet
+  metadata:
+    name: "mongodb-{{ instance_name | default('default') }}"
+    labels:
+      app: mongodb
+      instance: "{{ instance_name | default('default') }}"
+      managed-by: unity
+  spec:
+    serviceName: "mongodb-{{ instance_name | default('default') }}"
+    replicas: 1
+    selector:
+      matchLabels:
+        app: mongodb
+        instance: "{{ instance_name | default('default') }}"
+    template:
+      metadata:
+        labels:
+          app: mongodb
+          instance: "{{ instance_name | default('default') }}"
+      spec:
+        containers:
+          - name: mongodb
+            image: "mongo:{{ version }}"
+            ports:
+              - containerPort: 27017
+                name: mongodb
+            env:
+              - name: MONGO_INITDB_ROOT_USERNAME
+                valueFrom:
+                  secretKeyRef:
+                    name: "mongodb-{{ instance_name | default('default') }}-secret"
+                    key: username
+              - name: MONGO_INITDB_ROOT_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: "mongodb-{{ instance_name | default('default') }}-secret"
+                    key: password
+              {% if database_name %}
+              - name: MONGO_INITDB_DATABASE
+                value: "{{ database_name }}"
+              {% endif %}
+            volumeMounts:
+              - name: data
+                mountPath: /data/db
+            resources:
+              requests:
+                memory: "256Mi"
+                cpu: "250m"
+              limits:
+                memory: "{{ memory_limit | default('1Gi') }}"
+                cpu: "{{ cpu_limit | default('1000m') }}"
+            livenessProbe:
+              exec:
+                command:
+                  - mongosh
+                  - --eval
+                  - "db.adminCommand('ping')"
+              initialDelaySeconds: 30
+              periodSeconds: 10
+            readinessProbe:
+              exec:
+                command:
+                  - mongosh
+                  - --eval
+                  - "db.adminCommand('ping')"
+              initialDelaySeconds: 5
+              periodSeconds: 5
+    volumeClaimTemplates:
+      - metadata:
+          name: data
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: "{{ storage_size }}"

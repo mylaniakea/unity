@@ -10,10 +10,11 @@ from sqlalchemy import select, and_
 from typing import List, Optional
 from datetime import datetime, timedelta
 
-from app.core.database import get_db
+from app.database import get_db
+from app.core.dependencies import get_tenant_id
 from app.models import Plugin, PluginMetric, PluginExecution
-from app.services.plugins.plugin_manager import PluginManager
-from app.schemas.plugins import (
+from app.services.plugin_manager import PluginManager
+from app.schemas_plugins import (
     PluginListResponse,
     PluginInfo,
     PluginDetailInfo,
@@ -238,7 +239,8 @@ async def get_plugin_health(
 async def update_plugin_health(
     plugin_id: str,
     health_data: dict,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
 ):
     """
     Update plugin health status (for external plugins).
@@ -271,7 +273,8 @@ async def update_plugin_health(
 async def report_plugin_metrics(
     plugin_id: str,
     metric_data: PluginMetricData,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
 ):
     """
     Report plugin metrics (for external plugins).

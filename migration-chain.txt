@@ -1,0 +1,143 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    UNITY DATABASE MIGRATION CHAIN
+═══════════════════════════════════════════════════════════════════════════════
+
+Migration Flow (oldest → newest):
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1. 6a00ea433c25 - Initial Migration (2025-12-15)                           │
+│    File: 6a00ea433c25_initial_migration.py                                  │
+│    Tables: None (empty initial migration)                                   │
+└────────────────────────────────────┬────────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 2. 12e8b371598f - Add Authentication Tables (2025-12-21)                   │
+│    File: 12e8b371598f_add_authentication_tables.py                          │
+│    Tables: users, api_keys, audit_logs                                      │
+│    Purpose: User authentication and API key management                      │
+└────────────────────────────────────┬────────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 3. 70974ae864ff - Add Notification Tables (2025-12-22)                     │
+│    File: 70974ae864ff_add_notification_tables.py                            │
+│    Tables: notification_channels, notification_logs                         │
+│    Purpose: Notification system with Apprise support                        │
+└────────────────────────────────────┬────────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 4. 12df4f8e6ba9 - Add OAuth Links (2025-12-22)                             │
+│    File: 12df4f8e6ba9_add_oauth_links.py                                    │
+│    Tables: user_oauth_links                                                 │
+│    Purpose: OAuth provider integration (GitHub, Google, etc.)               │
+└────────────────────────────────────┬────────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 5. 8f3d9e2a1c45 - Add Alert Rules (2025-12-22)                             │
+│    File: 8f3d9e2a1c45_add_alert_rules.py                                    │
+│    Tables: alert_rules                                                      │
+│    Purpose: Monitoring and alerting configuration                           │
+└────────────────────────────────────┬────────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 6. 00001_add_plugins - Add Plugins Table (2026-01-03)                      │
+│    File: 00001_add_plugins_table.py                                         │
+│    Tables: plugins                                                          │
+│    Purpose: Core plugin system with metadata and configuration              │
+└────────────────────────────────────┬────────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 7. a1b2c3d4e5f6 - Add Marketplace and Dashboard Tables (2025-12-17)        │
+│    File: a1b2c3d4e5f6_add_marketplace_and_dashboard_tables.py               │
+│    Tables: marketplace_plugins, plugin_reviews, plugin_installations,       │
+│            plugin_downloads, dashboards, dashboard_widgets                  │
+│    Purpose: Plugin marketplace and custom dashboards                        │
+│    Note: Also adds conditions_json column to alert_rules                    │
+└────────────────────────────────────┬────────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 8. add_plugin_execution - Add Plugin Execution Tables (2026-01-03) ✓ HEAD │
+│    File: 1767484908_add_plugin_execution_tables.py                          │
+│    Tables: plugin_executions, plugin_metrics, plugin_alerts                 │
+│    Purpose: Track plugin execution, metrics, and custom alerts              │
+│    *** THIS IS THE LATEST VERSION YOUR DATABASE SHOULD BE AT ***            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Database Schema After All Migrations:
+
+Authentication & Security:
+  ├─ users              (User accounts)
+  ├─ api_keys           (API authentication)
+  ├─ audit_logs         (Security audit trail)
+  └─ user_oauth_links   (OAuth providers)
+
+Plugins:
+  ├─ plugins                 (Installed plugins)
+  ├─ plugin_executions       (Execution history) ← NEW in migration 8
+  ├─ plugin_metrics          (Performance data)  ← NEW in migration 8
+  └─ plugin_alerts           (Custom alerts)     ← NEW in migration 8
+
+Marketplace:
+  ├─ marketplace_plugins     (Available plugins)
+  ├─ plugin_reviews          (User reviews)
+  ├─ plugin_installations    (Installation tracking)
+  └─ plugin_downloads        (Download statistics)
+
+Dashboards:
+  ├─ dashboards              (Dashboard configs)
+  └─ dashboard_widgets       (Widget layouts)
+
+Notifications & Alerts:
+  ├─ notification_channels   (Delivery channels)
+  ├─ notification_logs       (Notification history)
+  └─ alert_rules             (Alert definitions)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+How to Check Your Current Version:
+
+  $ kubectl exec -n unity deployment/unity-backend -- alembic current
+
+Expected Output if UP TO DATE:
+  INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+  INFO  [alembic.runtime.migration] Will assume transactional DDL.
+  add_plugin_execution (head)
+  ↑↑↑ This means you're on the latest version! ↑↑↑
+
+Expected Output if BEHIND:
+  INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+  INFO  [alembic.runtime.migration] Will assume transactional DDL.
+  <some_other_revision_id>
+  ↑↑↑ This means you need to run migrations! ↑↑↑
+
+Expected Output if NO MIGRATIONS RUN:
+  INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+  INFO  [alembic.runtime.migration] Will assume transactional DDL.
+
+  (empty output = database is completely uninitialized)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+How to Apply All Missing Migrations:
+
+  $ kubectl exec -n unity deployment/unity-backend -- alembic upgrade head
+
+  This will automatically apply all migrations from your current version to the
+  latest version (add_plugin_execution).
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Migration Files Location:
+
+  Container: /app/alembic/versions/
+  Host:      /home/holon/Projects/unity/backend/alembic/versions/
+
+═══════════════════════════════════════════════════════════════════════════════

@@ -17,12 +17,13 @@ from sqlalchemy import select, and_
 from typing import List, Optional
 from datetime import datetime, timedelta
 
-from app.core.database import get_db
+from app.database import get_db
+from app.core.dependencies import get_tenant_id
 from app.models import Plugin, PluginMetric, PluginExecution, PluginAPIKey, User
-from app.services.plugins.plugin_manager import PluginManager
-from app.services.plugins.plugin_security import PluginSecurityService, rate_limiter
-from app.services.auth.auth_service import get_current_active_user
-from app.schemas.plugins import (
+from app.services.plugin_manager import PluginManager
+from app.services.plugin_security import PluginSecurityService, rate_limiter
+from app.services.auth import get_current_active_user
+from app.schemas_plugins import (
     PluginListResponse,
     PluginInfo,
     PluginDetailInfo,
@@ -102,7 +103,7 @@ async def list_plugins(
     category: Optional[str] = None,
     enabled: Optional[bool] = None,
     external: Optional[bool] = None,
-    current_user: User = Depends(get_current_active_user),
+    current_user: Optional[User] = Depends(lambda: None),
     manager: PluginManager = Depends(get_plugin_manager)
 ):
     """
@@ -111,14 +112,14 @@ async def list_plugins(
     **Authentication:** JWT token required
     **Authorization:** All authenticated users
     """
-    # Check rate limit
-    rate_limiter.check_rate_limit(str(current_user.id), "plugin_list")
-    
-    # Log action
-    PluginSecurityService.log_plugin_action(
-        current_user, "all", "list", 
-        {"filters": {"category": category, "enabled": enabled, "external": external}}
-    )
+    # Check rate limit (only if user is authenticated)
+    if current_user:
+        rate_limiter.check_rate_limit(str(current_user.id), "plugin_list")
+        # Log action
+        PluginSecurityService.log_plugin_action(
+            current_user, "all", "list", 
+            {"filters": {"category": category, "enabled": enabled, "external": external}}
+        )
     
     plugins = manager.list_plugins()
     

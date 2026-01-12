@@ -1,0 +1,56 @@
+---
+# Kubernetes Job to initialize database with admin user
+# Usage: kubectl apply -f k8s/jobs/init-database.yaml
+# Check status: kubectl get jobs -n unity
+# View logs: kubectl logs -n unity job/unity-db-init
+#
+# This job should be run after migrations to create the initial admin user
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: unity-db-init
+  namespace: unity
+  labels:
+    app: unity-backend
+    job: database-initialization
+spec:
+  ttlSecondsAfterFinished: 3600  # Clean up after 1 hour
+  backoffLimit: 3  # Retry up to 3 times on failure
+  template:
+    metadata:
+      labels:
+        app: unity-backend
+        job: database-initialization
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: init-db
+        image: docker.io/library/unity-backend:latest
+        imagePullPolicy: Never
+        command: ["sh", "-c"]
+        args:
+          - |
+            echo "=============================================="
+            echo "Unity Database Initialization Job"
+            echo "=============================================="
+            echo ""
+            export DATABASE_URL="postgresql+psycopg2://homelab_user:${POSTGRES_PASSWORD}@postgres-service.unity.svc.cluster.local:5432/homelab_db"
+            echo "Initializing database with admin user..."
+            python3 init_db.py
+            echo ""
+            echo "=============================================="
+            echo "Initialization completed successfully!"
+            echo "=============================================="
+        env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: unity-secrets
+              key: postgres-password
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: unity-secrets
+              key: jwt-secret-key
+        - name: PYTHONUNBUFFERED
+          value: "1"
