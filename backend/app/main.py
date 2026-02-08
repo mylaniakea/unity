@@ -4,8 +4,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.middleware.tenant_context import TenantContextMiddleware
 from app.routers import (
     profiles, ai, settings, reports, knowledge, system,
-    terminal, plugins, thresholds, alerts, push, auth, users, credentials, docker_hosts
+    terminal, plugins, auth, users, credentials, docker_hosts
 )
+# Monitoring routers (grouped under monitoring package)
+from app.routers.monitoring import thresholds, alerts, push
 # Import new plugin routers
 from app.routers import plugins_v2_secure, plugin_keys
 # Import Kubernetes control plane routers
@@ -453,8 +455,3 @@ def health_check():
         "version": "1.0.0",
         "components": components,
     }
-
-@app.get("/health")
-async def health_check():
-    """Health check endpoint for container orchestration."""
-    return {"status": "healthy", "service": "unity-backend"}

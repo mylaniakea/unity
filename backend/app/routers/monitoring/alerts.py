@@ -6,8 +6,15 @@ from datetime import datetime, timedelta
 from app.database import get_db
 from app.core.dependencies import get_tenant_id
 from app import models
-from app.schemas_alerts import Alert, AlertUpdate, AlertChannel, AlertChannelCreate, AlertChannelUpdate, NotificationLogResponse
-from app.services.alert_channels import get_all_channels
+from app.schemas.alerts import (
+    Alert,
+    AlertUpdate,
+    AlertChannel,
+    AlertChannelCreate,
+    AlertChannelUpdate,
+    NotificationLogResponse,
+)
+from app.services.monitoring.alert_channels import get_all_channels
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])
 

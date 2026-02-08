@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Optional
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import relationship
-from backend.app.database import Base
+from app.database import Base
 
 
 class Stack(Base):

@@ -12,6 +12,7 @@ from typing import List, Optional
 from datetime import datetime
 
 from app.core.dependencies import get_tenant_id
+from app.core.config import settings
 from app.database import get_db
 from app.models import DockerHost, User
 from app.services.auth import get_current_active_user
@@ -35,13 +36,35 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-
-import docker
+# Optional Docker SDK import
+try:
+    import docker
+    DOCKER_AVAILABLE = True
+except ImportError:
+    DOCKER_AVAILABLE = False
 
 async def check_host_health(host: DockerHost) -> dict:
     """
     Check the health of a Docker host.
     """
+    if not settings.enable_docker_integration:
+        return {
+            "healthy": False,
+            "health_status": "disabled",
+            "message": "Docker integration disabled in settings",
+            "container_count": 0,
+            "details": {}
+        }
+
+    if not DOCKER_AVAILABLE:
+        return {
+            "healthy": False,
+            "health_status": "unavailable",
+            "message": "docker Python package not installed",
+            "container_count": 0,
+            "details": {}
+        }
+
     try:
         client = docker.DockerClient(base_url=host.host_url)
         info = client.info()
@@ -80,6 +103,11 @@ async def create_host(
     """
     Register a new Docker host.
     """
+    if not settings.enable_docker_integration:
+        raise HTTPException(status_code=503, detail="Docker integration disabled in settings")
+    if not DOCKER_AVAILABLE:
+        raise HTTPException(status_code=503, detail="docker Python package not installed")
+
     # Check authorization
     if current_user.role != "admin":
         raise HTTPException(

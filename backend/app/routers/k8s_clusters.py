@@ -5,6 +5,7 @@ Provides RESTful endpoints for managing Kubernetes cluster connections
 and monitoring cluster health.
 """
 
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func
@@ -12,9 +13,17 @@ from typing import List, Optional
 from datetime import datetime
 
 from app.core.dependencies import get_tenant_id
+from app.core.config import settings
 from app.database import get_db
 from app.models import KubernetesCluster, KubernetesResource, User
 from app.services.auth import get_current_active_user
+from app.services.k8s_client import (
+    KubernetesClient,
+    KubernetesClientError,
+    KubernetesConnectionError,
+    KubernetesAuthenticationError,
+    KUBERNETES_AVAILABLE,
+)
 from app.schemas_k8s import (
     KubernetesClusterCreate,
     KubernetesClusterUpdate,
@@ -36,35 +45,131 @@ router = APIRouter(
 )
 
 
+async def _build_k8s_client(cluster: KubernetesCluster) -> KubernetesClient:
+    """
+    Build a KubernetesClient for the given cluster record.
+
+    Prefers explicit kubeconfig/context. Falls back to in-cluster config when
+    no path/context/url is provided.
+    """
+    in_cluster = not any([cluster.kubeconfig_path, cluster.api_server_url, cluster.context_name])
+    return KubernetesClient(
+        kubeconfig_path=cluster.kubeconfig_path,
+        context=cluster.context_name,
+        in_cluster=in_cluster
+    )
+
+
 async def check_cluster_health(cluster: KubernetesCluster) -> dict:
     """
-    Check the health of a Kubernetes cluster.
-
-    This function attempts to connect to the cluster and verify its status.
-    In a production environment, this would use the Kubernetes Python client.
+    Check the health of a Kubernetes cluster using the KubernetesClient wrapper.
     """
-    try:
-        # TODO: Implement actual K8s cluster health check using kubernetes client
-        # For now, return a mock response
-        return {
-            "healthy": True,
-            "health_status": "healthy",
-            "message": "Cluster is reachable and responding",
-            "cluster_version": cluster.cluster_version or "unknown",
-            "node_count": 0,
-            "namespace_count": 0,
-            "details": {}
-        }
-    except Exception as e:
-        logger.error(f"Error checking cluster health for {cluster.name}: {e}")
+    if not settings.enable_k8s_integration:
         return {
             "healthy": False,
-            "health_status": "unhealthy",
+            "health_status": "disabled",
+            "message": "Kubernetes integration disabled in settings",
+            "cluster_version": None,
+            "node_count": None,
+            "namespace_count": None,
+            "details": {},
+        }
+
+    if not KUBERNETES_AVAILABLE:
+        return {
+            "healthy": False,
+            "health_status": "unavailable",
+            "message": "kubernetes Python package not installed",
+            "cluster_version": None,
+            "node_count": None,
+            "namespace_count": None,
+            "details": {},
+        }
+
+    if not cluster.is_active:
+        return {
+            "healthy": False,
+            "health_status": "inactive",
+            "message": "Cluster monitoring disabled",
+            "cluster_version": None,
+            "node_count": None,
+            "namespace_count": None,
+            "details": {},
+        }
+
+    try:
+        k8s = await _build_k8s_client(cluster)
+        # Test API connectivity + version
+        version_info = await k8s.test_connection()
+        healthy = version_info.get("success", False)
+
+        node_count = None
+        namespace_count = None
+        details = {"api_versions": version_info.get("api_versions")}
+
+        # If connected, fetch quick counts
+        if healthy:
+            core_api = k8s.get_core_v1_api()
+            loop = asyncio.get_event_loop()
+            nodes = await loop.run_in_executor(None, core_api.list_node)
+            namespaces = await loop.run_in_executor(None, core_api.list_namespace)
+            node_count = len(nodes.items)
+            namespace_count = len(namespaces.items)
+            details["nodes"] = [n.metadata.name for n in nodes.items]
+
+        return {
+            "healthy": healthy,
+            "health_status": "healthy" if healthy else "unhealthy",
+            "message": version_info.get("message") or "Cluster reachable",
+            "cluster_version": version_info.get("cluster_version") or version_info.get("git_version"),
+            "node_count": node_count,
+            "namespace_count": namespace_count,
+            "details": details,
+        }
+
+    except KubernetesAuthenticationError as e:
+        logger.error(f"Auth error for cluster {cluster.name}: {e}")
+        return {
+            "healthy": False,
+            "health_status": "auth_error",
+            "message": str(e),
+            "cluster_version": None,
+            "node_count": None,
+            "namespace_count": None,
+            "details": {"error": str(e)},
+        }
+    except KubernetesConnectionError as e:
+        logger.error(f"Connection error for cluster {cluster.name}: {e}")
+        return {
+            "healthy": False,
+            "health_status": "unreachable",
+            "message": str(e),
+            "cluster_version": None,
+            "node_count": None,
+            "namespace_count": None,
+            "details": {"error": str(e)},
+        }
+    except KubernetesClientError as e:
+        logger.error(f"Kubernetes client error for {cluster.name}: {e}")
+        return {
+            "healthy": False,
+            "health_status": "error",
+            "message": str(e),
+            "cluster_version": None,
+            "node_count": None,
+            "namespace_count": None,
+            "details": {"error": str(e)},
+        }
+    except Exception as e:
+        logger.error(f"Unexpected error checking cluster health for {cluster.name}: {e}")
+        return {
+            "healthy": False,
+            "health_status": "error",
             "message": f"Failed to connect to cluster: {str(e)}",
             "cluster_version": None,
             "node_count": None,
             "namespace_count": None,
-            "details": {"error": str(e)}
+            "details": {"error": str(e)},
         }
 
 

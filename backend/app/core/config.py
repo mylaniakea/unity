@@ -79,6 +79,8 @@ class Settings(BaseSettings):
     enable_ai_analysis: bool = False
     enable_push_notifications: bool = True
     enable_plugins: bool = True
+    enable_k8s_integration: bool = True
+    enable_docker_integration: bool = True
     disable_auth: bool = False  # DO NOT enable in production  # Set to True to disable authentication for testing
     
     # Redis Configuration (for session storage)
